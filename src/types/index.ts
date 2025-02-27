@@ -11,6 +11,7 @@ export interface NodeConfig {
 export interface ProxmoxNodeStatus {
   id: string;
   name: string;
+  configName: string;
   status: 'online' | 'offline';
   uptime: number;
   cpu: number;

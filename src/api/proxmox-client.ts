@@ -175,7 +175,8 @@ export class ProxmoxClient {
       
       return {
         id: this.config.id,
-        name: this.config.name,
+        name: nodeName,
+        configName: this.config.name,
         status: 'online', // If we get a successful response, the node is online
         uptime: data.uptime,
         cpu: data.cpu,
@@ -211,7 +212,8 @@ export class ProxmoxClient {
       this.logger.debug('Returning offline status due to error');
       return {
         id: this.config.id,
-        name: this.config.name,
+        name: this.nodeName || this.config.name, // Use discovered node name if available, otherwise config name
+        configName: this.config.name,
         status: 'offline',
         uptime: 0,
         cpu: 0,
@@ -252,25 +254,61 @@ export class ProxmoxClient {
       const response = await this.client.get(`/nodes/${nodeName}/qemu`);
       const vms = response.data.data || [];
       
-      return vms.map((vm: any) => ({
-        id: `${this.config.id}-vm-${vm.vmid}`,
-        name: vm.name,
-        status: vm.status,
-        node: this.config.id,
-        vmid: vm.vmid,
-        cpus: vm.cpus,
-        memory: vm.mem,
-        maxmem: vm.maxmem,
-        disk: vm.disk,
-        maxdisk: vm.maxdisk,
-        uptime: vm.uptime || 0,
-        netin: vm.netin || 0,
-        netout: vm.netout || 0,
-        diskread: vm.diskread || 0,
-        diskwrite: vm.diskwrite || 0,
-        template: vm.template === 1,
-        type: 'qemu'
-      }));
+      // Create an array of promises to fetch detailed resource usage for each VM
+      const vmPromises = vms.map(async (vm: any) => {
+        try {
+          // Get detailed resource usage for this VM
+          const resourceData = await this.getGuestResourceUsage('qemu', vm.vmid);
+          
+          return {
+            id: `${this.config.id}-vm-${vm.vmid}`,
+            name: vm.name,
+            status: vm.status,
+            node: this.config.id,
+            vmid: vm.vmid,
+            cpus: vm.cpus,
+            // Use CPU usage from detailed resource data
+            cpu: resourceData.cpu * 100, // Convert to percentage
+            memory: vm.mem,
+            maxmem: vm.maxmem,
+            disk: vm.disk,
+            maxdisk: vm.maxdisk,
+            uptime: vm.uptime || 0,
+            netin: resourceData.netin || vm.netin || 0,
+            netout: resourceData.netout || vm.netout || 0,
+            diskread: resourceData.diskread || vm.diskread || 0,
+            diskwrite: resourceData.diskwrite || vm.diskwrite || 0,
+            template: vm.template === 1,
+            type: 'qemu'
+          } as ProxmoxVM;
+        } catch (error) {
+          // If we fail to get detailed resource usage, just return basic VM data
+          this.logger.warn(`Failed to get detailed resource usage for VM ${vm.vmid}`, { error });
+          
+          return {
+            id: `${this.config.id}-vm-${vm.vmid}`,
+            name: vm.name,
+            status: vm.status,
+            node: this.config.id,
+            vmid: vm.vmid,
+            cpus: vm.cpus,
+            memory: vm.mem,
+            maxmem: vm.maxmem,
+            disk: vm.disk,
+            maxdisk: vm.maxdisk,
+            uptime: vm.uptime || 0,
+            netin: vm.netin || 0,
+            netout: vm.netout || 0,
+            diskread: vm.diskread || 0,
+            diskwrite: vm.diskwrite || 0,
+            template: vm.template === 1,
+            type: 'qemu'
+          } as ProxmoxVM;
+        }
+      });
+      
+      // Wait for all VM resource data to be fetched
+      return await Promise.all(vmPromises);
     } catch (error) {
       this.logger.error('Failed to get virtual machines', { error });
       throw error;
@@ -286,25 +324,61 @@ export class ProxmoxClient {
       const response = await this.client.get(`/nodes/${nodeName}/lxc`);
       const containers = response.data.data || [];
       
-      return containers.map((container: any) => ({
-        id: `${this.config.id}-ct-${container.vmid}`,
-        name: container.name,
-        status: container.status,
-        node: this.config.id,
-        vmid: container.vmid,
-        cpus: container.cpus,
-        memory: container.mem,
-        maxmem: container.maxmem,
-        disk: container.disk,
-        maxdisk: container.maxdisk,
-        uptime: container.uptime || 0,
-        netin: container.netin || 0,
-        netout: container.netout || 0,
-        diskread: container.diskread || 0,
-        diskwrite: container.diskwrite || 0,
-        template: container.template === 1,
-        type: 'lxc'
-      }));
+      // Create an array of promises to fetch detailed resource usage for each container
+      const containerPromises = containers.map(async (container: any) => {
+        try {
+          // Get detailed resource usage for this container
+          const resourceData = await this.getGuestResourceUsage('lxc', container.vmid);
+          
+          return {
+            id: `${this.config.id}-ct-${container.vmid}`,
+            name: container.name,
+            status: container.status,
+            node: this.config.id,
+            vmid: container.vmid,
+            cpus: container.cpus,
+            // Use CPU usage from detailed resource data
+            cpu: resourceData.cpu * 100, // Convert to percentage
+            memory: container.mem,
+            maxmem: container.maxmem,
+            disk: container.disk,
+            maxdisk: container.maxdisk,
+            uptime: container.uptime || 0,
+            netin: resourceData.netin || container.netin || 0,
+            netout: resourceData.netout || container.netout || 0,
+            diskread: resourceData.diskread || container.diskread || 0,
+            diskwrite: resourceData.diskwrite || container.diskwrite || 0,
+            template: container.template === 1,
+            type: 'lxc'
+          } as ProxmoxContainer;
+        } catch (error) {
+          // If we fail to get detailed resource usage, just return basic container data
+          this.logger.warn(`Failed to get detailed resource usage for Container ${container.vmid}`, { error });
+          
+          return {
+            id: `${this.config.id}-ct-${container.vmid}`,
+            name: container.name,
+            status: container.status,
+            node: this.config.id,
+            vmid: container.vmid,
+            cpus: container.cpus,
+            memory: container.mem,
+            maxmem: container.maxmem,
+            disk: container.disk,
+            maxdisk: container.maxdisk,
+            uptime: container.uptime || 0,
+            netin: container.netin || 0,
+            netout: container.netout || 0,
+            diskread: container.diskread || 0,
+            diskwrite: container.diskwrite || 0,
+            template: container.template === 1,
+            type: 'lxc'
+          } as ProxmoxContainer;
+        }
+      });
+      
+      // Wait for all container resource data to be fetched
+      return await Promise.all(containerPromises);
     } catch (error) {
       this.logger.error('Failed to get containers', { error });
       throw error;

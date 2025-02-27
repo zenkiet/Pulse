@@ -6,6 +6,7 @@
   <title>ProxMox Monitoring</title>
   <link rel="stylesheet" href="css/styles.css">
   <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <!-- Load Socket.IO client from CDN -->
   <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
   <script src="js/app.js" defer></script>
@@ -32,73 +33,105 @@
 
   <main>
     <section class="dashboard">
-      <div class="summary-cards">
-        <div class="card">
-          <h2>Nodes</h2>
-          <div class="summary-data">
-            <div class="summary-item">
-              <span class="label">Total:</span>
-              <span class="value" id="nodes-total">0</span>
-            </div>
-            <div class="summary-item">
-              <span class="label">Online:</span>
-              <span class="value" id="nodes-online">0</span>
-            </div>
-            <div class="summary-item">
-              <span class="label">Offline:</span>
-              <span class="value" id="nodes-offline">0</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="card">
-          <h2>Guests</h2>
-          <div class="summary-data">
-            <div class="summary-item">
-              <span class="label">Total:</span>
-              <span class="value" id="guests-total">0</span>
-            </div>
-            <div class="summary-item">
-              <span class="label">Running:</span>
-              <span class="value" id="guests-running">0</span>
-            </div>
-            <div class="summary-item">
-              <span class="label">Stopped:</span>
-              <span class="value" id="guests-stopped">0</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="card">
-          <h2>Resources</h2>
-          <div class="summary-data">
-            <div class="summary-item">
-              <span class="label">CPU Usage:</span>
-              <span class="value" id="cpu-usage">0%</span>
-            </div>
-            <div class="summary-item">
-              <span class="label">Memory Usage:</span>
-              <span class="value" id="memory-usage">0%</span>
-            </div>
-            <div class="summary-item">
-              <span class="label">Disk Usage:</span>
-              <span class="value" id="disk-usage">0%</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div class="content-section">
         <h2>Nodes</h2>
-        <div id="nodes-container" class="cards-container">
-          <div class="loading">Loading nodes data... <span class="loading-dots"></span></div>
+        <div id="nodes-container" class="table-container">
+          <table class="data-table" id="nodes-table">
+            <thead>
+              <tr>
+                <th data-sort="name">Name</th>
+                <th data-sort="cpu">CPU</th>
+                <th data-sort="memory">Memory</th>
+                <th data-sort="disk">Disk</th>
+                <th data-sort="uptime">Uptime</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td colspan="5" class="loading">Loading nodes data... <span class="loading-dots"></span></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <div class="content-section">
-        <h2>Guests</h2>
-        <div id="guests-container" class="cards-container">
-          <div class="loading">Loading guests data... <span class="loading-dots"></span></div>
+      <div class="content-section" id="containers-section">
+        <div class="section-header">
+          <h2>Containers</h2>
+          <div class="section-actions">
+            <button class="section-move-btn" id="move-containers-up" title="Move section up" disabled>
+              <i class="fa fa-arrow-up"></i>
+            </button>
+            <button class="section-move-btn" id="move-containers-down" title="Move section down">
+              <i class="fa fa-arrow-down"></i>
+            </button>
+          </div>
+        </div>
+        <div class="section-controls">
+          <label class="toggle-switch ct-toggle">
+            <input type="checkbox" id="show-stopped-cts-toggle">
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">Show Stopped Containers</span>
+          </label>
+        </div>
+        <div id="cts-container" class="table-container">
+          <table class="data-table" id="cts-table">
+            <thead>
+              <tr>
+                <th data-sort="name">Name</th>
+                <th data-sort="cpu">CPU</th>
+                <th data-sort="memory">Memory</th>
+                <th data-sort="disk">Disk</th>
+                <th data-sort="network">Network</th>
+                <th data-sort="uptime">Uptime</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td colspan="6" class="loading">Loading container data... <span class="loading-dots"></span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="content-section" id="vms-section">
+        <div class="section-header">
+          <h2>Virtual Machines</h2>
+          <div class="section-actions">
+            <button class="section-move-btn" id="move-vms-up" title="Move section up">
+              <i class="fa fa-arrow-up"></i>
+            </button>
+            <button class="section-move-btn" id="move-vms-down" title="Move section down" disabled>
+              <i class="fa fa-arrow-down"></i>
+            </button>
+          </div>
+        </div>
+        <div class="section-controls">
+          <label class="toggle-switch vm-toggle">
+            <input type="checkbox" id="show-stopped-vms-toggle">
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">Show Stopped VMs</span>
+          </label>
+        </div>
+        <div id="vms-container" class="table-container">
+          <table class="data-table" id="vms-table">
+            <thead>
+              <tr>
+                <th data-sort="name">Name</th>
+                <th data-sort="cpu">CPU</th>
+                <th data-sort="memory">Memory</th>
+                <th data-sort="disk">Disk</th>
+                <th data-sort="network">Network</th>
+                <th data-sort="uptime">Uptime</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td colspan="6" class="loading">Loading VM data... <span class="loading-dots"></span></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </section>

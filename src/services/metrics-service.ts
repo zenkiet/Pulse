@@ -122,7 +122,9 @@ export class MetricsService extends EventEmitter {
       guestId,
       type,
       metrics: {
-        cpu: guest.cpus > 0 ? (guest.cpu || 0) / guest.cpus : 0,
+        // If guest.cpu is defined, use it directly (it's already a percentage)
+        // Otherwise, calculate it from cpus if available
+        cpu: guest.cpu !== undefined ? guest.cpu : (guest.cpus > 0 ? 0 : 0),
         memory: {
           total: guest.maxmem,
           used: guest.memory,
