@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import useSocket from '../hooks/useSocket';
+import { useThemeContext } from '../context/ThemeContext';
 import { 
   Box, 
   Card, 
@@ -24,7 +25,8 @@ import {
   Slider,
   IconButton,
   Collapse,
-  alpha
+  alpha,
+  useTheme
 } from '@mui/material';
 import NetworkCheckIcon from '@mui/icons-material/NetworkCheck';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
@@ -38,6 +40,8 @@ import SearchIcon from '@mui/icons-material/Search';
 import CancelIcon from '@mui/icons-material/Cancel';
 import CloseIcon from '@mui/icons-material/Close';
 import PersonIcon from '@mui/icons-material/Person';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
 import InputBase from '@mui/material/InputBase';
 
 // Define pulse animation
@@ -64,6 +68,13 @@ const fadeIn = keyframes`
     transform: translateY(0);
   }
 `;
+
+// Add localStorage keys as constants
+const STORAGE_KEY_FILTERS = 'network_display_filters';
+const STORAGE_KEY_SORT = 'network_display_sort';
+const STORAGE_KEY_SHOW_STOPPED = 'network_display_show_stopped';
+const STORAGE_KEY_SHOW_FILTERS = 'network_display_show_filters';
+const STORAGE_KEY_SEARCH_TERMS = 'network_display_search_terms';
 
 // Helper function to format bytes
 const formatBytes = (bytes, decimals = 2) => {
@@ -204,7 +215,7 @@ const StatusIndicator = ({ status }) => {
   );
 };
 
-// Add keyboard shortcut tooltip component
+// KeyboardShortcut component with better a11y
 const KeyboardShortcut = ({ shortcut, sx = {} }) => (
   <Box
     component="span"
@@ -225,6 +236,7 @@ const KeyboardShortcut = ({ shortcut, sx = {} }) => (
       borderColor: 'rgba(0, 0, 0, 0.1)',
       ...sx
     }}
+    aria-hidden="true" // Hide from screen readers since it's visual decoration
   >
     {shortcut}
   </Box>
@@ -239,35 +251,110 @@ const NetworkDisplay = () => {
     isDebugMode
   } = useSocket();
   
-  // Add sorting state
-  const [sortConfig, setSortConfig] = useState({
-    key: 'name',
-    direction: 'asc'
+  const theme = useTheme();
+  
+  // Use the theme context instead of local state
+  const { darkMode, toggleDarkMode } = useThemeContext();
+  
+  // Add sorting state - load from localStorage or use default
+  const [sortConfig, setSortConfig] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_SORT);
+      return saved ? JSON.parse(saved) : { key: 'name', direction: 'asc' };
+    } catch (e) {
+      console.error('Error loading sort preferences:', e);
+      return { key: 'name', direction: 'asc' };
+    }
   });
   
-  // Add state to track whether to show stopped systems
-  const [showStopped, setShowStopped] = useState(false);
+  // Add state to track whether to show stopped systems - load from localStorage or use default
+  const [showStopped, setShowStopped] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_SHOW_STOPPED);
+      return saved ? JSON.parse(saved) === true : false;
+    } catch (e) {
+      console.error('Error loading show stopped preference:', e);
+      return false;
+    }
+  });
   
-  // Add state to toggle filters visibility
-  const [showFilters, setShowFilters] = useState(false);
+  // Add state to toggle filters visibility - load from localStorage or use default
+  const [showFilters, setShowFilters] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_SHOW_FILTERS);
+      return saved ? JSON.parse(saved) === true : false;
+    } catch (e) {
+      console.error('Error loading show filters preference:', e);
+      return false;
+    }
+  });
   
   // Add search state
   const [searchTerm, setSearchTerm] = useState('');
-  // Add search terms array to store active search filters
-  const [activeSearchTerms, setActiveSearchTerms] = useState([]);
+  
+  // Add search terms array to store active search filters - load from localStorage or use default
+  const [activeSearchTerms, setActiveSearchTerms] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_SEARCH_TERMS);
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error('Error loading search terms:', e);
+      return [];
+    }
+  });
   
   // Reference to the search input element
   const searchInputRef = React.useRef(null);
   
-  // Add filter state
-  const [filters, setFilters] = useState({
-    cpu: 0,
-    memory: 0,
-    disk: 0,
-    download: 0,
-    upload: 0
+  // Add filter state - load from localStorage or use default
+  const [filters, setFilters] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_FILTERS);
+      return saved ? JSON.parse(saved) : {
+        cpu: 0,
+        memory: 0,
+        disk: 0,
+        download: 0,
+        upload: 0
+      };
+    } catch (e) {
+      console.error('Error loading filter preferences:', e);
+      return {
+        cpu: 0,
+        memory: 0,
+        disk: 0,
+        download: 0,
+        upload: 0
+      };
+    }
   });
+  
   const [activeSlider, setActiveSlider] = useState(null);
+  
+  // Save sort preferences whenever they change
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_SORT, JSON.stringify(sortConfig));
+  }, [sortConfig]);
+
+  // Save show stopped preference whenever it changes
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_SHOW_STOPPED, JSON.stringify(showStopped));
+  }, [showStopped]);
+
+  // Save show filters preference whenever it changes
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_SHOW_FILTERS, JSON.stringify(showFilters));
+  }, [showFilters]);
+
+  // Save active search terms whenever they change
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_SEARCH_TERMS, JSON.stringify(activeSearchTerms));
+  }, [activeSearchTerms]);
+
+  // Save filter preferences whenever they change
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_FILTERS, JSON.stringify(filters));
+  }, [filters]);
   
   // Function to reset all filters - wrap in useCallback to prevent infinite renders
   const resetFilters = useCallback(() => {
@@ -695,25 +782,27 @@ const NetworkDisplay = () => {
           mb: 3, 
           borderRadius: 2,
           overflow: 'visible',
+          bgcolor: darkMode ? 'background.paper' : undefined,
+          boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.1)' : undefined
         }}
         elevation={1}
       >
-        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+        <CardContent sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
           {/* Header section with search and controls */}
           <Box sx={{ 
             display: 'flex', 
             flexDirection: { xs: 'column', md: 'row' },
             alignItems: { xs: 'flex-start', md: 'center' },
-            mb: 2,
-            gap: { xs: 2, md: 0 }
+            mb: { xs: 1.5, sm: 2 },
+            gap: { xs: 1.5, md: 0 }
           }}>
             {/* Search box */}
             <Box sx={{ 
               display: 'flex', 
               alignItems: 'center',
-              bgcolor: 'background.paper',
+              bgcolor: darkMode ? 'background.default' : 'background.paper',
               borderRadius: 2,
-              border: theme => `1px solid ${theme.palette.grey[300]}`,
+              border: theme => `1px solid ${darkMode ? theme.palette.divider : theme.palette.grey[300]}`,
               px: 1.5,
               py: 0.5,
               width: { xs: '100%', md: 'auto' },
@@ -721,7 +810,7 @@ const NetworkDisplay = () => {
               transition: 'all 0.2s ease-in-out',
               '&:hover': {
                 borderColor: theme => theme.palette.primary.main,
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                boxShadow: darkMode ? '0 2px 6px rgba(0, 0, 0, 0.15)' : '0 1px 3px rgba(0,0,0,0.05)'
               },
               '&:focus-within': {
                 borderColor: theme => theme.palette.primary.main,
@@ -785,19 +874,49 @@ const NetworkDisplay = () => {
               </Box>
             </Box>
 
-            <Box sx={{ flexGrow: 1 }} />
+            <Box sx={{ flexGrow: 1, minHeight: { xs: 8, md: 0 } }} />
             
             {/* Controls section */}
             <Box sx={{ 
               display: 'flex', 
               alignItems: 'center',
               flexWrap: 'wrap',
-              gap: 1.5,
+              gap: { xs: 1, sm: 1.5 },
               ml: { xs: 0, md: 'auto' },
               width: { xs: '100%', md: 'auto' },
+              justifyContent: { xs: 'space-between', md: 'flex-start' }
             }}>
-              {/* Filter controls */}
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              {/* Dark Mode Toggle */}
+              <Tooltip title={darkMode ? "Switch to light mode" : "Switch to dark mode"}>
+                <IconButton
+                  onClick={toggleDarkMode}
+                  size="small"
+                  color={darkMode ? "primary" : "default"}
+                  sx={{ 
+                    borderRadius: 2,
+                    p: { xs: 0.8, sm: 1 },
+                    bgcolor: darkMode 
+                      ? alpha(theme.palette.primary.main, 0.08)
+                      : alpha(theme.palette.grey[100], 0.8),
+                    border: '1px solid',
+                    borderColor: darkMode 
+                      ? alpha(theme.palette.primary.main, 0.2)
+                      : 'grey.200',
+                    transition: 'all 0.2s ease'
+                  }}
+                  aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+                >
+                  {darkMode ? <Brightness7Icon fontSize="small" /> : <Brightness4Icon fontSize="small" />}
+                </IconButton>
+              </Tooltip>
+              
+              {/* Filter controls - updated for better mobile experience */}
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center',
+                flexGrow: { xs: 1, md: 0 },
+                justifyContent: { xs: 'center', md: 'flex-start' }
+              }}>
                 <Tooltip title={
                   <>
                     {showFilters ? "Hide filters" : "Show filters"}
@@ -815,8 +934,8 @@ const NetworkDisplay = () => {
                         ? alpha(theme.palette.primary.main, 0.08)
                         : alpha(theme.palette.primary.main, 0.04),
                       borderRadius: 2,
-                      py: 0.7,
-                      px: 1.5,
+                      py: { xs: 0.5, sm: 0.7 },
+                      px: { xs: 1, sm: 1.5 },
                       transition: 'all 0.2s ease-in-out',
                       cursor: 'pointer',
                       border: theme => (Object.values(filters).some(val => val > 0) || searchTerm) && !showFilters
@@ -824,6 +943,20 @@ const NetworkDisplay = () => {
                         : `1px solid transparent`,
                       '&:hover': {
                         bgcolor: theme => alpha(theme.palette.primary.main, 0.12),
+                      },
+                      '&:focus-visible': {
+                        outline: '2px solid',
+                        outlineColor: 'primary.main',
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={showFilters}
+                    aria-controls="filter-panel"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setShowFilters(!showFilters);
                       }
                     }}
                   >
@@ -840,7 +973,14 @@ const NetworkDisplay = () => {
                         </Typography>
                       </Box>
                     ) : (
-                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary" 
+                        sx={{ 
+                          fontWeight: 500,
+                          display: { xs: 'none', sm: 'block' }
+                        }}
+                      >
                         Filters
                       </Typography>
                     )}
@@ -966,16 +1106,29 @@ const NetworkDisplay = () => {
                     size="small"
                   />
                 }
-                label={<Typography variant="body2" sx={{ fontWeight: 500 }}>Show stopped</Typography>}
+                label={
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      fontWeight: 500,
+                      display: { xs: 'none', sm: 'block' }
+                    }}
+                  >
+                    Show stopped
+                  </Typography>
+                }
                 sx={{ 
                   m: 0, 
                   '& .MuiFormControlLabel-label': { ml: 0.5 },
-                  bgcolor: theme => alpha(theme.palette.grey[100], 0.7),
+                  bgcolor: theme => darkMode 
+                    ? alpha(theme.palette.background.default, 0.6)
+                    : alpha(theme.palette.grey[100], 0.7),
                   borderRadius: 2,
-                  px: 1,
+                  px: { xs: 0.5, sm: 1 },
                   py: 0.2,
                   border: '1px solid',
-                  borderColor: 'grey.200',
+                  borderColor: darkMode ? 'divider' : 'grey.200',
+                  minWidth: { xs: 42, sm: 'auto' }
                 }}
               />
             </Box>
@@ -1006,11 +1159,15 @@ const NetworkDisplay = () => {
               sx={{ 
                 mb: 2, 
                 p: 2, 
-                backgroundColor: theme => alpha(theme.palette.primary.light, 0.05),
+                backgroundColor: theme => darkMode 
+                  ? alpha(theme.palette.primary.dark, 0.15)
+                  : alpha(theme.palette.primary.light, 0.05),
                 borderRadius: 2,
                 border: '1px solid',
                 borderColor: 'divider'
               }}
+              role="region"
+              aria-label="Filter controls"
             >
               <Typography variant="subtitle2" sx={{ mb: 2 }}>Adjust minimum thresholds:</Typography>
               <Box sx={{ 
@@ -1022,7 +1179,13 @@ const NetworkDisplay = () => {
                 <Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <SpeedIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>CPU Usage</Typography>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ fontWeight: 500 }}
+                      id="cpu-filter-label"
+                    >
+                      CPU Usage
+                    </Typography>
                   </Box>
                   <Tooltip title={`CPU usage ≥ ${formatPercentage(filters.cpu)}`} arrow placement="top">
                     <Slider
@@ -1030,7 +1193,8 @@ const NetworkDisplay = () => {
                       onChange={(_, newValue) => updateFilter('cpu', newValue)}
                       onMouseDown={() => handleSliderDragStart('cpu')}
                       onMouseUp={handleSliderDragEnd}
-                      aria-labelledby="cpu-filter-slider"
+                      aria-labelledby="cpu-filter-label"
+                      aria-valuetext={`${formatPercentage(filters.cpu)}`}
                       valueLabelDisplay="auto"
                       valueLabelFormat={value => `${formatPercentage(value)}`}
                       sx={{
@@ -1060,7 +1224,13 @@ const NetworkDisplay = () => {
                 <Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <MemoryIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>Memory Usage</Typography>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ fontWeight: 500 }}
+                      id="memory-filter-label"
+                    >
+                      Memory Usage
+                    </Typography>
                   </Box>
                   <Tooltip title={`Memory usage ≥ ${formatPercentage(filters.memory)}`} arrow placement="top">
                     <Slider
@@ -1068,7 +1238,8 @@ const NetworkDisplay = () => {
                       onChange={(_, newValue) => updateFilter('memory', newValue)}
                       onMouseDown={() => handleSliderDragStart('memory')}
                       onMouseUp={handleSliderDragEnd}
-                      aria-labelledby="memory-filter-slider"
+                      aria-labelledby="memory-filter-label"
+                      aria-valuetext={`${formatPercentage(filters.memory)}`}
                       valueLabelDisplay="auto"
                       valueLabelFormat={value => `${formatPercentage(value)}`}
                       sx={{
@@ -1098,7 +1269,13 @@ const NetworkDisplay = () => {
                 <Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <StorageIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>Disk Usage</Typography>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ fontWeight: 500 }}
+                      id="disk-filter-label"
+                    >
+                      Disk Usage
+                    </Typography>
                   </Box>
                   <Tooltip title={`Disk usage ≥ ${formatPercentage(filters.disk)}`} arrow placement="top">
                     <Slider
@@ -1106,7 +1283,8 @@ const NetworkDisplay = () => {
                       onChange={(_, newValue) => updateFilter('disk', newValue)}
                       onMouseDown={() => handleSliderDragStart('disk')}
                       onMouseUp={handleSliderDragEnd}
-                      aria-labelledby="disk-filter-slider"
+                      aria-labelledby="disk-filter-label"
+                      aria-valuetext={`${formatPercentage(filters.disk)}`}
                       valueLabelDisplay="auto"
                       valueLabelFormat={value => `${formatPercentage(value)}`}
                       sx={{
@@ -1136,7 +1314,13 @@ const NetworkDisplay = () => {
                 <Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <ArrowDownwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>Download Rate</Typography>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ fontWeight: 500 }}
+                      id="download-filter-label"
+                    >
+                      Download Rate
+                    </Typography>
                   </Box>
                   <Tooltip title={`Download ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}`} arrow placement="top">
                     <Slider
@@ -1144,7 +1328,8 @@ const NetworkDisplay = () => {
                       onChange={(_, newValue) => updateFilter('download', newValue)}
                       onMouseDown={() => handleSliderDragStart('download')}
                       onMouseUp={handleSliderDragEnd}
-                      aria-labelledby="download-filter-slider"
+                      aria-labelledby="download-filter-label"
+                      aria-valuetext={`${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}`}
                       valueLabelDisplay="auto"
                       valueLabelFormat={value => formatNetworkRateForFilter(sliderValueToNetworkRate(value))}
                       sx={{
@@ -1174,7 +1359,13 @@ const NetworkDisplay = () => {
                 <Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <ArrowUpwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>Upload Rate</Typography>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ fontWeight: 500 }}
+                      id="upload-filter-label"
+                    >
+                      Upload Rate
+                    </Typography>
                   </Box>
                   <Tooltip title={`Upload ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}`} arrow placement="top">
                     <Slider
@@ -1182,7 +1373,8 @@ const NetworkDisplay = () => {
                       onChange={(_, newValue) => updateFilter('upload', newValue)}
                       onMouseDown={() => handleSliderDragStart('upload')}
                       onMouseUp={handleSliderDragEnd}
-                      aria-labelledby="upload-filter-slider"
+                      aria-labelledby="upload-filter-label"
+                      aria-valuetext={`${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}`}
                       valueLabelDisplay="auto"
                       valueLabelFormat={value => formatNetworkRateForFilter(sliderValueToNetworkRate(value))}
                       sx={{
@@ -1210,9 +1402,12 @@ const NetworkDisplay = () => {
               </Box>
               
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
-                <Typography variant="caption" color={
-                  Object.values(filters).some(val => val > 0) ? 'primary.main' : 'text.secondary'
-                } sx={{ fontWeight: 500 }}>
+                <Typography 
+                  variant="caption" 
+                  color={Object.values(filters).some(val => val > 0) ? 'primary.main' : 'text.secondary'} 
+                  sx={{ fontWeight: 500 }}
+                  aria-live="polite" // Announce when this changes
+                >
                   {Object.values(filters).some(val => val > 0) ? 
                     `Showing ${sortedAndFilteredData.length} of ${guestData.length} systems` : 
                     ''}
@@ -1226,8 +1421,14 @@ const NetworkDisplay = () => {
                   sx={{ 
                     height: 28,
                     transition: 'all 0.2s ease',
-                    fontWeight: Object.values(filters).some(val => val > 0) ? 600 : 400
+                    fontWeight: Object.values(filters).some(val => val > 0) ? 600 : 400,
+                    '&:focus-visible': {
+                      outline: '2px solid',
+                      outlineColor: 'primary.main',
+                      outlineOffset: 2,
+                    }
                   }}
+                  aria-pressed={Object.values(filters).some(val => val > 0)}
                 />
               </Box>
             </Box>
@@ -1238,36 +1439,71 @@ const NetworkDisplay = () => {
             sx={{ 
               boxShadow: 'none', 
               borderRadius: 2,
-              overflow: 'hidden',
+              overflow: 'auto',
               position: 'relative',
               border: '1px solid',
-              borderColor: 'grey.200',
+              borderColor: darkMode ? 'divider' : 'grey.200',
+              bgcolor: darkMode ? 'background.paper' : undefined,
+              maxWidth: '100%',
+              '&::-webkit-scrollbar': {
+                height: '8px',
+                width: '8px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: darkMode ? '#1e1e1e' : '#f1f1f1',
+                borderRadius: '0 0 8px 8px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: darkMode ? '#3a3a3a' : '#bbb',
+                borderRadius: '4px',
+              },
+              '&::-webkit-scrollbar-thumb:hover': {
+                background: darkMode ? '#555' : '#999',
+              }
             }}
           >
-            <Table sx={{ 
-              '& tbody tr:nth-of-type(odd)': {
-                backgroundColor: theme => alpha(theme.palette.grey[50], 0.8),
-              },
-              '& tbody tr:nth-of-type(even)': {
-                backgroundColor: theme => alpha(theme.palette.background.paper, 1),
-              },
-              '& tbody tr': {
-                transition: 'background-color 0.15s ease-in-out',
-                '&:hover': {
-                  backgroundColor: theme => alpha(theme.palette.primary.light, 0.05)
-                }
-              },
-              '& th': {
-                transition: 'background-color 0.2s ease'
-              }
-            }}>
+            <Table 
+              sx={{ 
+                '& tbody tr': {
+                  backgroundColor: theme => darkMode ? 'background.paper' : 'white',
+                  transition: 'background-color 0.15s ease-in-out',
+                  '&:hover': {
+                    backgroundColor: theme => darkMode
+                      ? alpha(theme.palette.primary.dark, 0.1)
+                      : alpha(theme.palette.primary.light, 0.05)
+                  },
+                  '&:focus-within': {
+                    outline: '2px solid',
+                    outlineColor: 'primary.main',
+                  }
+                },
+                '& th': {
+                  transition: 'background-color 0.2s ease',
+                  whiteSpace: 'nowrap',
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                },
+                '& td': {
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  padding: { xs: '8px 12px', sm: '12px 16px' },
+                  borderColor: theme => darkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(224, 224, 224, 1)',
+                },
+                tableLayout: { xs: 'auto', md: 'fixed' }
+              }}
+              aria-label="System metrics table"
+            >
               <TableHead>
                 <TableRow sx={{ 
-                  backgroundColor: theme => alpha(theme.palette.primary.light, 0.05),
+                  backgroundColor: theme => darkMode
+                    ? alpha(theme.palette.background.default, 0.6)
+                    : alpha(theme.palette.primary.light, 0.05),
                   '& th': { 
                     py: showFilters ? 1 : 1.5,
                     pb: showFilters ? 1 : 1.5,
-                    borderBottom: theme => `2px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+                    borderBottom: theme => `2px solid ${
+                      darkMode 
+                        ? alpha(theme.palette.divider, 0.8)
+                        : alpha(theme.palette.primary.main, 0.1)
+                    }`,
                     verticalAlign: 'middle',
                     minHeight: showFilters ? '48px' : '40px',
                     transition: 'padding 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-height 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
@@ -1283,6 +1519,20 @@ const NetworkDisplay = () => {
                       cursor: 'pointer', 
                       '&:hover': {
                         backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                      },
+                      '&:focus-visible': {
+                        outline: '2px solid',
+                        outlineColor: 'primary.main',
+                        outlineOffset: -2,
+                      }
+                    }}
+                    role="columnheader"
+                    aria-sort={sortConfig.key === 'name' ? sortConfig.direction : undefined}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        requestSort('name');
                       }
                     }}
                   >
@@ -1302,7 +1552,9 @@ const NetworkDisplay = () => {
                           color: 'primary.main',
                           fontSize: '0.8rem',
                           fontWeight: 'bold'
-                        }}>
+                        }}
+                        aria-hidden="true"
+                        >
                           {sortConfig.direction === 'asc' ? '↑' : '↓'}
                         </Box>
                       )}
@@ -1343,7 +1595,9 @@ const NetworkDisplay = () => {
                           color: 'primary.main',
                           fontSize: '0.8rem',
                           fontWeight: 'bold'
-                        }}>
+                        }}
+                        aria-hidden="true"
+                        >
                           {sortConfig.direction === 'asc' ? '↑' : '↓'}
                         </Box>
                       )}
@@ -1384,7 +1638,9 @@ const NetworkDisplay = () => {
                           color: 'primary.main',
                           fontSize: '0.8rem',
                           fontWeight: 'bold'
-                        }}>
+                        }}
+                        aria-hidden="true"
+                        >
                           {sortConfig.direction === 'asc' ? '↑' : '↓'}
                         </Box>
                       )}
@@ -1425,7 +1681,9 @@ const NetworkDisplay = () => {
                           color: 'primary.main',
                           fontSize: '0.8rem',
                           fontWeight: 'bold'
-                        }}>
+                        }}
+                        aria-hidden="true"
+                        >
                           {sortConfig.direction === 'asc' ? '↑' : '↓'}
                         </Box>
                       )}
@@ -1466,7 +1724,9 @@ const NetworkDisplay = () => {
                           color: 'primary.main',
                           fontSize: '0.8rem',
                           fontWeight: 'bold'
-                        }}>
+                        }}
+                        aria-hidden="true"
+                        >
                           {sortConfig.direction === 'asc' ? '↑' : '↓'}
                         </Box>
                       )}
@@ -1507,7 +1767,9 @@ const NetworkDisplay = () => {
                           color: 'secondary.main',
                           fontSize: '0.8rem',
                           fontWeight: 'bold'
-                        }}>
+                        }}
+                        aria-hidden="true"
+                        >
                           {sortConfig.direction === 'asc' ? '↑' : '↓'}
                         </Box>
                       )}
