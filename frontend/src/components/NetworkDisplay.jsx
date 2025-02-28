@@ -133,7 +133,7 @@ const ProgressWithLabel = ({ value, color = "primary", disabled = false, tooltip
           value={normalizedValue} 
           color={color}
           sx={{
-            height: 8,
+            height: 4,
             borderRadius: 4,
             backgroundColor: theme => alpha(theme.palette.grey[300], 0.5),
             '& .MuiLinearProgress-bar': {
@@ -930,6 +930,228 @@ const NetworkDisplay = () => {
             </Alert>
           )}
           
+          {/* Filter Panel that shows when filters are active */}
+          <Collapse in={showFilters} timeout="auto">
+            <Box 
+              sx={{ 
+                mb: 2, 
+                p: 2, 
+                backgroundColor: theme => alpha(theme.palette.primary.light, 0.05),
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'divider'
+              }}
+            >
+              <Typography variant="subtitle2" sx={{ mb: 2 }}>Adjust minimum thresholds:</Typography>
+              <Box sx={{ 
+                display: 'grid', 
+                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr', lg: '1fr 1fr 1fr 1fr 1fr' },
+                gap: 3
+              }}>
+                {/* CPU Filter */}
+                <Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <SpeedIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>CPU Usage</Typography>
+                  </Box>
+                  <Tooltip title={`CPU usage ≥ ${formatPercentage(filters.cpu)}`} arrow placement="top">
+                    <Slider
+                      value={filters.cpu}
+                      onChange={(_, newValue) => updateFilter('cpu', newValue)}
+                      onMouseDown={() => handleSliderDragStart('cpu')}
+                      onMouseUp={handleSliderDragEnd}
+                      aria-labelledby="cpu-filter-slider"
+                      valueLabelDisplay="auto"
+                      valueLabelFormat={value => `${formatPercentage(value)}`}
+                      sx={{
+                        color: theme => alpha(theme.palette.primary.main, filters.cpu > 0 ? 0.8 : 0.4),
+                        height: 4,
+                        '& .MuiSlider-thumb': {
+                          height: 14,
+                          width: 14,
+                          '&:hover, &.Mui-focusVisible': {
+                            boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
+                          }
+                        },
+                        '& .MuiSlider-valueLabel': {
+                          fontWeight: 'bold',
+                          lineHeight: 1.2
+                        }
+                      }}
+                    />
+                  </Tooltip>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                    <Typography variant="caption" color="text.secondary">0%</Typography>
+                    <Typography variant="caption" color="text.secondary">100%</Typography>
+                  </Box>
+                </Box>
+                
+                {/* Memory Filter */}
+                <Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <MemoryIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>Memory Usage</Typography>
+                  </Box>
+                  <Tooltip title={`Memory usage ≥ ${formatPercentage(filters.memory)}`} arrow placement="top">
+                    <Slider
+                      value={filters.memory}
+                      onChange={(_, newValue) => updateFilter('memory', newValue)}
+                      onMouseDown={() => handleSliderDragStart('memory')}
+                      onMouseUp={handleSliderDragEnd}
+                      aria-labelledby="memory-filter-slider"
+                      valueLabelDisplay="auto"
+                      valueLabelFormat={value => `${formatPercentage(value)}`}
+                      sx={{
+                        color: theme => alpha(theme.palette.primary.main, filters.memory > 0 ? 0.8 : 0.4),
+                        height: 4,
+                        '& .MuiSlider-thumb': {
+                          height: 14,
+                          width: 14,
+                          '&:hover, &.Mui-focusVisible': {
+                            boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
+                          }
+                        },
+                        '& .MuiSlider-valueLabel': {
+                          fontWeight: 'bold',
+                          lineHeight: 1.2
+                        }
+                      }}
+                    />
+                  </Tooltip>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                    <Typography variant="caption" color="text.secondary">0%</Typography>
+                    <Typography variant="caption" color="text.secondary">100%</Typography>
+                  </Box>
+                </Box>
+                
+                {/* Disk Filter */}
+                <Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <StorageIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>Disk Usage</Typography>
+                  </Box>
+                  <Tooltip title={`Disk usage ≥ ${formatPercentage(filters.disk)}`} arrow placement="top">
+                    <Slider
+                      value={filters.disk}
+                      onChange={(_, newValue) => updateFilter('disk', newValue)}
+                      onMouseDown={() => handleSliderDragStart('disk')}
+                      onMouseUp={handleSliderDragEnd}
+                      aria-labelledby="disk-filter-slider"
+                      valueLabelDisplay="auto"
+                      valueLabelFormat={value => `${formatPercentage(value)}`}
+                      sx={{
+                        color: theme => alpha(theme.palette.primary.main, filters.disk > 0 ? 0.8 : 0.4),
+                        height: 4,
+                        '& .MuiSlider-thumb': {
+                          height: 14,
+                          width: 14,
+                          '&:hover, &.Mui-focusVisible': {
+                            boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
+                          }
+                        },
+                        '& .MuiSlider-valueLabel': {
+                          fontWeight: 'bold',
+                          lineHeight: 1.2
+                        }
+                      }}
+                    />
+                  </Tooltip>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                    <Typography variant="caption" color="text.secondary">0%</Typography>
+                    <Typography variant="caption" color="text.secondary">100%</Typography>
+                  </Box>
+                </Box>
+                
+                {/* Download Filter */}
+                <Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <ArrowDownwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>Download Rate</Typography>
+                  </Box>
+                  <Tooltip title={`Download ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}`} arrow placement="top">
+                    <Slider
+                      value={filters.download}
+                      onChange={(_, newValue) => updateFilter('download', newValue)}
+                      onMouseDown={() => handleSliderDragStart('download')}
+                      onMouseUp={handleSliderDragEnd}
+                      aria-labelledby="download-filter-slider"
+                      valueLabelDisplay="auto"
+                      valueLabelFormat={value => formatNetworkRateForFilter(sliderValueToNetworkRate(value))}
+                      sx={{
+                        color: theme => alpha(theme.palette.primary.main, filters.download > 0 ? 0.8 : 0.4),
+                        height: 4,
+                        '& .MuiSlider-thumb': {
+                          height: 14,
+                          width: 14,
+                          '&:hover, &.Mui-focusVisible': {
+                            boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
+                          }
+                        },
+                        '& .MuiSlider-valueLabel': {
+                          fontWeight: 'bold',
+                          lineHeight: 1.2
+                        }
+                      }}
+                    />
+                  </Tooltip>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                    <Typography variant="caption" color="text.secondary">0 B/s</Typography>
+                    <Typography variant="caption" color="text.secondary">10 MB/s</Typography>
+                  </Box>
+                </Box>
+                
+                {/* Upload Filter */}
+                <Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <ArrowUpwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>Upload Rate</Typography>
+                  </Box>
+                  <Tooltip title={`Upload ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}`} arrow placement="top">
+                    <Slider
+                      value={filters.upload}
+                      onChange={(_, newValue) => updateFilter('upload', newValue)}
+                      onMouseDown={() => handleSliderDragStart('upload')}
+                      onMouseUp={handleSliderDragEnd}
+                      aria-labelledby="upload-filter-slider"
+                      valueLabelDisplay="auto"
+                      valueLabelFormat={value => formatNetworkRateForFilter(sliderValueToNetworkRate(value))}
+                      sx={{
+                        color: theme => alpha(theme.palette.secondary.main, filters.upload > 0 ? 0.8 : 0.4),
+                        height: 4,
+                        '& .MuiSlider-thumb': {
+                          height: 14,
+                          width: 14,
+                          '&:hover, &.Mui-focusVisible': {
+                            boxShadow: `0px 0px 0px 8px ${alpha('#9c27b0', 0.16)}`
+                          }
+                        },
+                        '& .MuiSlider-valueLabel': {
+                          fontWeight: 'bold',
+                          lineHeight: 1.2
+                        }
+                      }}
+                    />
+                  </Tooltip>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                    <Typography variant="caption" color="text.secondary">0 B/s</Typography>
+                    <Typography variant="caption" color="text.secondary">10 MB/s</Typography>
+                  </Box>
+                </Box>
+              </Box>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+                <Chip 
+                  label="Reset All Filters" 
+                  onClick={resetFilters}
+                  variant="outlined"
+                  size="small"
+                  color="primary"
+                  sx={{ height: 28 }}
+                />
+              </Box>
+            </Box>
+          </Collapse>
+          
           <TableContainer 
             component={Paper} 
             sx={{ 
@@ -967,683 +1189,157 @@ const NetworkDisplay = () => {
                     transition: 'padding 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-height 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
                   }
                 }}>
-                  <TableCell width="18%" sx={{ 
-                    fontWeight: 'bold', 
-                    minHeight: '48px', 
-                    position: 'relative',
-                    py: showFilters ? 1 : 1.5  // Add consistent padding
-                  }}>
-                    <TableSortLabel
-                      active={sortConfig.key === 'name'}
-                      direction={sortConfig.key === 'name' ? sortConfig.direction : 'asc'}
-                      onClick={() => requestSort('name')}
-                      sx={{ height: '24px' }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', height: '24px' }}>
-                        <PersonIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                        Guest Name
-                      </Box>
-                    </TableSortLabel>
-                    
-                    {/* Hidden slider container for Guest Name to match other columns structure */}
-                    <Box 
-                      sx={{ 
-                        position: 'relative',
-                        marginTop: showFilters ? 0.5 : 0,
-                        marginBottom: showFilters ? 0.5 : 0,
-                        height: showFilters ? '32px' : 0,
-                        opacity: showFilters ? 1 : 0,
-                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                        overflow: 'hidden',
-                        display: 'block',
-                        visibility: 'hidden' // Always hidden but takes up space
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                        <Box sx={{ width: '100%', position: 'relative' }}>
-                          {/* Empty placeholder to maintain spacing */}
+                  <TableCell 
+                    width="18%" 
+                    onClick={() => requestSort('name')}
+                    sx={{ 
+                      fontWeight: 'bold', 
+                      minHeight: '48px', 
+                      position: 'relative',
+                      cursor: 'pointer', 
+                      '&:hover': {
+                        backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                      }
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <PersonIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                      Guest Name
+                      {sortConfig.key === 'name' && (
+                        <Box sx={{ ml: 0.5 }}>
+                          {sortConfig.direction === 'asc' ? '↑' : '↓'}
                         </Box>
-                      </Box>
+                      )}
                     </Box>
                   </TableCell>
                   
                   {/* CPU Column */}
-                  <TableCell width="19%" sx={{ 
-                    fontWeight: 'bold', 
-                    minHeight: '48px', 
-                    position: 'relative',
-                    py: showFilters ? 1 : 1.5  // Add consistent padding
-                  }} ref={cpuColumnRef}>
-                    <TableSortLabel
-                      active={sortConfig.key === 'cpu'}
-                      direction={sortConfig.key === 'cpu' ? sortConfig.direction : 'asc'}
-                      onClick={() => requestSort('cpu')}
-                      sx={{ height: '24px' }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', height: '24px' }}>
-                        <SpeedIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                        CPU
-                      </Box>
-                    </TableSortLabel>
-                    
-                    {/* Always rendered slider container, visibility controlled by CSS */}
-                    <Box 
-                      sx={{ 
-                        position: 'relative',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        height: showFilters ? '36px' : 0,
-                        marginTop: showFilters ? 0.5 : 0,
-                        marginBottom: showFilters ? 0.5 : 0,
-                        opacity: showFilters ? 1 : 0,
-                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                        overflow: 'visible',
-                      }}
-                    >
-                      <Box sx={{ width: '100%', position: 'relative' }}>
-                        <LinearProgress 
-                          variant="determinate" 
-                          value={filters.cpu} 
-                          color="primary"
-                          sx={{ 
-                            height: 3,
-                            borderRadius: 4,
-                            backgroundColor: theme => alpha(theme.palette.primary.main, 0.1),
-                            boxShadow: 'none',
-                            '& .MuiLinearProgress-bar': {
-                              borderRadius: 4,
-                              boxShadow: 'none',
-                              transition: 'none'
-                            }
-                          }} 
-                        />
-                        <Slider
-                          value={filters.cpu}
-                          onChange={(e, newValue) => updateFilter('cpu', newValue)}
-                          onChangeCommitted={handleSliderDragEnd}
-                          onMouseDown={() => handleSliderDragStart('cpu')}
-                          aria-label="CPU filter"
-                          size="small"
-                          sx={{ 
-                            position: 'absolute', 
-                            top: -5,
-                            width: '100%', 
-                            padding: '4px 0',
-                            margin: 0,
-                            opacity: showFilters ? 1 : 0,
-                            visibility: showFilters ? 'visible' : 'hidden',
-                            transition: 'opacity 0.1s ease, visibility 0s',
-                            zIndex: 1,
-                            '& .MuiSlider-rail': { 
-                              opacity: 0.3,
-                              background: 'linear-gradient(90deg, rgba(25,118,210,0.1) 0%, rgba(25,118,210,0.3) 100%)',
-                              height: 4,
-                              borderRadius: 2
-                            },
-                            '& .MuiSlider-track': { 
-                              opacity: 0.8,
-                              background: 'linear-gradient(90deg, rgba(25,118,210,0.6) 0%, rgba(25,118,210,0.9) 100%)',
-                              height: 4,
-                              borderRadius: 2,
-                              border: 'none'
-                            },
-                            '& .MuiSlider-thumb': { 
-                              width: 16,
-                              height: 16,
-                              bgcolor: '#fff',
-                              border: '2px solid #1976d2',
-                              boxShadow: '0 2px 4px 0 rgba(0,0,0,0.2)',
-                              transition: 'all 0.2s ease',
-                              '&:hover, &.Mui-focusVisible': { 
-                                boxShadow: '0 0 0 8px rgba(25, 118, 210, 0.16)',
-                                borderWidth: '2px',
-                                width: 18,
-                                height: 18
-                              },
-                              '&:before': {
-                                boxShadow: 'none'
-                              },
-                              '&:after': {
-                                width: 36,
-                                height: 36
-                              },
-                              '&.Mui-active': {
-                                boxShadow: '0 0 0 12px rgba(25, 118, 210, 0.16)',
-                                width: 20,
-                                height: 20
-                              }
-                            },
-                            '& .MuiSlider-valueLabel': {
-                              backgroundColor: theme => theme.palette.primary.main,
-                              padding: '4px 6px',
-                              borderRadius: 4,
-                              fontSize: '0.75rem',
-                              fontWeight: 'bold',
-                              display: activeSlider === 'cpu' ? 'block' : 'none',
-                              boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-                              '&:before': {
-                                borderBottom: 'none',
-                                borderRight: 'none'
-                              }
-                            }
-                          }}
-                          valueLabelDisplay="auto"
-                          valueLabelFormat={value => `${formatPercentage(value)}`}
-                        />
-                      </Box>
+                  <TableCell 
+                    width="19%" 
+                    ref={cpuColumnRef} 
+                    onClick={() => requestSort('cpu')}
+                    sx={{ 
+                      fontWeight: 'bold', 
+                      minHeight: '48px', 
+                      position: 'relative',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                      }
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <SpeedIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                      CPU
+                      {sortConfig.key === 'cpu' && (
+                        <Box sx={{ ml: 0.5 }}>
+                          {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                        </Box>
+                      )}
                     </Box>
                   </TableCell>
                   
                   {/* Memory Column */}
-                  <TableCell width="19%" sx={{ 
-                    fontWeight: 'bold', 
-                    minHeight: '48px', 
-                    position: 'relative',
-                    py: showFilters ? 1 : 1.5  // Add consistent padding
-                  }} ref={memoryColumnRef}>
-                    <TableSortLabel
-                      active={sortConfig.key === 'memory'}
-                      direction={sortConfig.key === 'memory' ? sortConfig.direction : 'asc'}
-                      onClick={() => requestSort('memory')}
-                      sx={{ height: '24px' }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', height: '24px' }}>
-                        <MemoryIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                        Memory
-                      </Box>
-                    </TableSortLabel>
-                    
-                    {/* Always rendered slider container, visibility controlled by CSS */}
-                    <Box 
-                      sx={{ 
-                        position: 'relative',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        height: showFilters ? '36px' : 0,
-                        marginTop: showFilters ? 0.5 : 0,
-                        marginBottom: showFilters ? 0.5 : 0,
-                        opacity: showFilters ? 1 : 0,
-                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                        overflow: 'visible',
-                      }}
-                    >
-                      <Box sx={{ width: '100%', position: 'relative' }}>
-                        <LinearProgress 
-                          variant="determinate" 
-                          value={filters.memory} 
-                          color="primary"
-                          sx={{ 
-                            height: 3,
-                            borderRadius: 4,
-                            backgroundColor: theme => alpha(theme.palette.primary.main, 0.1),
-                            boxShadow: 'none',
-                            '& .MuiLinearProgress-bar': {
-                              borderRadius: 4,
-                              boxShadow: 'none',
-                              transition: 'none'
-                            }
-                          }} 
-                        />
-                        <Slider
-                          value={filters.memory}
-                          onChange={(e, newValue) => updateFilter('memory', newValue)}
-                          onChangeCommitted={handleSliderDragEnd}
-                          onMouseDown={() => handleSliderDragStart('memory')}
-                          aria-label="Memory filter"
-                          size="small"
-                          sx={{ 
-                            position: 'absolute', 
-                            top: -5,
-                            width: '100%', 
-                            padding: '4px 0',
-                            margin: 0,
-                            opacity: showFilters ? 1 : 0,
-                            visibility: showFilters ? 'visible' : 'hidden',
-                            transition: 'opacity 0.1s ease, visibility 0s',
-                            zIndex: 1,
-                            '& .MuiSlider-rail': { 
-                              opacity: 0.3,
-                              background: 'linear-gradient(90deg, rgba(25,118,210,0.1) 0%, rgba(25,118,210,0.3) 100%)',
-                              height: 4,
-                              borderRadius: 2
-                            },
-                            '& .MuiSlider-track': { 
-                              opacity: 0.8,
-                              background: 'linear-gradient(90deg, rgba(25,118,210,0.6) 0%, rgba(25,118,210,0.9) 100%)',
-                              height: 4,
-                              borderRadius: 2,
-                              border: 'none'
-                            },
-                            '& .MuiSlider-thumb': { 
-                              width: 16,
-                              height: 16,
-                              bgcolor: '#fff',
-                              border: '2px solid #1976d2',
-                              boxShadow: '0 2px 4px 0 rgba(0,0,0,0.2)',
-                              transition: 'all 0.2s ease',
-                              '&:hover, &.Mui-focusVisible': { 
-                                boxShadow: '0 0 0 8px rgba(25, 118, 210, 0.16)',
-                                borderWidth: '2px',
-                                width: 18,
-                                height: 18
-                              },
-                              '&:before': {
-                                boxShadow: 'none'
-                              },
-                              '&:after': {
-                                width: 36,
-                                height: 36
-                              },
-                              '&.Mui-active': {
-                                boxShadow: '0 0 0 12px rgba(25, 118, 210, 0.16)',
-                                width: 20,
-                                height: 20
-                              }
-                            },
-                            '& .MuiSlider-valueLabel': {
-                              backgroundColor: theme => theme.palette.primary.main,
-                              padding: '4px 6px',
-                              borderRadius: 4,
-                              fontSize: '0.75rem',
-                              fontWeight: 'bold',
-                              display: activeSlider === 'memory' ? 'block' : 'none',
-                              boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-                              '&:before': {
-                                borderBottom: 'none',
-                                borderRight: 'none'
-                              }
-                            }
-                          }}
-                          valueLabelDisplay="auto"
-                          valueLabelFormat={value => `${formatPercentage(value)}`}
-                        />
-                      </Box>
+                  <TableCell 
+                    width="19%" 
+                    ref={memoryColumnRef}
+                    onClick={() => requestSort('memory')}
+                    sx={{ 
+                      fontWeight: 'bold', 
+                      minHeight: '48px', 
+                      position: 'relative',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                      }
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <MemoryIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                      Memory
+                      {sortConfig.key === 'memory' && (
+                        <Box sx={{ ml: 0.5 }}>
+                          {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                        </Box>
+                      )}
                     </Box>
                   </TableCell>
                   
                   {/* Disk Column */}
-                  <TableCell width="19%" sx={{ 
-                    fontWeight: 'bold', 
-                    minHeight: '48px', 
-                    position: 'relative',
-                    py: showFilters ? 1 : 1.5  // Add consistent padding
-                  }} ref={diskColumnRef}>
-                    <TableSortLabel
-                      active={sortConfig.key === 'disk'}
-                      direction={sortConfig.key === 'disk' ? sortConfig.direction : 'asc'}
-                      onClick={() => requestSort('disk')}
-                      sx={{ height: '24px' }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', height: '24px' }}>
-                        <StorageIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                        Disk
-                      </Box>
-                    </TableSortLabel>
-                    
-                    {/* Always rendered slider container, visibility controlled by CSS */}
-                    <Box 
-                      sx={{ 
-                        position: 'relative',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        height: showFilters ? '36px' : 0,
-                        marginTop: showFilters ? 0.5 : 0,
-                        marginBottom: showFilters ? 0.5 : 0,
-                        opacity: showFilters ? 1 : 0,
-                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                        overflow: 'visible',
-                      }}
-                    >
-                      <Box sx={{ width: '100%', position: 'relative' }}>
-                        <LinearProgress 
-                          variant="determinate" 
-                          value={filters.disk} 
-                          color="primary"
-                          sx={{ 
-                            height: 3,
-                            borderRadius: 4,
-                            backgroundColor: theme => alpha(theme.palette.primary.main, 0.1),
-                            boxShadow: 'none',
-                            '& .MuiLinearProgress-bar': {
-                              borderRadius: 4,
-                              boxShadow: 'none',
-                              transition: 'none'
-                            }
-                          }} 
-                        />
-                        <Slider
-                          value={filters.disk}
-                          onChange={(e, newValue) => updateFilter('disk', newValue)}
-                          onChangeCommitted={handleSliderDragEnd}
-                          onMouseDown={() => handleSliderDragStart('disk')}
-                          aria-label="Disk filter"
-                          size="small"
-                          sx={{ 
-                            position: 'absolute', 
-                            top: -5,
-                            width: '100%', 
-                            padding: '4px 0',
-                            margin: 0,
-                            opacity: showFilters ? 1 : 0,
-                            visibility: showFilters ? 'visible' : 'hidden',
-                            transition: 'opacity 0.1s ease, visibility 0s',
-                            zIndex: 1,
-                            '& .MuiSlider-rail': { 
-                              opacity: 0.3,
-                              background: 'linear-gradient(90deg, rgba(25,118,210,0.1) 0%, rgba(25,118,210,0.3) 100%)',
-                              height: 4,
-                              borderRadius: 2
-                            },
-                            '& .MuiSlider-track': { 
-                              opacity: 0.8,
-                              background: 'linear-gradient(90deg, rgba(25,118,210,0.6) 0%, rgba(25,118,210,0.9) 100%)',
-                              height: 4,
-                              borderRadius: 2,
-                              border: 'none'
-                            },
-                            '& .MuiSlider-thumb': { 
-                              width: 16,
-                              height: 16,
-                              bgcolor: '#fff',
-                              border: '2px solid #1976d2',
-                              boxShadow: '0 2px 4px 0 rgba(0,0,0,0.2)',
-                              transition: 'all 0.2s ease',
-                              '&:hover, &.Mui-focusVisible': { 
-                                boxShadow: '0 0 0 8px rgba(25, 118, 210, 0.16)',
-                                borderWidth: '2px',
-                                width: 18,
-                                height: 18
-                              },
-                              '&:before': {
-                                boxShadow: 'none'
-                              },
-                              '&:after': {
-                                width: 36,
-                                height: 36
-                              },
-                              '&.Mui-active': {
-                                boxShadow: '0 0 0 12px rgba(25, 118, 210, 0.16)',
-                                width: 20,
-                                height: 20
-                              }
-                            },
-                            '& .MuiSlider-valueLabel': {
-                              backgroundColor: theme => theme.palette.primary.main,
-                              padding: '4px 6px',
-                              borderRadius: 4,
-                              fontSize: '0.75rem',
-                              fontWeight: 'bold',
-                              display: activeSlider === 'disk' ? 'block' : 'none',
-                              boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-                              '&:before': {
-                                borderBottom: 'none',
-                                borderRight: 'none'
-                              }
-                            }
-                          }}
-                          valueLabelDisplay="auto"
-                          valueLabelFormat={value => `${formatPercentage(value)}`}
-                        />
-                      </Box>
+                  <TableCell 
+                    width="19%" 
+                    ref={diskColumnRef}
+                    onClick={() => requestSort('disk')}
+                    sx={{ 
+                      fontWeight: 'bold', 
+                      minHeight: '48px', 
+                      position: 'relative',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                      }
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <StorageIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                      Disk
+                      {sortConfig.key === 'disk' && (
+                        <Box sx={{ ml: 0.5 }}>
+                          {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                        </Box>
+                      )}
                     </Box>
                   </TableCell>
                   
                   {/* Download Column */}
-                  <TableCell width="12.5%" sx={{ 
-                    fontWeight: 'bold', 
-                    minHeight: '48px', 
-                    position: 'relative',
-                    py: showFilters ? 1 : 1.5  // Add consistent padding
-                  }} ref={downloadColumnRef}>
-                    <TableSortLabel
-                      active={sortConfig.key === 'download'}
-                      direction={sortConfig.key === 'download' ? sortConfig.direction : 'asc'}
-                      onClick={() => requestSort('download')}
-                      sx={{ height: '24px' }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', height: '24px' }}>
-                        <ArrowDownwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                        Download
-                      </Box>
-                    </TableSortLabel>
-                    
-                    {/* Always rendered slider container, visibility controlled by CSS */}
-                    <Box 
-                      sx={{ 
-                        position: 'relative',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        height: showFilters ? '36px' : 0,
-                        marginTop: showFilters ? 0.5 : 0,
-                        marginBottom: showFilters ? 0.5 : 0,
-                        opacity: showFilters ? 1 : 0,
-                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                        overflow: 'visible',
-                      }}
-                    >
-                      <Box sx={{ width: '100%', position: 'relative' }}>
-                        <LinearProgress 
-                          variant="determinate" 
-                          value={filters.download} 
-                          color="primary"
-                          sx={{ 
-                            height: 3,
-                            borderRadius: 4,
-                            backgroundColor: theme => alpha(theme.palette.primary.main, 0.1),
-                            boxShadow: 'none',
-                            '& .MuiLinearProgress-bar': {
-                              borderRadius: 4,
-                              boxShadow: 'none',
-                              transition: 'none'
-                            }
-                          }} 
-                        />
-                        <Slider
-                          value={filters.download}
-                          onChange={(e, newValue) => updateFilter('download', newValue)}
-                          onChangeCommitted={handleSliderDragEnd}
-                          onMouseDown={() => handleSliderDragStart('download')}
-                          aria-label="Download filter"
-                          size="small"
-                          sx={{ 
-                            position: 'absolute', 
-                            top: -5,
-                            width: '100%', 
-                            padding: '4px 0',
-                            margin: 0,
-                            opacity: showFilters ? 1 : 0,
-                            visibility: showFilters ? 'visible' : 'hidden',
-                            transition: 'opacity 0.1s ease, visibility 0s',
-                            zIndex: 1,
-                            '& .MuiSlider-rail': { 
-                              opacity: 0.3,
-                              background: 'linear-gradient(90deg, rgba(25,118,210,0.1) 0%, rgba(25,118,210,0.3) 100%)',
-                              height: 4,
-                              borderRadius: 2
-                            },
-                            '& .MuiSlider-track': { 
-                              opacity: 0.8,
-                              background: 'linear-gradient(90deg, rgba(25,118,210,0.6) 0%, rgba(25,118,210,0.9) 100%)',
-                              height: 4,
-                              borderRadius: 2,
-                              border: 'none'
-                            },
-                            '& .MuiSlider-thumb': { 
-                              width: 16,
-                              height: 16,
-                              bgcolor: '#fff',
-                              border: '2px solid #1976d2',
-                              boxShadow: '0 2px 4px 0 rgba(0,0,0,0.2)',
-                              transition: 'all 0.2s ease',
-                              '&:hover, &.Mui-focusVisible': { 
-                                boxShadow: '0 0 0 8px rgba(25, 118, 210, 0.16)',
-                                borderWidth: '2px',
-                                width: 18,
-                                height: 18
-                              },
-                              '&:before': {
-                                boxShadow: 'none'
-                              },
-                              '&:after': {
-                                width: 36,
-                                height: 36
-                              },
-                              '&.Mui-active': {
-                                boxShadow: '0 0 0 12px rgba(25, 118, 210, 0.16)',
-                                width: 20,
-                                height: 20
-                              }
-                            },
-                            '& .MuiSlider-valueLabel': {
-                              backgroundColor: theme => theme.palette.primary.main,
-                              padding: '4px 6px',
-                              borderRadius: 4,
-                              fontSize: '0.75rem',
-                              fontWeight: 'bold',
-                              display: activeSlider === 'download' ? 'block' : 'none',
-                              boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-                              '&:before': {
-                                borderBottom: 'none',
-                                borderRight: 'none'
-                              }
-                            }
-                          }}
-                          valueLabelDisplay="auto"
-                          valueLabelFormat={value => `${formatNetworkRateForFilter(sliderValueToNetworkRate(value))}`}
-                        />
-                      </Box>
+                  <TableCell 
+                    width="12%" 
+                    ref={downloadColumnRef}
+                    onClick={() => requestSort('download')}
+                    sx={{ 
+                      fontWeight: 'bold', 
+                      minHeight: '48px', 
+                      position: 'relative',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                      }
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <ArrowDownwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                      Download
+                      {sortConfig.key === 'download' && (
+                        <Box sx={{ ml: 0.5 }}>
+                          {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                        </Box>
+                      )}
                     </Box>
                   </TableCell>
                   
                   {/* Upload Column */}
-                  <TableCell width="12.5%" sx={{ 
-                    fontWeight: 'bold', 
-                    minHeight: '48px', 
-                    position: 'relative',
-                    py: showFilters ? 1 : 1.5  // Add consistent padding
-                  }} ref={uploadColumnRef}>
-                    <TableSortLabel
-                      active={sortConfig.key === 'upload'}
-                      direction={sortConfig.key === 'upload' ? sortConfig.direction : 'asc'}
-                      onClick={() => requestSort('upload')}
-                      sx={{ height: '24px' }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', height: '24px' }}>
-                        <ArrowUpwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                        Upload
-                      </Box>
-                    </TableSortLabel>
-                    
-                    {/* Always rendered slider container, visibility controlled by CSS */}
-                    <Box 
-                      sx={{ 
-                        position: 'relative',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        height: showFilters ? '36px' : 0,
-                        marginTop: showFilters ? 0.5 : 0,
-                        marginBottom: showFilters ? 0.5 : 0,
-                        opacity: showFilters ? 1 : 0,
-                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                        overflow: 'visible',
-                      }}
-                    >
-                      <Box sx={{ width: '100%', position: 'relative' }}>
-                        <LinearProgress 
-                          variant="determinate" 
-                          value={filters.upload} 
-                          color="secondary"
-                          sx={{ 
-                            height: 3,
-                            borderRadius: 4,
-                            backgroundColor: theme => alpha(theme.palette.secondary.main, 0.1),
-                            boxShadow: 'none',
-                            '& .MuiLinearProgress-bar': {
-                              borderRadius: 4,
-                              boxShadow: 'none',
-                              transition: 'none'
-                            }
-                          }} 
-                        />
-                        <Slider
-                          value={filters.upload}
-                          onChange={(e, newValue) => updateFilter('upload', newValue)}
-                          onChangeCommitted={handleSliderDragEnd}
-                          onMouseDown={() => handleSliderDragStart('upload')}
-                          aria-label="Upload filter"
-                          size="small"
-                          sx={{ 
-                            position: 'absolute', 
-                            top: -5,
-                            width: '100%', 
-                            padding: '4px 0',
-                            margin: 0,
-                            opacity: showFilters ? 1 : 0,
-                            visibility: showFilters ? 'visible' : 'hidden',
-                            transition: 'opacity 0.1s ease, visibility 0s',
-                            zIndex: 1,
-                            '& .MuiSlider-rail': { 
-                              opacity: 0.3,
-                              background: 'linear-gradient(90deg, rgba(156,39,176,0.1) 0%, rgba(156,39,176,0.3) 100%)',
-                              height: 4,
-                              borderRadius: 2
-                            },
-                            '& .MuiSlider-track': { 
-                              opacity: 0.8,
-                              background: 'linear-gradient(90deg, rgba(156,39,176,0.6) 0%, rgba(156,39,176,0.9) 100%)',
-                              height: 4,
-                              borderRadius: 2,
-                              border: 'none'
-                            },
-                            '& .MuiSlider-thumb': { 
-                              width: 16,
-                              height: 16,
-                              bgcolor: '#fff',
-                              border: '2px solid #9c27b0',
-                              boxShadow: '0 2px 4px 0 rgba(0,0,0,0.2)',
-                              transition: 'all 0.2s ease',
-                              '&:hover, &.Mui-focusVisible': { 
-                                boxShadow: '0 0 0 8px rgba(156, 39, 176, 0.16)',
-                                borderWidth: '2px',
-                                width: 18,
-                                height: 18
-                              },
-                              '&:before': {
-                                boxShadow: 'none'
-                              },
-                              '&:after': {
-                                width: 36,
-                                height: 36
-                              },
-                              '&.Mui-active': {
-                                boxShadow: '0 0 0 12px rgba(156, 39, 176, 0.16)',
-                                width: 20,
-                                height: 20
-                              }
-                            },
-                            '& .MuiSlider-valueLabel': {
-                              backgroundColor: theme => theme.palette.secondary.main,
-                              padding: '4px 6px',
-                              borderRadius: 4,
-                              fontSize: '0.75rem',
-                              fontWeight: 'bold',
-                              display: activeSlider === 'upload' ? 'block' : 'none',
-                              boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-                              '&:before': {
-                                borderBottom: 'none',
-                                borderRight: 'none'
-                              }
-                            }
-                          }}
-                          valueLabelDisplay="auto"
-                          valueLabelFormat={value => `${formatNetworkRateForFilter(sliderValueToNetworkRate(value))}`}
-                        />
-                      </Box>
+                  <TableCell 
+                    width="13%" 
+                    ref={uploadColumnRef}
+                    onClick={() => requestSort('upload')}
+                    sx={{ 
+                      fontWeight: 'bold', 
+                      minHeight: '48px', 
+                      position: 'relative',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                      }
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <ArrowUpwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                      Upload
+                      {sortConfig.key === 'upload' && (
+                        <Box sx={{ ml: 0.5 }}>
+                          {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                        </Box>
+                      )}
                     </Box>
                   </TableCell>
                 </TableRow>
