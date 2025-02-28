@@ -17,6 +17,9 @@ build/
 logs/
 *.log
 
+# Reports
+reports/
+
 # IDE and editor files
 .idea/
 .vscode/

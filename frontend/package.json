@@ -25,5 +25,9 @@
     "recharts": "^2.15.1",
     "socket.io-client": "^4.8.1",
     "vite": "^6.2.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "kill-port": "^2.0.1"
   }
 }

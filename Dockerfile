@@ -1,28 +1,30 @@
-FROM node:18-alpine as builder
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci
-
-COPY . .
-RUN npm run build
-
 FROM node:18-alpine
 
 WORKDIR /app
 
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/dist ./dist
+# Copy package files
+COPY package*.json ./
+COPY frontend/package*.json ./frontend/
 
-RUN npm ci --only=production
+# Install dependencies
+RUN npm ci
+RUN cd frontend && npm ci
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD wget -qO- http://localhost:${PORT:-3000}/api/health || exit 1
+# Copy application files
+COPY . .
 
-# Expose the port
-EXPOSE ${PORT:-3000}
+# Make the startup script executable
+RUN chmod +x start-pulse.sh
 
-# Start the application
-CMD ["node", "dist/server.js"] 
+# Set environment variables
+ENV NODE_ENV=development
+ENV LOG_LEVEL=info
+ENV ENABLE_DEV_TOOLS=true
+ENV PORT=3000
+ENV DOCKER_CONTAINER=true
+
+# Expose the backend and frontend ports
+EXPOSE 3000 5173
+
+# Start both the backend and frontend (using the start-pulse.sh script)
+CMD ["./start-pulse.sh"] 

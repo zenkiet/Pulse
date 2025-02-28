@@ -31,24 +31,37 @@ import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import FilterAltOffIcon from '@mui/icons-material/FilterAltOff';
 import MemoryIcon from '@mui/icons-material/Memory';
 import StorageIcon from '@mui/icons-material/Storage';
-import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import SpeedIcon from '@mui/icons-material/Speed';
 import SearchIcon from '@mui/icons-material/Search';
 import CancelIcon from '@mui/icons-material/Cancel';
 import CloseIcon from '@mui/icons-material/Close';
+import PersonIcon from '@mui/icons-material/Person';
 import InputBase from '@mui/material/InputBase';
 
 // Define pulse animation
 const pulseAnimation = keyframes`
   0% {
-    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4);
+    box-shadow: 0 0 0 0 rgba(58, 123, 213, 0.4);
   }
   70% {
-    box-shadow: 0 0 0 6px rgba(76, 175, 80, 0);
+    box-shadow: 0 0 0 6px rgba(58, 123, 213, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+    box-shadow: 0 0 0 0 rgba(58, 123, 213, 0);
+  }
+`;
+
+// Add fade-in animation
+const fadeIn = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 `;
 
@@ -105,83 +118,89 @@ const networkRateToSliderValue = (bytesPerSecond) => {
 
 // Progress bar with label and tooltip
 const ProgressWithLabel = ({ value, color = "primary", disabled = false, tooltipText }) => {
-  return (
-    <Tooltip title={tooltipText || `${formatPercentage(value)} usage`} arrow placement="top">
-      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', py: 1 }}>
-        <Box sx={{ width: '100%', mr: 1.5 }}>
-          <LinearProgress 
-            variant="determinate" 
-            value={Math.min(value, 100)} 
-            color={color}
-            sx={{ 
-              opacity: disabled ? 0.5 : 1,
-              height: 12,
-              borderRadius: 2,
-              backgroundColor: theme => theme.palette.grey[200],
-              boxShadow: '0 1px 2px rgba(0,0,0,0.05) inset',
-              '& .MuiLinearProgress-bar': {
-                borderRadius: 2,
-                boxShadow: '0 1px 0 rgba(255,255,255,0.3) inset'
-              }
-            }} 
-          />
-        </Box>
-        <Box sx={{ minWidth: 45 }}>
-          <Typography 
-            variant="body2"
-            fontWeight="medium"
-            color={disabled ? "text.disabled" : "text.secondary"}
-          >
-            {formatPercentage(value)}
-          </Typography>
-        </Box>
+  const normalizedValue = Math.min(Math.max(0, value), 100);
+  
+  const progressBar = (
+    <Box sx={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      width: '100%',
+      opacity: disabled ? 0.5 : 1,
+    }}>
+      <Box sx={{ width: '100%', mr: 1 }}>
+        <LinearProgress 
+          variant="determinate" 
+          value={normalizedValue} 
+          color={color}
+          sx={{
+            height: 8,
+            borderRadius: 4,
+            backgroundColor: theme => alpha(theme.palette.grey[300], 0.5),
+            '& .MuiLinearProgress-bar': {
+              borderRadius: 4,
+              transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+            }
+          }}
+        />
       </Box>
-    </Tooltip>
+      <Box sx={{ minWidth: 35 }}>
+        <Typography 
+          variant="body2" 
+          color="text.secondary"
+          sx={{ 
+            fontWeight: 500,
+            fontSize: '0.75rem',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {formatPercentage(normalizedValue)}
+        </Typography>
+      </Box>
+    </Box>
   );
+  
+  if (tooltipText) {
+    return (
+      <Tooltip title={tooltipText} arrow placement="top">
+        {progressBar}
+      </Tooltip>
+    );
+  }
+  
+  return progressBar;
 };
 
 // Status indicator circle
 const StatusIndicator = ({ status }) => {
-  // Map status to color and display text
-  const statusMap = {
-    'running': { color: '#4caf50', text: 'Running', animate: true },      // Green
-    'stopped': { color: '#ff9800', text: 'Stopped', animate: false },     // Amber/Orange
-    'paused': { color: '#2196f3', text: 'Paused', animate: false },       // Blue
-    'error': { color: '#f44336', text: 'Error', animate: true },          // Red
-    'starting': { color: '#9c27b0', text: 'Starting', animate: true },    // Purple
-    'stopping': { color: '#795548', text: 'Stopping', animate: true }     // Brown
-  };
+  let color = 'grey';
   
-  // Default values for unknown status
-  const statusInfo = statusMap[status] || { color: '#9e9e9e', text: status, animate: false }; // Gray for unknown
+  switch (status.toLowerCase()) {
+    case 'running':
+      color = '#4caf50'; // success green
+      break;
+    case 'stopped':
+      color = '#f44336'; // error red
+      break;
+    case 'paused':
+      color = '#ff9800'; // warning orange
+      break;
+    default:
+      color = '#9e9e9e'; // grey
+  }
   
   return (
-    <Tooltip title={statusInfo.text} arrow placement="top">
-      <Box
-        sx={{
-          width: 10,
-          height: 10,
-          borderRadius: '50%',
-          backgroundColor: statusInfo.color,
-          display: 'inline-block',
-          boxShadow: '0 0 3px rgba(0,0,0,0.3)',
-          animation: statusInfo.animate ? `${pulseAnimation} 2s infinite` : 'none',
-          position: 'relative',
-          '&::after': statusInfo.animate ? {
-            content: '""',
-            position: 'absolute',
-            top: -2,
-            left: -2,
-            width: 14,
-            height: 14,
-            borderRadius: '50%',
-            backgroundColor: 'transparent',
-            boxShadow: `0 0 5px 1px ${statusInfo.color}99`,
-            opacity: 0.7
-          } : {}
-        }}
-      />
-    </Tooltip>
+    <Box
+      sx={{
+        width: 10,
+        height: 10,
+        borderRadius: '50%',
+        bgcolor: color,
+        boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.8)',
+        ...(status.toLowerCase() === 'running' && {
+          animation: `${pulseAnimation} 2s infinite`
+        })
+      }}
+    />
   );
 };
 
@@ -222,6 +241,7 @@ const NetworkDisplay = () => {
     download: 0,
     upload: 0
   });
+  const [activeSlider, setActiveSlider] = useState(null);
   
   // Function to reset all filters - wrap in useCallback to prevent infinite renders
   const resetFilters = useCallback(() => {
@@ -236,29 +256,51 @@ const NetworkDisplay = () => {
     setActiveSearchTerms([]);
   }, []);
   
+  // Function to clear all filters and reset sorting to default
+  const clearAllFiltersAndSorting = useCallback(() => {
+    resetFilters();
+    
+    // Reset sorting to default
+    setSortConfig({
+      key: 'name',
+      direction: 'asc'
+    });
+  }, [resetFilters]);
+  
   // Add event listeners for keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Reset all filters when ESC is pressed
+      // Handle ESC key behavior
       if (e.key === 'Escape') {
-        resetFilters();
+        // Reset everything to defaults with a single ESC press
+        const isSearchInputFocused = document.activeElement === searchInputRef.current;
         
-        // If the search input is focused, blur it
-        if (document.activeElement === searchInputRef.current) {
+        // If search is focused, blur it
+        if (isSearchInputFocused) {
           searchInputRef.current.blur();
         }
+        
+        // Close filters if open
+        if (showFilters) {
+          setShowFilters(false);
+        }
+        
+        // Clear all filters and reset sorting
+        clearAllFiltersAndSorting();
+        
+        // Prevent default action
+        e.preventDefault();
         return;
       }
       
-      // If filters are visible and user starts typing, focus the search input
+      // If user starts typing, focus the search input without opening filters
       // Only if not already in an input field or contentEditable element
-      if (showFilters && 
-          e.key.length === 1 && 
+      if (e.key.length === 1 && 
           !/^(Control|Alt|Shift|Meta)$/.test(e.key) &&
           !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) &&
           !document.activeElement.isContentEditable) {
         
-        // Focus the search input
+        // Focus the search input without opening filters
         if (searchInputRef.current) {
           searchInputRef.current.focus();
           
@@ -279,7 +321,7 @@ const NetworkDisplay = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showFilters, resetFilters]); // resetFilters is now properly memoized
+  }, [showFilters, resetFilters, clearAllFiltersAndSorting]); // Removed escRecentlyPressed dependency
   
   // Function to add a search term to active filters
   const addSearchTerm = (term) => {
@@ -299,6 +341,21 @@ const NetworkDisplay = () => {
       ...prev,
       [filterName]: newValue
     }));
+  };
+  
+  // Function to handle slider drag start
+  const handleSliderDragStart = (filterName) => {
+    setActiveSlider(filterName);
+  };
+
+  // Function to handle slider drag end
+  const handleSliderDragEnd = () => {
+    setActiveSlider(null);
+    
+    // Remove focus from the active element to allow keyboard shortcuts to work
+    if (document.activeElement) {
+      document.activeElement.blur();
+    }
   };
   
   // Function to clear a specific filter
@@ -533,11 +590,28 @@ const NetworkDisplay = () => {
   const MAX_DOWNLOAD_RATE = 10485760; // ~10 MB/s
   const MAX_UPLOAD_RATE = 5242880;  // ~5 MB/s
   
+  // Create refs for columns to measure their widths for accurate slider positioning
+  const cpuColumnRef = React.useRef(null);
+  const memoryColumnRef = React.useRef(null);
+  const diskColumnRef = React.useRef(null);
+  const downloadColumnRef = React.useRef(null);
+  const uploadColumnRef = React.useRef(null);
+  
   if (error) {
     return (
-      <Card sx={{ mb: 2, bgcolor: '#FFF4F4' }}>
+      <Card 
+        sx={{ 
+          mb: 2, 
+          bgcolor: '#FFF4F4',
+          borderRadius: 2,
+          overflow: 'hidden',
+          border: '1px solid #ffcdd2',
+          animation: `${fadeIn} 0.3s ease-out`,
+        }}
+      >
         <CardContent>
-          <Typography color="error" variant="h6">
+          <Typography color="error" variant="h6" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+            <CancelIcon sx={{ mr: 1 }} />
             Connection Error
           </Typography>
           <Typography>{error}</Typography>
@@ -548,9 +622,18 @@ const NetworkDisplay = () => {
   
   if (!isConnected) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200 }}>
-        <CircularProgress />
-        <Typography variant="body1" sx={{ ml: 2 }}>
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: 300,
+          flexDirection: 'column',
+          animation: `${fadeIn} 0.3s ease-out`,
+        }}
+      >
+        <CircularProgress size={48} thickness={4} />
+        <Typography variant="body1" sx={{ mt: 3, fontWeight: 500 }}>
           Connecting to server...
         </Typography>
       </Box>
@@ -558,573 +641,797 @@ const NetworkDisplay = () => {
   }
   
   return (
-    <Card sx={{ borderRadius: 2, overflow: 'hidden', boxShadow: 3 }}>
-      <CardContent>
-        <Box sx={{ 
-          display: 'flex', 
-          flexWrap: 'wrap',
-          alignItems: 'center', 
-          mb: 2,
-          pb: 1.5,
-          borderBottom: theme => `1px solid ${theme.palette.grey[200]}`
-        }}>
-          {/* Title and status section */}
+    <Box sx={{ animation: `${fadeIn} 0.3s ease-out` }}>
+      <Card 
+        sx={{ 
+          mb: 3, 
+          borderRadius: 2,
+          overflow: 'visible',
+        }}
+        elevation={1}
+      >
+        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+          {/* Header section with search and controls */}
           <Box sx={{ 
             display: 'flex', 
-            alignItems: 'center', 
-            mr: 2,
-            minWidth: 200
+            flexDirection: { xs: 'column', md: 'row' },
+            alignItems: { xs: 'flex-start', md: 'center' },
+            mb: 2,
+            gap: { xs: 2, md: 0 }
           }}>
-            <NetworkCheckIcon sx={{ mr: 1.5 }} color="primary" />
-            <Box>
-              <Typography variant="h6" component="div" sx={{ fontWeight: 500, lineHeight: 1.2 }}>
-                System Metrics
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
-                <Box 
-                  sx={{ 
-                    width: 8, 
-                    height: 8, 
-                    borderRadius: '50%', 
-                    bgcolor: isConnected ? 'success.main' : 'error.main',
-                    boxShadow: theme => `0 0 0 2px ${theme.palette.background.paper}`,
-                    mr: 0.8,
-                    animation: isConnected ? `${pulseAnimation} 3s infinite` : 'none',
-                  }} 
-                />
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-                  {isConnected ? 'Live Connection' : 'Disconnected'}
-                </Typography>
-              </Box>
-            </Box>
-          </Box>
-
-          {/* Debug badge if needed */}
-          {isDebugMode && (
-            <Chip 
-              label="Debug Mode" 
-              color="warning"
-              size="small"
-              sx={{ mr: 2 }}
-            />
-          )}
-
-          <Box sx={{ flexGrow: 1 }} />
-          
-          {/* Controls section */}
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: 1.5
-          }}>
-            {/* Filter controls */}
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Tooltip title={showFilters ? "Hide filters" : "Show filters"}>
-                <Box 
-                  onClick={() => setShowFilters(!showFilters)}
-                  sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center',
-                    bgcolor: theme => (Object.values(filters).some(val => val > 0) || searchTerm)
-                      ? alpha(theme.palette.primary.main, 0.08)
-                      : alpha(theme.palette.primary.main, 0.04),
-                    borderRadius: 1,
-                    py: 0.5,
-                    px: 1.5,
-                    transition: 'all 0.2s ease-in-out',
-                    cursor: 'pointer',
-                    border: theme => (Object.values(filters).some(val => val > 0) || searchTerm) && !showFilters
-                      ? `1px solid ${alpha(theme.palette.primary.main, 0.3)}`
-                      : 'none',
-                    '&:hover': {
-                      bgcolor: theme => alpha(theme.palette.primary.main, 0.12),
+            {/* Search box */}
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              bgcolor: 'background.paper',
+              borderRadius: 2,
+              border: theme => `1px solid ${theme.palette.grey[300]}`,
+              px: 1.5,
+              py: 0.5,
+              width: { xs: '100%', md: 'auto' },
+              minWidth: { md: 220 },
+              transition: 'all 0.2s ease-in-out',
+              '&:hover': {
+                borderColor: theme => theme.palette.primary.main,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+              },
+              '&:focus-within': {
+                borderColor: theme => theme.palette.primary.main,
+                boxShadow: theme => `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`
+              }
+            }}>
+              <SearchIcon fontSize="small" sx={{ color: 'text.secondary', mr: 1 }} />
+              <InputBase
+                placeholder="Search guests..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && searchTerm.trim()) {
+                    e.preventDefault();
+                    // Add current search term to active filters
+                    addSearchTerm(searchTerm.trim());
+                    // Clear the input field
+                    setSearchTerm('');
+                    // Keep focus on the input field for the next term
+                    e.target.focus();
+                  } else if (e.key === 'Escape') {
+                    // Let the global handler handle this completely
+                    // The global handler will detect that search is focused
+                    // and both blur and collapse the filter window
+                    e.preventDefault();
+                  }
+                }}
+                fullWidth
+                size="small"
+                inputRef={searchInputRef}
+                sx={{ 
+                  fontSize: '0.875rem', 
+                  '& input': { 
+                    p: 0.5,
+                    '&::placeholder': {
+                      opacity: 0.7,
+                      fontSize: '0.875rem'
                     }
-                  }}
+                  } 
+                }}
+              />
+              {searchTerm && (
+                <IconButton 
+                  size="small" 
+                  onClick={() => setSearchTerm('')}
+                  sx={{ p: 0.3, ml: 0.5 }}
                 >
-                  <FilterAltIcon 
-                    fontSize="small" 
-                    color={(Object.values(filters).some(val => val > 0) || searchTerm) ? "primary" : (showFilters ? "primary" : "action")} 
-                    sx={{ mr: 0.8 }}
-                  />
-                  
-                  {(Object.values(filters).some(val => val > 0) || searchTerm) ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Typography variant="body2" color="primary" sx={{ fontWeight: 500 }}>
-                        {`${getSortedAndFilteredData(guestData).length}/${guestData.length}`}
-                      </Typography>
-                    </Box>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      Filters
-                    </Typography>
-                  )}
-                </Box>
-              </Tooltip>
-
-              {/* Remove the dropdown and show filter chips directly */}
-              {(Object.values(filters).some(val => val > 0) || activeSearchTerms.length > 0 || searchTerm) && (
-                <Box sx={{ 
-                  display: 'flex', 
-                  flexWrap: 'wrap',
-                  alignItems: 'center',
-                  gap: 0.75,
-                  ml: 1.5
-                }}>
-                  {/* Active search term chips */}
-                  {activeSearchTerms.map(term => (
-                    <Chip 
-                      key={term}
-                      label={`"${term}"`}
-                      onDelete={() => removeSearchTerm(term)}
-                      color="default"
-                      size="small"
-                      deleteIcon={<CancelIcon fontSize="small" />}
-                      sx={{ height: 24 }}
-                    />
-                  ))}
-                  
-                  {/* Current search term chip (shown only if not empty and not yet in activeSearchTerms) */}
-                  {searchTerm && !activeSearchTerms.includes(searchTerm) && (
-                    <Chip 
-                      label={`"${searchTerm}"`}
-                      onDelete={() => setSearchTerm('')}
-                      color="default"
-                      size="small"
-                      deleteIcon={<CancelIcon fontSize="small" />}
-                      sx={{ height: 24 }}
-                    />
-                  )}
-                  
-                  {/* CPU filter chip */}
-                  {filters.cpu > 0 && (
-                    <Chip 
-                      label={`CPU ≥ ${formatPercentage(filters.cpu)}`}
-                      onDelete={() => clearFilter('cpu')}
-                      color="primary"
-                      size="small"
-                      deleteIcon={<CancelIcon fontSize="small" />}
-                      sx={{ height: 24, '& .MuiChip-label': { fontWeight: 500 } }}
-                    />
-                  )}
-                  
-                  {/* Memory filter chip */}
-                  {filters.memory > 0 && (
-                    <Chip 
-                      label={`Mem ≥ ${formatPercentage(filters.memory)}`}
-                      onDelete={() => clearFilter('memory')}
-                      color="primary"
-                      size="small"
-                      deleteIcon={<CancelIcon fontSize="small" />}
-                      sx={{ height: 24, '& .MuiChip-label': { fontWeight: 500 } }}
-                    />
-                  )}
-                  
-                  {/* Disk filter chip */}
-                  {filters.disk > 0 && (
-                    <Chip 
-                      label={`Disk ≥ ${formatPercentage(filters.disk)}`}
-                      onDelete={() => clearFilter('disk')}
-                      color="primary"
-                      size="small"
-                      deleteIcon={<CancelIcon fontSize="small" />}
-                      sx={{ height: 24, '& .MuiChip-label': { fontWeight: 500 } }}
-                    />
-                  )}
-                  
-                  {/* Download filter chip */}
-                  {filters.download > 0 && (
-                    <Chip 
-                      label={`DL ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}`}
-                      onDelete={() => clearFilter('download')}
-                      color="primary"
-                      size="small"
-                      deleteIcon={<CancelIcon fontSize="small" />}
-                      sx={{ height: 24, '& .MuiChip-label': { fontWeight: 500 } }}
-                    />
-                  )}
-                  
-                  {/* Upload filter chip */}
-                  {filters.upload > 0 && (
-                    <Chip 
-                      label={`UL ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}`}
-                      onDelete={() => clearFilter('upload')}
-                      color="secondary"
-                      size="small"
-                      deleteIcon={<CancelIcon fontSize="small" />}
-                      sx={{ height: 24, '& .MuiChip-label': { fontWeight: 500 } }}
-                    />
-                  )}
-                  
-                  {/* Reset all filters button */}
-                  <Chip 
-                    label="Reset"
-                    onClick={resetFilters}
-                    variant="outlined"
-                    size="small"
-                    color="primary"
-                    sx={{ height: 24 }}
-                  />
-                </Box>
+                  <CloseIcon fontSize="small" />
+                </IconButton>
               )}
             </Box>
+
+            <Box sx={{ flexGrow: 1 }} />
             
-            {/* Display controls */}
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={showStopped}
-                  onChange={(e) => setShowStopped(e.target.checked)}
-                  color="primary"
-                  size="small"
-                />
-              }
-              label={<Typography variant="body2">Show stopped</Typography>}
-              sx={{ m: 0, '& .MuiFormControlLabel-label': { ml: 0.5 } }}
-            />
-          </Box>
-        </Box>
-        
-        {isDebugMode && (
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            Running in debug mode with simulated data. The server connection is unavailable.
-          </Alert>
-        )}
-        
-        <TableContainer component={Paper} sx={{ 
-          boxShadow: 2, 
-          borderRadius: 1,
-          overflow: 'hidden' 
-        }}>
-          <Table sx={{ 
-            '& tbody tr:nth-of-type(odd)': {
-              backgroundColor: theme => theme.palette.grey[50],
-            },
-            '& tbody tr': {
-              transition: 'background-color 0.15s ease-in-out',
-              '&:hover': {
-                backgroundColor: theme => theme.palette.action.hover
-              }
-            },
-            '& th': {
-              transition: 'background-color 0.2s ease'
-            }
-          }}>
-            <TableHead>
-              <TableRow sx={{ 
-                backgroundColor: theme => theme.palette.grey[100],
-                '& th': { 
-                  py: 1.75,
-                  borderBottom: theme => `2px solid ${theme.palette.grey[300]}`
-                }
-              }}>
-                <TableCell width="18%" sx={{ fontWeight: 'bold' }}>
-                  {showFilters ? (
-                    <Box sx={{ 
+            {/* Controls section */}
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 1.5,
+              ml: { xs: 0, md: 'auto' },
+              width: { xs: '100%', md: 'auto' },
+            }}>
+              {/* Filter controls */}
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Tooltip title={showFilters ? "Hide filters" : "Show filters"}>
+                  <Box 
+                    onClick={() => setShowFilters(!showFilters)}
+                    sx={{ 
                       display: 'flex', 
-                      alignItems: 'center', 
-                      bgcolor: 'background.paper',
-                      border: theme => searchTerm 
-                        ? `1px solid ${theme.palette.primary.main}` 
-                        : `1px solid ${theme.palette.grey[300]}`,
-                      borderRadius: 1,
-                      pl: 1,
-                      pr: 0.5,
-                      py: 0.5,
+                      alignItems: 'center',
+                      bgcolor: theme => (Object.values(filters).some(val => val > 0) || searchTerm)
+                        ? alpha(theme.palette.primary.main, 0.08)
+                        : alpha(theme.palette.primary.main, 0.04),
+                      borderRadius: 2,
+                      py: 0.7,
+                      px: 1.5,
                       transition: 'all 0.2s ease-in-out',
-                    }}>
-                      <SearchIcon 
-                        fontSize="small" 
-                        sx={{ color: searchTerm ? 'primary.main' : 'text.secondary', mr: 0.5 }} 
-                      />
-                      <InputBase
-                        placeholder="Search guests..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && searchTerm.trim()) {
-                            e.preventDefault();
-                            // Add current search term to active filters
-                            addSearchTerm(searchTerm.trim());
-                            // Clear the input field
-                            setSearchTerm('');
-                            // Keep focus on the input field for the next term
-                            e.target.focus();
-                          } else if (e.key === 'Escape') {
-                            // Simply call resetFilters instead of just clearing the search term
-                            // Don't stop propagation - let the global handler also run
-                            resetFilters();
-                            e.target.blur();
-                          }
-                        }}
-                        fullWidth
+                      cursor: 'pointer',
+                      border: theme => (Object.values(filters).some(val => val > 0) || searchTerm) && !showFilters
+                        ? `1px solid ${alpha(theme.palette.primary.main, 0.3)}`
+                        : `1px solid transparent`,
+                      '&:hover': {
+                        bgcolor: theme => alpha(theme.palette.primary.main, 0.12),
+                      }
+                    }}
+                  >
+                    <FilterAltIcon 
+                      fontSize="small" 
+                      color={(Object.values(filters).some(val => val > 0) || searchTerm) ? "primary" : (showFilters ? "primary" : "action")} 
+                      sx={{ mr: 0.8 }}
+                    />
+                    
+                    {(Object.values(filters).some(val => val > 0) || searchTerm) ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography variant="body2" color="primary" sx={{ fontWeight: 600 }}>
+                          {`${getSortedAndFilteredData(guestData).length}/${guestData.length}`}
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                        Filters
+                      </Typography>
+                    )}
+                  </Box>
+                </Tooltip>
+
+                {/* Remove the dropdown and show filter chips directly */}
+                {(Object.values(filters).some(val => val > 0) || activeSearchTerms.length > 0 || searchTerm) && (
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    gap: 0.75,
+                    ml: 1.5,
+                    maxWidth: { xs: '100%', md: '400px' },
+                    mt: { xs: 1, md: 0 }
+                  }}>
+                    {/* Active search term chips */}
+                    {activeSearchTerms.map(term => (
+                      <Chip 
+                        key={term}
+                        label={`"${term}"`}
+                        onDelete={() => removeSearchTerm(term)}
+                        color="default"
                         size="small"
-                        autoFocus
-                        inputRef={searchInputRef}
-                        sx={{ 
-                          fontSize: '0.875rem', 
-                          '& input': { 
-                            p: 0,
-                            '&::placeholder': {
-                              opacity: 0.7,
-                              fontSize: '0.875rem'
-                            }
-                          } 
-                        }}
+                        deleteIcon={<CancelIcon fontSize="small" />}
+                        sx={{ height: 24 }}
                       />
-                      {searchTerm && (
-                        <IconButton 
-                          size="small" 
-                          onClick={() => setSearchTerm('')}
-                          sx={{ p: 0.3, ml: 0.5 }}
-                        >
-                          <CloseIcon fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Box>
-                  ) : (
+                    ))}
+                    
+                    {/* Current search term chip (shown only if not empty and not yet in activeSearchTerms) */}
+                    {searchTerm && !activeSearchTerms.includes(searchTerm) && (
+                      <Chip 
+                        label={`"${searchTerm}"`}
+                        onDelete={() => setSearchTerm('')}
+                        color="default"
+                        size="small"
+                        deleteIcon={<CancelIcon fontSize="small" />}
+                        sx={{ height: 24 }}
+                      />
+                    )}
+                    
+                    {/* CPU filter chip */}
+                    {filters.cpu > 0 && (
+                      <Chip 
+                        label={`CPU ≥ ${formatPercentage(filters.cpu)}`}
+                        onDelete={() => clearFilter('cpu')}
+                        color="primary"
+                        size="small"
+                        deleteIcon={<CancelIcon fontSize="small" />}
+                        sx={{ height: 24, '& .MuiChip-label': { fontWeight: 500 } }}
+                      />
+                    )}
+                    
+                    {/* Memory filter chip */}
+                    {filters.memory > 0 && (
+                      <Chip 
+                        label={`Mem ≥ ${formatPercentage(filters.memory)}`}
+                        onDelete={() => clearFilter('memory')}
+                        color="primary"
+                        size="small"
+                        deleteIcon={<CancelIcon fontSize="small" />}
+                        sx={{ height: 24, '& .MuiChip-label': { fontWeight: 500 } }}
+                      />
+                    )}
+                    
+                    {/* Disk filter chip */}
+                    {filters.disk > 0 && (
+                      <Chip 
+                        label={`Disk ≥ ${formatPercentage(filters.disk)}`}
+                        onDelete={() => clearFilter('disk')}
+                        color="primary"
+                        size="small"
+                        deleteIcon={<CancelIcon fontSize="small" />}
+                        sx={{ height: 24, '& .MuiChip-label': { fontWeight: 500 } }}
+                      />
+                    )}
+                    
+                    {/* Download filter chip */}
+                    {filters.download > 0 && (
+                      <Chip 
+                        label={`DL ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}`}
+                        onDelete={() => clearFilter('download')}
+                        color="primary"
+                        size="small"
+                        deleteIcon={<CancelIcon fontSize="small" />}
+                        sx={{ height: 24, '& .MuiChip-label': { fontWeight: 500 } }}
+                      />
+                    )}
+                    
+                    {/* Upload filter chip */}
+                    {filters.upload > 0 && (
+                      <Chip 
+                        label={`UL ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}`}
+                        onDelete={() => clearFilter('upload')}
+                        color="secondary"
+                        size="small"
+                        deleteIcon={<CancelIcon fontSize="small" />}
+                        sx={{ height: 24, '& .MuiChip-label': { fontWeight: 500 } }}
+                      />
+                    )}
+                    
+                    {/* Reset all filters button */}
+                    <Chip 
+                      label="Reset"
+                      onClick={resetFilters}
+                      variant="outlined"
+                      size="small"
+                      color="primary"
+                      sx={{ height: 24 }}
+                    />
+                  </Box>
+                )}
+              </Box>
+              
+              {/* Display controls */}
+              <FormControlLabel
+                control={
+                  <Switch 
+                    checked={showStopped}
+                    onChange={(e) => setShowStopped(e.target.checked)}
+                    color="primary"
+                    size="small"
+                  />
+                }
+                label={<Typography variant="body2" sx={{ fontWeight: 500 }}>Show stopped</Typography>}
+                sx={{ 
+                  m: 0, 
+                  '& .MuiFormControlLabel-label': { ml: 0.5 },
+                  bgcolor: theme => alpha(theme.palette.grey[100], 0.7),
+                  borderRadius: 2,
+                  px: 1,
+                  py: 0.2,
+                  border: '1px solid',
+                  borderColor: 'grey.200',
+                }}
+              />
+            </Box>
+          </Box>
+          
+          {isDebugMode && (
+            <Alert 
+              severity="warning" 
+              sx={{ 
+                mb: 2,
+                borderRadius: 1.5,
+                '& .MuiAlert-icon': {
+                  alignItems: 'center'
+                }
+              }}
+            >
+              Running in debug mode with simulated data. The server connection is unavailable.
+            </Alert>
+          )}
+          
+          <TableContainer 
+            component={Paper} 
+            sx={{ 
+              boxShadow: 'none', 
+              borderRadius: 2,
+              overflow: 'hidden',
+              position: 'relative',
+              border: '1px solid',
+              borderColor: 'grey.200',
+            }}
+          >
+            <Table sx={{ 
+              '& tbody tr:nth-of-type(odd)': {
+                backgroundColor: theme => alpha(theme.palette.grey[50], 0.5),
+              },
+              '& tbody tr': {
+                transition: 'background-color 0.15s ease-in-out',
+                '&:hover': {
+                  backgroundColor: theme => alpha(theme.palette.primary.light, 0.05)
+                }
+              },
+              '& th': {
+                transition: 'background-color 0.2s ease'
+              }
+            }}>
+              <TableHead>
+                <TableRow sx={{ 
+                  backgroundColor: theme => alpha(theme.palette.primary.light, 0.05),
+                  '& th': { 
+                    py: showFilters ? 1 : 1.5,
+                    pb: showFilters ? 1 : 1.5,
+                    borderBottom: theme => `2px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+                    verticalAlign: 'middle',
+                    minHeight: showFilters ? '48px' : '40px',
+                    transition: 'padding 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-height 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+                  }
+                }}>
+                  <TableCell width="18%" sx={{ 
+                    fontWeight: 'bold', 
+                    minHeight: '48px', 
+                    position: 'relative',
+                    py: showFilters ? 1 : 1.5  // Add consistent padding
+                  }}>
                     <TableSortLabel
                       active={sortConfig.key === 'name'}
                       direction={sortConfig.key === 'name' ? sortConfig.direction : 'asc'}
                       onClick={() => requestSort('name')}
+                      sx={{ height: '24px' }}
                     >
-                      Guest Name
+                      <Box sx={{ display: 'flex', alignItems: 'center', height: '24px' }}>
+                        <PersonIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                        Guest Name
+                      </Box>
                     </TableSortLabel>
-                  )}
-                </TableCell>
-                <TableCell width="19%" sx={{ fontWeight: 'bold' }}>
-                  <Box>
+                    
+                    {/* Hidden slider container for Guest Name to match other columns structure */}
+                    <Box 
+                      sx={{ 
+                        position: 'relative',
+                        marginTop: showFilters ? 0.5 : 0,
+                        marginBottom: showFilters ? 0.5 : 0,
+                        height: showFilters ? '32px' : 0,
+                        opacity: showFilters ? 1 : 0,
+                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                        overflow: 'hidden',
+                        display: 'block',
+                        visibility: 'hidden' // Always hidden but takes up space
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                        <Box sx={{ width: '100%', position: 'relative' }}>
+                          {/* Empty placeholder to maintain spacing */}
+                        </Box>
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  
+                  {/* CPU Column */}
+                  <TableCell width="19%" sx={{ 
+                    fontWeight: 'bold', 
+                    minHeight: '48px', 
+                    position: 'relative',
+                    py: showFilters ? 1 : 1.5  // Add consistent padding
+                  }} ref={cpuColumnRef}>
                     <TableSortLabel
                       active={sortConfig.key === 'cpu'}
                       direction={sortConfig.key === 'cpu' ? sortConfig.direction : 'asc'}
                       onClick={() => requestSort('cpu')}
+                      sx={{ height: '24px' }}
                     >
-                      CPU
-                    </TableSortLabel>
-                    <Collapse in={showFilters} timeout="auto" mountOnEnter unmountOnExit>
-                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mt: 1 }}>
-                        <Box sx={{ width: '100%', mr: 1.5, position: 'relative' }}>
-                          <LinearProgress 
-                            variant="determinate" 
-                            value={filters.cpu} 
-                            color="primary"
-                            sx={{ 
-                              height: 4,
-                              borderRadius: 4,
-                              backgroundColor: theme => alpha(theme.palette.primary.main, 0.1),
-                              boxShadow: 'none',
-                              '& .MuiLinearProgress-bar': {
-                                borderRadius: 4,
-                                boxShadow: 'none',
-                                transition: 'none'
-                              }
-                            }} 
-                          />
-                          <Slider
-                            value={filters.cpu}
-                            onChange={(e, newValue) => updateFilter('cpu', newValue)}
-                            aria-label="CPU filter"
-                            size="small"
-                            sx={{ 
-                              position: 'absolute', 
-                              top: -12, 
-                              width: '100%', 
-                              padding: '14px 0',
-                              margin: 0,
-                              '& .MuiSlider-rail': { opacity: 0 },
-                              '& .MuiSlider-track': { opacity: 0 },
-                              '& .MuiSlider-thumb': { 
-                                width: 16, 
-                                height: 16, 
-                                bgcolor: '#fff',
-                                border: '2px solid currentColor',
-                                boxShadow: '0 1px 3px 0 rgba(0,0,0,0.2)',
-                                transition: 'width 0.2s ease, height 0.2s ease, box-shadow 0.2s ease',
-                                '&:hover, &.Mui-focusVisible': { 
-                                  boxShadow: '0 0 0 6px rgba(25, 118, 210, 0.16)',
-                                  borderWidth: '2px'
-                                },
-                                '&:before': {
-                                  boxShadow: 'none'
-                                },
-                                '&:after': {
-                                  width: 32,
-                                  height: 32
-                                }
-                              }
-                            }}
-                          />
-                        </Box>
-                        <Box sx={{ minWidth: 35 }}>
-                          <Typography variant="caption" fontWeight="medium" color="text.secondary">
-                            {formatPercentage(filters.cpu)}
-                          </Typography>
-                        </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', height: '24px' }}>
+                        <SpeedIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                        CPU
                       </Box>
-                    </Collapse>
-                  </Box>
-                </TableCell>
-                <TableCell width="19%" sx={{ fontWeight: 'bold' }}>
-                  <Box>
+                    </TableSortLabel>
+                    
+                    {/* Always rendered slider container, visibility controlled by CSS */}
+                    <Box 
+                      sx={{ 
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: showFilters ? '36px' : 0,
+                        marginTop: showFilters ? 0.5 : 0,
+                        marginBottom: showFilters ? 0.5 : 0,
+                        opacity: showFilters ? 1 : 0,
+                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                        overflow: 'visible',
+                      }}
+                    >
+                      <Box sx={{ width: '100%', position: 'relative' }}>
+                        <LinearProgress 
+                          variant="determinate" 
+                          value={filters.cpu} 
+                          color="primary"
+                          sx={{ 
+                            height: 3,
+                            borderRadius: 4,
+                            backgroundColor: theme => alpha(theme.palette.primary.main, 0.1),
+                            boxShadow: 'none',
+                            '& .MuiLinearProgress-bar': {
+                              borderRadius: 4,
+                              boxShadow: 'none',
+                              transition: 'none'
+                            }
+                          }} 
+                        />
+                        <Slider
+                          value={filters.cpu}
+                          onChange={(e, newValue) => updateFilter('cpu', newValue)}
+                          onChangeCommitted={handleSliderDragEnd}
+                          onMouseDown={() => handleSliderDragStart('cpu')}
+                          aria-label="CPU filter"
+                          size="small"
+                          sx={{ 
+                            position: 'absolute', 
+                            top: -5,
+                            width: '100%', 
+                            padding: '4px 0',
+                            margin: 0,
+                            opacity: showFilters ? 1 : 0,
+                            visibility: showFilters ? 'visible' : 'hidden',
+                            transition: 'opacity 0.1s ease, visibility 0s',
+                            zIndex: 1,
+                            '& .MuiSlider-rail': { 
+                              opacity: 0.3,
+                              background: 'linear-gradient(90deg, rgba(25,118,210,0.1) 0%, rgba(25,118,210,0.3) 100%)',
+                              height: 4,
+                              borderRadius: 2
+                            },
+                            '& .MuiSlider-track': { 
+                              opacity: 0.8,
+                              background: 'linear-gradient(90deg, rgba(25,118,210,0.6) 0%, rgba(25,118,210,0.9) 100%)',
+                              height: 4,
+                              borderRadius: 2,
+                              border: 'none'
+                            },
+                            '& .MuiSlider-thumb': { 
+                              width: 16,
+                              height: 16,
+                              bgcolor: '#fff',
+                              border: '2px solid #1976d2',
+                              boxShadow: '0 2px 4px 0 rgba(0,0,0,0.2)',
+                              transition: 'all 0.2s ease',
+                              '&:hover, &.Mui-focusVisible': { 
+                                boxShadow: '0 0 0 8px rgba(25, 118, 210, 0.16)',
+                                borderWidth: '2px',
+                                width: 18,
+                                height: 18
+                              },
+                              '&:before': {
+                                boxShadow: 'none'
+                              },
+                              '&:after': {
+                                width: 36,
+                                height: 36
+                              },
+                              '&.Mui-active': {
+                                boxShadow: '0 0 0 12px rgba(25, 118, 210, 0.16)',
+                                width: 20,
+                                height: 20
+                              }
+                            },
+                            '& .MuiSlider-valueLabel': {
+                              backgroundColor: theme => theme.palette.primary.main,
+                              padding: '4px 6px',
+                              borderRadius: 4,
+                              fontSize: '0.75rem',
+                              fontWeight: 'bold',
+                              display: activeSlider === 'cpu' ? 'block' : 'none',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                              '&:before': {
+                                borderBottom: 'none',
+                                borderRight: 'none'
+                              }
+                            }
+                          }}
+                          valueLabelDisplay="auto"
+                          valueLabelFormat={value => `${formatPercentage(value)}`}
+                        />
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  
+                  {/* Memory Column */}
+                  <TableCell width="19%" sx={{ 
+                    fontWeight: 'bold', 
+                    minHeight: '48px', 
+                    position: 'relative',
+                    py: showFilters ? 1 : 1.5  // Add consistent padding
+                  }} ref={memoryColumnRef}>
                     <TableSortLabel
                       active={sortConfig.key === 'memory'}
                       direction={sortConfig.key === 'memory' ? sortConfig.direction : 'asc'}
                       onClick={() => requestSort('memory')}
+                      sx={{ height: '24px' }}
                     >
-                      Memory
-                    </TableSortLabel>
-                    <Collapse in={showFilters} timeout="auto" mountOnEnter unmountOnExit>
-                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mt: 1 }}>
-                        <Box sx={{ width: '100%', mr: 1.5, position: 'relative' }}>
-                          <LinearProgress 
-                            variant="determinate" 
-                            value={filters.memory} 
-                            color="primary"
-                            sx={{ 
-                              height: 4,
-                              borderRadius: 4,
-                              backgroundColor: theme => alpha(theme.palette.primary.main, 0.1),
-                              boxShadow: 'none',
-                              '& .MuiLinearProgress-bar': {
-                                borderRadius: 4,
-                                boxShadow: 'none',
-                                transition: 'none'
-                              }
-                            }} 
-                          />
-                          <Slider
-                            value={filters.memory}
-                            onChange={(e, newValue) => updateFilter('memory', newValue)}
-                            aria-label="Memory filter"
-                            size="small"
-                            sx={{ 
-                              position: 'absolute', 
-                              top: -12, 
-                              width: '100%', 
-                              padding: '14px 0',
-                              margin: 0,
-                              '& .MuiSlider-rail': { opacity: 0 },
-                              '& .MuiSlider-track': { opacity: 0 },
-                              '& .MuiSlider-thumb': { 
-                                width: 16, 
-                                height: 16, 
-                                bgcolor: '#fff',
-                                border: '2px solid currentColor',
-                                boxShadow: '0 1px 3px 0 rgba(0,0,0,0.2)',
-                                transition: 'width 0.2s ease, height 0.2s ease, box-shadow 0.2s ease',
-                                '&:hover, &.Mui-focusVisible': { 
-                                  boxShadow: '0 0 0 6px rgba(25, 118, 210, 0.16)',
-                                  borderWidth: '2px'
-                                },
-                                '&:before': {
-                                  boxShadow: 'none'
-                                },
-                                '&:after': {
-                                  width: 32,
-                                  height: 32
-                                }
-                              }
-                            }}
-                          />
-                        </Box>
-                        <Box sx={{ minWidth: 35 }}>
-                          <Typography variant="caption" fontWeight="medium" color="text.secondary">
-                            {formatPercentage(filters.memory)}
-                          </Typography>
-                        </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', height: '24px' }}>
+                        <MemoryIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                        Memory
                       </Box>
-                    </Collapse>
-                  </Box>
-                </TableCell>
-                <TableCell width="19%" sx={{ fontWeight: 'bold' }}>
-                  <Box>
+                    </TableSortLabel>
+                    
+                    {/* Always rendered slider container, visibility controlled by CSS */}
+                    <Box 
+                      sx={{ 
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: showFilters ? '36px' : 0,
+                        marginTop: showFilters ? 0.5 : 0,
+                        marginBottom: showFilters ? 0.5 : 0,
+                        opacity: showFilters ? 1 : 0,
+                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                        overflow: 'visible',
+                      }}
+                    >
+                      <Box sx={{ width: '100%', position: 'relative' }}>
+                        <LinearProgress 
+                          variant="determinate" 
+                          value={filters.memory} 
+                          color="primary"
+                          sx={{ 
+                            height: 3,
+                            borderRadius: 4,
+                            backgroundColor: theme => alpha(theme.palette.primary.main, 0.1),
+                            boxShadow: 'none',
+                            '& .MuiLinearProgress-bar': {
+                              borderRadius: 4,
+                              boxShadow: 'none',
+                              transition: 'none'
+                            }
+                          }} 
+                        />
+                        <Slider
+                          value={filters.memory}
+                          onChange={(e, newValue) => updateFilter('memory', newValue)}
+                          onChangeCommitted={handleSliderDragEnd}
+                          onMouseDown={() => handleSliderDragStart('memory')}
+                          aria-label="Memory filter"
+                          size="small"
+                          sx={{ 
+                            position: 'absolute', 
+                            top: -5,
+                            width: '100%', 
+                            padding: '4px 0',
+                            margin: 0,
+                            opacity: showFilters ? 1 : 0,
+                            visibility: showFilters ? 'visible' : 'hidden',
+                            transition: 'opacity 0.1s ease, visibility 0s',
+                            zIndex: 1,
+                            '& .MuiSlider-rail': { 
+                              opacity: 0.3,
+                              background: 'linear-gradient(90deg, rgba(25,118,210,0.1) 0%, rgba(25,118,210,0.3) 100%)',
+                              height: 4,
+                              borderRadius: 2
+                            },
+                            '& .MuiSlider-track': { 
+                              opacity: 0.8,
+                              background: 'linear-gradient(90deg, rgba(25,118,210,0.6) 0%, rgba(25,118,210,0.9) 100%)',
+                              height: 4,
+                              borderRadius: 2,
+                              border: 'none'
+                            },
+                            '& .MuiSlider-thumb': { 
+                              width: 16,
+                              height: 16,
+                              bgcolor: '#fff',
+                              border: '2px solid #1976d2',
+                              boxShadow: '0 2px 4px 0 rgba(0,0,0,0.2)',
+                              transition: 'all 0.2s ease',
+                              '&:hover, &.Mui-focusVisible': { 
+                                boxShadow: '0 0 0 8px rgba(25, 118, 210, 0.16)',
+                                borderWidth: '2px',
+                                width: 18,
+                                height: 18
+                              },
+                              '&:before': {
+                                boxShadow: 'none'
+                              },
+                              '&:after': {
+                                width: 36,
+                                height: 36
+                              },
+                              '&.Mui-active': {
+                                boxShadow: '0 0 0 12px rgba(25, 118, 210, 0.16)',
+                                width: 20,
+                                height: 20
+                              }
+                            },
+                            '& .MuiSlider-valueLabel': {
+                              backgroundColor: theme => theme.palette.primary.main,
+                              padding: '4px 6px',
+                              borderRadius: 4,
+                              fontSize: '0.75rem',
+                              fontWeight: 'bold',
+                              display: activeSlider === 'memory' ? 'block' : 'none',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                              '&:before': {
+                                borderBottom: 'none',
+                                borderRight: 'none'
+                              }
+                            }
+                          }}
+                          valueLabelDisplay="auto"
+                          valueLabelFormat={value => `${formatPercentage(value)}`}
+                        />
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  
+                  {/* Disk Column */}
+                  <TableCell width="19%" sx={{ 
+                    fontWeight: 'bold', 
+                    minHeight: '48px', 
+                    position: 'relative',
+                    py: showFilters ? 1 : 1.5  // Add consistent padding
+                  }} ref={diskColumnRef}>
                     <TableSortLabel
                       active={sortConfig.key === 'disk'}
                       direction={sortConfig.key === 'disk' ? sortConfig.direction : 'asc'}
                       onClick={() => requestSort('disk')}
+                      sx={{ height: '24px' }}
                     >
-                      Disk
-                    </TableSortLabel>
-                    <Collapse in={showFilters} timeout="auto" mountOnEnter unmountOnExit>
-                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mt: 1 }}>
-                        <Box sx={{ width: '100%', mr: 1.5, position: 'relative' }}>
-                          <LinearProgress 
-                            variant="determinate" 
-                            value={filters.disk} 
-                            color="primary"
-                            sx={{ 
-                              height: 4,
-                              borderRadius: 4,
-                              backgroundColor: theme => alpha(theme.palette.primary.main, 0.1),
-                              boxShadow: 'none',
-                              '& .MuiLinearProgress-bar': {
-                                borderRadius: 4,
-                                boxShadow: 'none',
-                                transition: 'none'
-                              }
-                            }} 
-                          />
-                          <Slider
-                            value={filters.disk}
-                            onChange={(e, newValue) => updateFilter('disk', newValue)}
-                            aria-label="Disk filter"
-                            size="small"
-                            sx={{ 
-                              position: 'absolute', 
-                              top: -12, 
-                              width: '100%', 
-                              padding: '14px 0',
-                              margin: 0,
-                              '& .MuiSlider-rail': { opacity: 0 },
-                              '& .MuiSlider-track': { opacity: 0 },
-                              '& .MuiSlider-thumb': { 
-                                width: 16, 
-                                height: 16, 
-                                bgcolor: '#fff',
-                                border: '2px solid currentColor',
-                                boxShadow: '0 1px 3px 0 rgba(0,0,0,0.2)',
-                                transition: 'width 0.2s ease, height 0.2s ease, box-shadow 0.2s ease',
-                                '&:hover, &.Mui-focusVisible': { 
-                                  boxShadow: '0 0 0 6px rgba(25, 118, 210, 0.16)',
-                                  borderWidth: '2px'
-                                },
-                                '&:before': {
-                                  boxShadow: 'none'
-                                },
-                                '&:after': {
-                                  width: 32,
-                                  height: 32
-                                }
-                              }
-                            }}
-                          />
-                        </Box>
-                        <Box sx={{ minWidth: 35 }}>
-                          <Typography variant="caption" fontWeight="medium" color="text.secondary">
-                            {formatPercentage(filters.disk)}
-                          </Typography>
-                        </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', height: '24px' }}>
+                        <StorageIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                        Disk
                       </Box>
-                    </Collapse>
-                  </Box>
-                </TableCell>
-                <TableCell width="12.5%" sx={{ fontWeight: 'bold' }}>
-                  <Box>
+                    </TableSortLabel>
+                    
+                    {/* Always rendered slider container, visibility controlled by CSS */}
+                    <Box 
+                      sx={{ 
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: showFilters ? '36px' : 0,
+                        marginTop: showFilters ? 0.5 : 0,
+                        marginBottom: showFilters ? 0.5 : 0,
+                        opacity: showFilters ? 1 : 0,
+                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                        overflow: 'visible',
+                      }}
+                    >
+                      <Box sx={{ width: '100%', position: 'relative' }}>
+                        <LinearProgress 
+                          variant="determinate" 
+                          value={filters.disk} 
+                          color="primary"
+                          sx={{ 
+                            height: 3,
+                            borderRadius: 4,
+                            backgroundColor: theme => alpha(theme.palette.primary.main, 0.1),
+                            boxShadow: 'none',
+                            '& .MuiLinearProgress-bar': {
+                              borderRadius: 4,
+                              boxShadow: 'none',
+                              transition: 'none'
+                            }
+                          }} 
+                        />
+                        <Slider
+                          value={filters.disk}
+                          onChange={(e, newValue) => updateFilter('disk', newValue)}
+                          onChangeCommitted={handleSliderDragEnd}
+                          onMouseDown={() => handleSliderDragStart('disk')}
+                          aria-label="Disk filter"
+                          size="small"
+                          sx={{ 
+                            position: 'absolute', 
+                            top: -5,
+                            width: '100%', 
+                            padding: '4px 0',
+                            margin: 0,
+                            opacity: showFilters ? 1 : 0,
+                            visibility: showFilters ? 'visible' : 'hidden',
+                            transition: 'opacity 0.1s ease, visibility 0s',
+                            zIndex: 1,
+                            '& .MuiSlider-rail': { 
+                              opacity: 0.3,
+                              background: 'linear-gradient(90deg, rgba(25,118,210,0.1) 0%, rgba(25,118,210,0.3) 100%)',
+                              height: 4,
+                              borderRadius: 2
+                            },
+                            '& .MuiSlider-track': { 
+                              opacity: 0.8,
+                              background: 'linear-gradient(90deg, rgba(25,118,210,0.6) 0%, rgba(25,118,210,0.9) 100%)',
+                              height: 4,
+                              borderRadius: 2,
+                              border: 'none'
+                            },
+                            '& .MuiSlider-thumb': { 
+                              width: 16,
+                              height: 16,
+                              bgcolor: '#fff',
+                              border: '2px solid #1976d2',
+                              boxShadow: '0 2px 4px 0 rgba(0,0,0,0.2)',
+                              transition: 'all 0.2s ease',
+                              '&:hover, &.Mui-focusVisible': { 
+                                boxShadow: '0 0 0 8px rgba(25, 118, 210, 0.16)',
+                                borderWidth: '2px',
+                                width: 18,
+                                height: 18
+                              },
+                              '&:before': {
+                                boxShadow: 'none'
+                              },
+                              '&:after': {
+                                width: 36,
+                                height: 36
+                              },
+                              '&.Mui-active': {
+                                boxShadow: '0 0 0 12px rgba(25, 118, 210, 0.16)',
+                                width: 20,
+                                height: 20
+                              }
+                            },
+                            '& .MuiSlider-valueLabel': {
+                              backgroundColor: theme => theme.palette.primary.main,
+                              padding: '4px 6px',
+                              borderRadius: 4,
+                              fontSize: '0.75rem',
+                              fontWeight: 'bold',
+                              display: activeSlider === 'disk' ? 'block' : 'none',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                              '&:before': {
+                                borderBottom: 'none',
+                                borderRight: 'none'
+                              }
+                            }
+                          }}
+                          valueLabelDisplay="auto"
+                          valueLabelFormat={value => `${formatPercentage(value)}`}
+                        />
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  
+                  {/* Download Column */}
+                  <TableCell width="12.5%" sx={{ 
+                    fontWeight: 'bold', 
+                    minHeight: '48px', 
+                    position: 'relative',
+                    py: showFilters ? 1 : 1.5  // Add consistent padding
+                  }} ref={downloadColumnRef}>
                     <TableSortLabel
                       active={sortConfig.key === 'download'}
                       direction={sortConfig.key === 'download' ? sortConfig.direction : 'asc'}
                       onClick={() => requestSort('download')}
+                      sx={{ height: '24px' }}
                     >
-                      Download
+                      <Box sx={{ display: 'flex', alignItems: 'center', height: '24px' }}>
+                        <ArrowDownwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                        Download
+                      </Box>
                     </TableSortLabel>
-                    <Collapse in={showFilters} timeout="auto" mountOnEnter unmountOnExit>
-                      <Box sx={{ mt: 1, position: 'relative' }}>
+                    
+                    {/* Always rendered slider container, visibility controlled by CSS */}
+                    <Box 
+                      sx={{ 
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: showFilters ? '36px' : 0,
+                        marginTop: showFilters ? 0.5 : 0,
+                        marginBottom: showFilters ? 0.5 : 0,
+                        opacity: showFilters ? 1 : 0,
+                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                        overflow: 'visible',
+                      }}
+                    >
+                      <Box sx={{ width: '100%', position: 'relative' }}>
                         <LinearProgress 
                           variant="determinate" 
                           value={filters.download} 
                           color="primary"
                           sx={{ 
-                            height: 4,
+                            height: 3,
                             borderRadius: 4,
                             backgroundColor: theme => alpha(theme.palette.primary.main, 0.1),
                             boxShadow: 'none',
@@ -1138,61 +1445,121 @@ const NetworkDisplay = () => {
                         <Slider
                           value={filters.download}
                           onChange={(e, newValue) => updateFilter('download', newValue)}
+                          onChangeCommitted={handleSliderDragEnd}
+                          onMouseDown={() => handleSliderDragStart('download')}
                           aria-label="Download filter"
                           size="small"
                           sx={{ 
                             position: 'absolute', 
-                            top: -12, 
+                            top: -5,
                             width: '100%', 
-                            padding: '14px 0',
+                            padding: '4px 0',
                             margin: 0,
-                            '& .MuiSlider-rail': { opacity: 0 },
-                            '& .MuiSlider-track': { opacity: 0 },
+                            opacity: showFilters ? 1 : 0,
+                            visibility: showFilters ? 'visible' : 'hidden',
+                            transition: 'opacity 0.1s ease, visibility 0s',
+                            zIndex: 1,
+                            '& .MuiSlider-rail': { 
+                              opacity: 0.3,
+                              background: 'linear-gradient(90deg, rgba(25,118,210,0.1) 0%, rgba(25,118,210,0.3) 100%)',
+                              height: 4,
+                              borderRadius: 2
+                            },
+                            '& .MuiSlider-track': { 
+                              opacity: 0.8,
+                              background: 'linear-gradient(90deg, rgba(25,118,210,0.6) 0%, rgba(25,118,210,0.9) 100%)',
+                              height: 4,
+                              borderRadius: 2,
+                              border: 'none'
+                            },
                             '& .MuiSlider-thumb': { 
-                              width: 16, 
-                              height: 16, 
+                              width: 16,
+                              height: 16,
                               bgcolor: '#fff',
-                              border: '2px solid currentColor',
-                              boxShadow: '0 1px 3px 0 rgba(0,0,0,0.2)',
-                              transition: 'width 0.2s ease, height 0.2s ease, box-shadow 0.2s ease',
+                              border: '2px solid #1976d2',
+                              boxShadow: '0 2px 4px 0 rgba(0,0,0,0.2)',
+                              transition: 'all 0.2s ease',
                               '&:hover, &.Mui-focusVisible': { 
-                                boxShadow: '0 0 0 6px rgba(25, 118, 210, 0.16)',
-                                borderWidth: '2px'
+                                boxShadow: '0 0 0 8px rgba(25, 118, 210, 0.16)',
+                                borderWidth: '2px',
+                                width: 18,
+                                height: 18
                               },
                               '&:before': {
                                 boxShadow: 'none'
                               },
                               '&:after': {
-                                width: 32,
-                                height: 32
+                                width: 36,
+                                height: 36
+                              },
+                              '&.Mui-active': {
+                                boxShadow: '0 0 0 12px rgba(25, 118, 210, 0.16)',
+                                width: 20,
+                                height: 20
+                              }
+                            },
+                            '& .MuiSlider-valueLabel': {
+                              backgroundColor: theme => theme.palette.primary.main,
+                              padding: '4px 6px',
+                              borderRadius: 4,
+                              fontSize: '0.75rem',
+                              fontWeight: 'bold',
+                              display: activeSlider === 'download' ? 'block' : 'none',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                              '&:before': {
+                                borderBottom: 'none',
+                                borderRight: 'none'
                               }
                             }
                           }}
+                          valueLabelDisplay="auto"
+                          valueLabelFormat={value => `${formatNetworkRateForFilter(sliderValueToNetworkRate(value))}`}
                         />
-                        <Typography variant="caption" color="primary" sx={{ display: 'block', mt: 0.5 }}>
-                          ↓ {filters.download > 0 ? formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download)) : 'Any'}
-                        </Typography>
                       </Box>
-                    </Collapse>
-                  </Box>
-                </TableCell>
-                <TableCell width="12.5%" sx={{ fontWeight: 'bold' }}>
-                  <Box>
+                    </Box>
+                  </TableCell>
+                  
+                  {/* Upload Column */}
+                  <TableCell width="12.5%" sx={{ 
+                    fontWeight: 'bold', 
+                    minHeight: '48px', 
+                    position: 'relative',
+                    py: showFilters ? 1 : 1.5  // Add consistent padding
+                  }} ref={uploadColumnRef}>
                     <TableSortLabel
                       active={sortConfig.key === 'upload'}
                       direction={sortConfig.key === 'upload' ? sortConfig.direction : 'asc'}
                       onClick={() => requestSort('upload')}
+                      sx={{ height: '24px' }}
                     >
-                      Upload
+                      <Box sx={{ display: 'flex', alignItems: 'center', height: '24px' }}>
+                        <ArrowUpwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                        Upload
+                      </Box>
                     </TableSortLabel>
-                    <Collapse in={showFilters} timeout="auto" mountOnEnter unmountOnExit>
-                      <Box sx={{ mt: 1, position: 'relative' }}>
+                    
+                    {/* Always rendered slider container, visibility controlled by CSS */}
+                    <Box 
+                      sx={{ 
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: showFilters ? '36px' : 0,
+                        marginTop: showFilters ? 0.5 : 0,
+                        marginBottom: showFilters ? 0.5 : 0,
+                        opacity: showFilters ? 1 : 0,
+                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                        overflow: 'visible',
+                      }}
+                    >
+                      <Box sx={{ width: '100%', position: 'relative' }}>
                         <LinearProgress 
                           variant="determinate" 
                           value={filters.upload} 
                           color="secondary"
                           sx={{ 
-                            height: 4,
+                            height: 3,
                             borderRadius: 4,
                             backgroundColor: theme => alpha(theme.palette.secondary.main, 0.1),
                             boxShadow: 'none',
@@ -1206,189 +1573,225 @@ const NetworkDisplay = () => {
                         <Slider
                           value={filters.upload}
                           onChange={(e, newValue) => updateFilter('upload', newValue)}
+                          onChangeCommitted={handleSliderDragEnd}
+                          onMouseDown={() => handleSliderDragStart('upload')}
                           aria-label="Upload filter"
                           size="small"
                           sx={{ 
                             position: 'absolute', 
-                            top: -12, 
+                            top: -5,
                             width: '100%', 
-                            padding: '14px 0',
+                            padding: '4px 0',
                             margin: 0,
-                            '& .MuiSlider-rail': { opacity: 0 },
-                            '& .MuiSlider-track': { opacity: 0 },
+                            opacity: showFilters ? 1 : 0,
+                            visibility: showFilters ? 'visible' : 'hidden',
+                            transition: 'opacity 0.1s ease, visibility 0s',
+                            zIndex: 1,
+                            '& .MuiSlider-rail': { 
+                              opacity: 0.3,
+                              background: 'linear-gradient(90deg, rgba(156,39,176,0.1) 0%, rgba(156,39,176,0.3) 100%)',
+                              height: 4,
+                              borderRadius: 2
+                            },
+                            '& .MuiSlider-track': { 
+                              opacity: 0.8,
+                              background: 'linear-gradient(90deg, rgba(156,39,176,0.6) 0%, rgba(156,39,176,0.9) 100%)',
+                              height: 4,
+                              borderRadius: 2,
+                              border: 'none'
+                            },
                             '& .MuiSlider-thumb': { 
-                              width: 16, 
-                              height: 16, 
+                              width: 16,
+                              height: 16,
                               bgcolor: '#fff',
-                              border: '2px solid currentColor',
-                              boxShadow: '0 1px 3px 0 rgba(0,0,0,0.2)',
-                              transition: 'width 0.2s ease, height 0.2s ease, box-shadow 0.2s ease',
+                              border: '2px solid #9c27b0',
+                              boxShadow: '0 2px 4px 0 rgba(0,0,0,0.2)',
+                              transition: 'all 0.2s ease',
                               '&:hover, &.Mui-focusVisible': { 
-                                boxShadow: '0 0 0 6px rgba(156, 39, 176, 0.16)',
-                                borderWidth: '2px'
+                                boxShadow: '0 0 0 8px rgba(156, 39, 176, 0.16)',
+                                borderWidth: '2px',
+                                width: 18,
+                                height: 18
                               },
                               '&:before': {
                                 boxShadow: 'none'
                               },
                               '&:after': {
-                                width: 32,
-                                height: 32
+                                width: 36,
+                                height: 36
+                              },
+                              '&.Mui-active': {
+                                boxShadow: '0 0 0 12px rgba(156, 39, 176, 0.16)',
+                                width: 20,
+                                height: 20
+                              }
+                            },
+                            '& .MuiSlider-valueLabel': {
+                              backgroundColor: theme => theme.palette.secondary.main,
+                              padding: '4px 6px',
+                              borderRadius: 4,
+                              fontSize: '0.75rem',
+                              fontWeight: 'bold',
+                              display: activeSlider === 'upload' ? 'block' : 'none',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                              '&:before': {
+                                borderBottom: 'none',
+                                borderRight: 'none'
                               }
                             }
                           }}
+                          valueLabelDisplay="auto"
+                          valueLabelFormat={value => `${formatNetworkRateForFilter(sliderValueToNetworkRate(value))}`}
                         />
-                        <Typography variant="caption" color="secondary" sx={{ display: 'block', mt: 0.5 }}>
-                          ↑ {filters.upload > 0 ? formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload)) : 'Any'}
+                      </Box>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {guestData.length > 0 ? (
+                  getSortedAndFilteredData(guestData)
+                    .map((guest) => {
+                    const metrics = getMetricsForGuest(guest.id);
+                    const networkMetrics = metrics?.metrics?.network;
+                    
+                    // Get resource metrics (CPU, memory, disk) with fallbacks
+                    const cpuUsage = metrics?.metrics?.cpu || 0;
+                    
+                    // Handle either direct percentage or calculated from used/total
+                    const memoryData = metrics?.metrics?.memory || {};
+                    const memoryUsage = memoryData.percentUsed || 
+                      (memoryData.total && memoryData.used ? 
+                        (memoryData.used / memoryData.total) * 100 : 0);
+                    
+                    // Same for disk
+                    const diskData = metrics?.metrics?.disk || {};
+                    const diskUsage = diskData.percentUsed || 
+                      (diskData.total && diskData.used ? 
+                        (diskData.used / diskData.total) * 100 : 0);
+                    
+                    // Check if system is running
+                    const isRunning = guest.status === 'running';
+                    
+                    return (
+                      <TableRow key={guest.id} sx={{ 
+                        opacity: isRunning ? 1 : 0.8, 
+                        '& > td': { py: 1.5 },
+                        transition: 'all 0.2s ease-in-out',
+                      }}>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+                            <StatusIndicator status={guest.status} />
+                            <Typography 
+                              noWrap 
+                              sx={{ 
+                                maxWidth: 150,
+                                fontWeight: isRunning ? 500 : 400
+                              }}
+                            >
+                              {guest.name}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <ProgressWithLabel 
+                            value={cpuUsage} 
+                            color={cpuUsage > 80 ? "error" : cpuUsage > 60 ? "warning" : "primary"}
+                            disabled={!isRunning}
+                            tooltipText={isRunning ? `CPU: ${formatPercentage(cpuUsage)} utilized` : "System is not running"}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <ProgressWithLabel 
+                            value={memoryUsage} 
+                            color={memoryUsage > 80 ? "error" : memoryUsage > 60 ? "warning" : "primary"}
+                            disabled={!isRunning}
+                            tooltipText={isRunning ? 
+                              memoryData.total ? 
+                                `Memory: ${formatBytes(memoryData.used || 0)} / ${formatBytes(memoryData.total)} (${formatPercentage(memoryUsage)})` : 
+                                `Memory: ${formatPercentage(memoryUsage)} utilized` : 
+                              "System is not running"}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <ProgressWithLabel 
+                            value={diskUsage} 
+                            color={diskUsage > 80 ? "error" : diskUsage > 60 ? "warning" : "primary"}
+                            disabled={!isRunning}
+                            tooltipText={isRunning ? 
+                              diskData.total ? 
+                                `Disk: ${formatBytes(diskData.used || 0)} / ${formatBytes(diskData.total)} (${formatPercentage(diskUsage)})` : 
+                                `Disk: ${formatPercentage(diskUsage)} utilized` : 
+                              "System is not running"}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {isRunning && networkMetrics ? (
+                            <Typography variant="body2" color="primary" noWrap fontWeight="medium">
+                              ↓ {formatNetworkRate(networkMetrics.inRate || 0)}
+                            </Typography>
+                          ) : (
+                            <Typography variant="body2" color="text.disabled" noWrap>
+                              ↓ -
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isRunning && networkMetrics ? (
+                            <Typography variant="body2" color="secondary" noWrap fontWeight="medium">
+                              ↑ {formatNetworkRate(networkMetrics.outRate || 0)}
+                            </Typography>
+                          ) : (
+                            <Typography variant="body2" color="text.disabled" noWrap>
+                              ↑ -
+                            </Typography>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 2 }}>
+                        <NetworkCheckIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2, opacity: 0.6 }} />
+                        <Typography variant="h6" color="text.secondary" gutterBottom>
+                          No Systems Available
+                        </Typography>
+                        <Typography variant="body2" color="text.disabled">
+                          No guest data has been received from the server
                         </Typography>
                       </Box>
-                    </Collapse>
-                  </Box>
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {guestData.length > 0 ? (
-                getSortedAndFilteredData(guestData)
-                  .map((guest) => {
-                  const metrics = getMetricsForGuest(guest.id);
-                  const networkMetrics = metrics?.metrics?.network;
-                  
-                  // Get resource metrics (CPU, memory, disk) with fallbacks
-                  const cpuUsage = metrics?.metrics?.cpu || 0;
-                  
-                  // Handle either direct percentage or calculated from used/total
-                  const memoryData = metrics?.metrics?.memory || {};
-                  const memoryUsage = memoryData.percentUsed || 
-                    (memoryData.total && memoryData.used ? 
-                      (memoryData.used / memoryData.total) * 100 : 0);
-                  
-                  // Same for disk
-                  const diskData = metrics?.metrics?.disk || {};
-                  const diskUsage = diskData.percentUsed || 
-                    (diskData.total && diskData.used ? 
-                      (diskData.used / diskData.total) * 100 : 0);
-                  
-                  // Check if system is running
-                  const isRunning = guest.status === 'running';
-                  
-                  return (
-                    <TableRow key={guest.id} sx={{ 
-                      opacity: isRunning ? 1 : 0.8, 
-                      '& > td': { py: 1.5 },
-                      transition: 'all 0.2s ease-in-out',
-                    }}>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
-                          <StatusIndicator status={guest.status} />
-                          <Typography 
-                            noWrap 
-                            sx={{ 
-                              maxWidth: 150,
-                              fontWeight: isRunning ? 500 : 400
-                            }}
-                          >
-                            {guest.name}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <ProgressWithLabel 
-                          value={cpuUsage} 
-                          color={cpuUsage > 80 ? "error" : cpuUsage > 60 ? "warning" : "primary"}
-                          disabled={!isRunning}
-                          tooltipText={isRunning ? `CPU: ${formatPercentage(cpuUsage)} utilized` : "System is not running"}
+                    </TableCell>
+                  </TableRow>
+                )}
+                {guestData.length > 0 && getSortedAndFilteredData(guestData).length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 2 }}>
+                        <FilterAltIcon sx={{ fontSize: 40, color: 'primary.light', mb: 2, opacity: 0.7 }} />
+                        <Typography variant="h6" color="text.secondary" gutterBottom>
+                          No Matching Systems
+                        </Typography>
+                        <Typography variant="body2" color="text.disabled" sx={{ mb: 2 }}>
+                          No systems match the current filters
+                        </Typography>
+                        <Chip 
+                          label="Reset Filters" 
+                          color="primary" 
+                          onClick={resetFilters}
+                          sx={{ mt: 1 }}
                         />
-                      </TableCell>
-                      <TableCell>
-                        <ProgressWithLabel 
-                          value={memoryUsage} 
-                          color={memoryUsage > 80 ? "error" : memoryUsage > 60 ? "warning" : "primary"}
-                          disabled={!isRunning}
-                          tooltipText={isRunning ? 
-                            memoryData.total ? 
-                              `Memory: ${formatBytes(memoryData.used || 0)} / ${formatBytes(memoryData.total)} (${formatPercentage(memoryUsage)})` : 
-                              `Memory: ${formatPercentage(memoryUsage)} utilized` : 
-                            "System is not running"}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <ProgressWithLabel 
-                          value={diskUsage} 
-                          color={diskUsage > 80 ? "error" : diskUsage > 60 ? "warning" : "primary"}
-                          disabled={!isRunning}
-                          tooltipText={isRunning ? 
-                            diskData.total ? 
-                              `Disk: ${formatBytes(diskData.used || 0)} / ${formatBytes(diskData.total)} (${formatPercentage(diskUsage)})` : 
-                              `Disk: ${formatPercentage(diskUsage)} utilized` : 
-                            "System is not running"}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {isRunning && networkMetrics ? (
-                          <Typography variant="body2" color="primary" noWrap fontWeight="medium">
-                            ↓ {formatNetworkRate(networkMetrics.inRate || 0)}
-                          </Typography>
-                        ) : (
-                          <Typography variant="body2" color="text.disabled" noWrap>
-                            ↓ -
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {isRunning && networkMetrics ? (
-                          <Typography variant="body2" color="secondary" noWrap fontWeight="medium">
-                            ↑ {formatNetworkRate(networkMetrics.outRate || 0)}
-                          </Typography>
-                        ) : (
-                          <Typography variant="body2" color="text.disabled" noWrap>
-                            ↑ -
-                          </Typography>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 2 }}>
-                      <NetworkCheckIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2, opacity: 0.6 }} />
-                      <Typography variant="h6" color="text.secondary" gutterBottom>
-                        No Systems Available
-                      </Typography>
-                      <Typography variant="body2" color="text.disabled">
-                        No guest data has been received from the server
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              )}
-              {guestData.length > 0 && getSortedAndFilteredData(guestData).length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 2 }}>
-                      <FilterAltIcon sx={{ fontSize: 40, color: 'primary.light', mb: 2, opacity: 0.7 }} />
-                      <Typography variant="h6" color="text.secondary" gutterBottom>
-                        No Matching Systems
-                      </Typography>
-                      <Typography variant="body2" color="text.disabled" sx={{ mb: 2 }}>
-                        No systems match the current filters
-                      </Typography>
-                      <Chip 
-                        label="Reset Filters" 
-                        color="primary" 
-                        onClick={resetFilters}
-                        sx={{ mt: 1 }}
-                      />
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </CardContent>
-    </Card>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </CardContent>
+      </Card>
+    </Box>
   );
 };
 

@@ -9,7 +9,12 @@
     "lint": "eslint . --ext .ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "test:startup": "ts-node src/scripts/startup-check.ts",
-    "test:api": "ts-node src/scripts/proxmox-api-test.ts"
+    "test:api": "ts-node src/scripts/proxmox-api-test.ts",
+    "kill:backend": "npx kill-port 3000",
+    "kill:frontend": "npx kill-port 5173 5174 5175 5176 5177 5178 5179 5180 5181 5182 5183 5184 5185 5186 5187 5188 5189 5190 5191 5192 5193 5194 5195 5196 5197 5198 5199 5200",
+    "kill:all": "npm run kill:backend && npm run kill:frontend",
+    "dev:frontend": "cd frontend && npm run dev",
+    "pulse": "./start-pulse.sh"
   },
   "keywords": [],
   "author": "",
@@ -31,6 +36,7 @@
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
+    "concurrently": "^9.1.2",
     "nodemon": "^3.1.9",
     "ts-node-dev": "^2.0.0"
   }
