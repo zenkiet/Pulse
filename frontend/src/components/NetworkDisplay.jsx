@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import useSocket from '../hooks/useSocket';
 import { 
   Box, 
@@ -203,6 +203,32 @@ const StatusIndicator = ({ status }) => {
     />
   );
 };
+
+// Add keyboard shortcut tooltip component
+const KeyboardShortcut = ({ shortcut, sx = {} }) => (
+  <Box
+    component="span"
+    sx={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      px: 0.7,
+      py: 0.3,
+      ml: 0.8,
+      fontSize: '0.65rem',
+      lineHeight: 1,
+      fontWeight: 600,
+      color: 'text.secondary',
+      bgcolor: 'rgba(0, 0, 0, 0.06)',
+      borderRadius: 0.8,
+      border: '1px solid',
+      borderColor: 'rgba(0, 0, 0, 0.1)',
+      ...sx
+    }}
+  >
+    {shortcut}
+  </Box>
+);
 
 const NetworkDisplay = () => {
   const { 
@@ -597,6 +623,28 @@ const NetworkDisplay = () => {
   const downloadColumnRef = React.useRef(null);
   const uploadColumnRef = React.useRef(null);
   
+  // Memoize getSortedAndFilteredData to optimize performance
+  const sortedAndFilteredData = useMemo(
+    () => getSortedAndFilteredData(guestData),
+    [guestData, sortConfig, filters, showStopped, searchTerm, activeSearchTerms, displayMetrics]
+  );
+  
+  // Add keyboard shortcut handler for 'F' key to toggle filters
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // If 'F' is pressed and no input/textarea is focused, toggle filters
+      if (e.key.toLowerCase() === 'f' && 
+          !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) &&
+          !document.activeElement.isContentEditable) {
+        e.preventDefault();
+        setShowFilters(prev => !prev);
+      }
+    };
+    
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+  
   if (error) {
     return (
       <Card 
@@ -724,6 +772,17 @@ const NetworkDisplay = () => {
                   <CloseIcon fontSize="small" />
                 </IconButton>
               )}
+              
+              <Box sx={{ 
+                display: { xs: 'none', md: 'flex' }, 
+                alignItems: 'center',
+                ml: 0.5,
+                mr: -0.5,
+                opacity: 0.6,
+                '&:hover': { opacity: 1 }
+              }}>
+                <KeyboardShortcut shortcut="ESC" sx={{ mr: 0.5 }} />
+              </Box>
             </Box>
 
             <Box sx={{ flexGrow: 1 }} />
@@ -739,7 +798,14 @@ const NetworkDisplay = () => {
             }}>
               {/* Filter controls */}
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Tooltip title={showFilters ? "Hide filters" : "Show filters"}>
+                <Tooltip title={
+                  <>
+                    {showFilters ? "Hide filters" : "Show filters"}
+                    <Box sx={{ mt: 0.5, opacity: 0.7, fontSize: '0.7rem', display: 'flex', alignItems: 'center' }}>
+                      Press <Box component="span" sx={{ mx: 0.5, px: 0.4, border: '1px solid', borderColor: 'rgba(255,255,255,0.3)', borderRadius: 0.5 }}>F</Box> to toggle
+                    </Box>
+                  </>
+                }>
                   <Box 
                     onClick={() => setShowFilters(!showFilters)}
                     sx={{ 
@@ -770,7 +836,7 @@ const NetworkDisplay = () => {
                     {(Object.values(filters).some(val => val > 0) || searchTerm) ? (
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <Typography variant="body2" color="primary" sx={{ fontWeight: 600 }}>
-                          {`${getSortedAndFilteredData(guestData).length}/${guestData.length}`}
+                          {`${sortedAndFilteredData.length}/${guestData.length}`}
                         </Typography>
                       </Box>
                     ) : (
@@ -931,7 +997,11 @@ const NetworkDisplay = () => {
           )}
           
           {/* Filter Panel that shows when filters are active */}
-          <Collapse in={showFilters} timeout="auto">
+          <Collapse in={showFilters} timeout="auto" sx={{
+            '& .MuiCollapse-wrapperInner': {
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+            }
+          }}>
             <Box 
               sx={{ 
                 mb: 2, 
@@ -1139,14 +1209,25 @@ const NetworkDisplay = () => {
                 </Box>
               </Box>
               
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+                <Typography variant="caption" color={
+                  Object.values(filters).some(val => val > 0) ? 'primary.main' : 'text.secondary'
+                } sx={{ fontWeight: 500 }}>
+                  {Object.values(filters).some(val => val > 0) ? 
+                    `Showing ${sortedAndFilteredData.length} of ${guestData.length} systems` : 
+                    ''}
+                </Typography>
                 <Chip 
                   label="Reset All Filters" 
                   onClick={resetFilters}
-                  variant="outlined"
+                  variant={Object.values(filters).some(val => val > 0) ? "filled" : "outlined"}
                   size="small"
                   color="primary"
-                  sx={{ height: 28 }}
+                  sx={{ 
+                    height: 28,
+                    transition: 'all 0.2s ease',
+                    fontWeight: Object.values(filters).some(val => val > 0) ? 600 : 400
+                  }}
                 />
               </Box>
             </Box>
@@ -1165,7 +1246,10 @@ const NetworkDisplay = () => {
           >
             <Table sx={{ 
               '& tbody tr:nth-of-type(odd)': {
-                backgroundColor: theme => alpha(theme.palette.grey[50], 0.5),
+                backgroundColor: theme => alpha(theme.palette.grey[50], 0.8),
+              },
+              '& tbody tr:nth-of-type(even)': {
+                backgroundColor: theme => alpha(theme.palette.background.paper, 1),
               },
               '& tbody tr': {
                 transition: 'background-color 0.15s ease-in-out',
@@ -1206,7 +1290,19 @@ const NetworkDisplay = () => {
                       <PersonIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
                       Guest Name
                       {sortConfig.key === 'name' && (
-                        <Box sx={{ ml: 0.5 }}>
+                        <Box sx={{ 
+                          ml: 0.5,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 18,
+                          height: 18,
+                          borderRadius: '50%',
+                          bgcolor: theme => alpha(theme.palette.primary.main, 0.1),
+                          color: 'primary.main',
+                          fontSize: '0.8rem',
+                          fontWeight: 'bold'
+                        }}>
                           {sortConfig.direction === 'asc' ? '↑' : '↓'}
                         </Box>
                       )}
@@ -1223,6 +1319,9 @@ const NetworkDisplay = () => {
                       minHeight: '48px', 
                       position: 'relative',
                       cursor: 'pointer',
+                      borderBottom: theme => filters.cpu > 0 ? 
+                        `2px solid ${theme.palette.primary.main}` : undefined,
+                      color: theme => filters.cpu > 0 ? 'primary.main' : 'inherit',
                       '&:hover': {
                         backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
                       }
@@ -1232,7 +1331,19 @@ const NetworkDisplay = () => {
                       <SpeedIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
                       CPU
                       {sortConfig.key === 'cpu' && (
-                        <Box sx={{ ml: 0.5 }}>
+                        <Box sx={{ 
+                          ml: 0.5,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 18,
+                          height: 18,
+                          borderRadius: '50%',
+                          bgcolor: theme => alpha(theme.palette.primary.main, 0.1),
+                          color: 'primary.main',
+                          fontSize: '0.8rem',
+                          fontWeight: 'bold'
+                        }}>
                           {sortConfig.direction === 'asc' ? '↑' : '↓'}
                         </Box>
                       )}
@@ -1249,6 +1360,9 @@ const NetworkDisplay = () => {
                       minHeight: '48px', 
                       position: 'relative',
                       cursor: 'pointer',
+                      borderBottom: theme => filters.memory > 0 ? 
+                        `2px solid ${theme.palette.primary.main}` : undefined,
+                      color: theme => filters.memory > 0 ? 'primary.main' : 'inherit',
                       '&:hover': {
                         backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
                       }
@@ -1258,7 +1372,19 @@ const NetworkDisplay = () => {
                       <MemoryIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
                       Memory
                       {sortConfig.key === 'memory' && (
-                        <Box sx={{ ml: 0.5 }}>
+                        <Box sx={{ 
+                          ml: 0.5,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 18,
+                          height: 18,
+                          borderRadius: '50%',
+                          bgcolor: theme => alpha(theme.palette.primary.main, 0.1),
+                          color: 'primary.main',
+                          fontSize: '0.8rem',
+                          fontWeight: 'bold'
+                        }}>
                           {sortConfig.direction === 'asc' ? '↑' : '↓'}
                         </Box>
                       )}
@@ -1275,6 +1401,9 @@ const NetworkDisplay = () => {
                       minHeight: '48px', 
                       position: 'relative',
                       cursor: 'pointer',
+                      borderBottom: theme => filters.disk > 0 ? 
+                        `2px solid ${theme.palette.primary.main}` : undefined,
+                      color: theme => filters.disk > 0 ? 'primary.main' : 'inherit',
                       '&:hover': {
                         backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
                       }
@@ -1284,7 +1413,19 @@ const NetworkDisplay = () => {
                       <StorageIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
                       Disk
                       {sortConfig.key === 'disk' && (
-                        <Box sx={{ ml: 0.5 }}>
+                        <Box sx={{ 
+                          ml: 0.5,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 18,
+                          height: 18,
+                          borderRadius: '50%',
+                          bgcolor: theme => alpha(theme.palette.primary.main, 0.1),
+                          color: 'primary.main',
+                          fontSize: '0.8rem',
+                          fontWeight: 'bold'
+                        }}>
                           {sortConfig.direction === 'asc' ? '↑' : '↓'}
                         </Box>
                       )}
@@ -1301,6 +1442,9 @@ const NetworkDisplay = () => {
                       minHeight: '48px', 
                       position: 'relative',
                       cursor: 'pointer',
+                      borderBottom: theme => filters.download > 0 ? 
+                        `2px solid ${theme.palette.primary.main}` : undefined,
+                      color: theme => filters.download > 0 ? 'primary.main' : 'inherit',
                       '&:hover': {
                         backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
                       }
@@ -1310,7 +1454,19 @@ const NetworkDisplay = () => {
                       <ArrowDownwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
                       Download
                       {sortConfig.key === 'download' && (
-                        <Box sx={{ ml: 0.5 }}>
+                        <Box sx={{ 
+                          ml: 0.5,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 18,
+                          height: 18,
+                          borderRadius: '50%',
+                          bgcolor: theme => alpha(theme.palette.primary.main, 0.1),
+                          color: 'primary.main',
+                          fontSize: '0.8rem',
+                          fontWeight: 'bold'
+                        }}>
                           {sortConfig.direction === 'asc' ? '↑' : '↓'}
                         </Box>
                       )}
@@ -1327,6 +1483,9 @@ const NetworkDisplay = () => {
                       minHeight: '48px', 
                       position: 'relative',
                       cursor: 'pointer',
+                      borderBottom: theme => filters.upload > 0 ? 
+                        `2px solid ${theme.palette.secondary.main}` : undefined,
+                      color: theme => filters.upload > 0 ? 'secondary.main' : 'inherit',
                       '&:hover': {
                         backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
                       }
@@ -1336,7 +1495,19 @@ const NetworkDisplay = () => {
                       <ArrowUpwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
                       Upload
                       {sortConfig.key === 'upload' && (
-                        <Box sx={{ ml: 0.5 }}>
+                        <Box sx={{ 
+                          ml: 0.5,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 18,
+                          height: 18,
+                          borderRadius: '50%',
+                          bgcolor: theme => alpha(theme.palette.secondary.main, 0.1),
+                          color: 'secondary.main',
+                          fontSize: '0.8rem',
+                          fontWeight: 'bold'
+                        }}>
                           {sortConfig.direction === 'asc' ? '↑' : '↓'}
                         </Box>
                       )}
@@ -1346,7 +1517,7 @@ const NetworkDisplay = () => {
               </TableHead>
               <TableBody>
                 {guestData.length > 0 ? (
-                  getSortedAndFilteredData(guestData)
+                  sortedAndFilteredData
                     .map((guest) => {
                     const metrics = getMetricsForGuest(guest.id);
                     const networkMetrics = metrics?.metrics?.network;
@@ -1374,6 +1545,42 @@ const NetworkDisplay = () => {
                         opacity: isRunning ? 1 : 0.8, 
                         '& > td': { py: 1.5 },
                         transition: 'all 0.2s ease-in-out',
+                        // Highlight rows that match active filters with subtle indicators
+                        ...(filters.cpu > 0 && cpuUsage > filters.cpu && {
+                          '& td:nth-of-type(2)': { 
+                            borderLeft: '2px solid',
+                            borderLeftColor: theme => alpha(theme.palette.primary.main, 0.4),
+                            pl: 1.5 // Add some padding to account for the border
+                          }
+                        }),
+                        ...(filters.memory > 0 && memoryUsage > filters.memory && {
+                          '& td:nth-of-type(3)': { 
+                            borderLeft: '2px solid',
+                            borderLeftColor: theme => alpha(theme.palette.primary.main, 0.4),
+                            pl: 1.5
+                          }
+                        }),
+                        ...(filters.disk > 0 && diskUsage > filters.disk && {
+                          '& td:nth-of-type(4)': { 
+                            borderLeft: '2px solid',
+                            borderLeftColor: theme => alpha(theme.palette.primary.main, 0.4),
+                            pl: 1.5
+                          }
+                        }),
+                        ...(filters.download > 0 && networkMetrics?.inRate >= sliderValueToNetworkRate(filters.download) && {
+                          '& td:nth-of-type(5)': { 
+                            borderLeft: '2px solid',
+                            borderLeftColor: theme => alpha(theme.palette.primary.main, 0.4),
+                            pl: 1.5
+                          }
+                        }),
+                        ...(filters.upload > 0 && networkMetrics?.outRate >= sliderValueToNetworkRate(filters.upload) && {
+                          '& td:nth-of-type(6)': { 
+                            borderLeft: '2px solid',
+                            borderLeftColor: theme => alpha(theme.palette.secondary.main, 0.4),
+                            pl: 1.5
+                          }
+                        })
                       }}>
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
@@ -1461,7 +1668,7 @@ const NetworkDisplay = () => {
                     </TableCell>
                   </TableRow>
                 )}
-                {guestData.length > 0 && getSortedAndFilteredData(guestData).length === 0 && (
+                {guestData.length > 0 && sortedAndFilteredData.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 2 }}>
@@ -1470,14 +1677,23 @@ const NetworkDisplay = () => {
                           No Matching Systems
                         </Typography>
                         <Typography variant="body2" color="text.disabled" sx={{ mb: 2 }}>
-                          No systems match the current filters
+                          Try adjusting your filters or search terms
                         </Typography>
-                        <Chip 
-                          label="Reset Filters" 
-                          color="primary" 
-                          onClick={resetFilters}
-                          sx={{ mt: 1 }}
-                        />
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                          <Chip 
+                            label="Reset Filters" 
+                            color="primary" 
+                            onClick={resetFilters}
+                            sx={{ mt: 1 }}
+                          />
+                          <Chip 
+                            label="Show Stopped Systems" 
+                            color="default" 
+                            variant="outlined"
+                            onClick={() => setShowStopped(true)}
+                            sx={{ mt: 1, display: !showStopped ? 'flex' : 'none' }}
+                          />
+                        </Box>
                       </Box>
                     </TableCell>
                   </TableRow>
