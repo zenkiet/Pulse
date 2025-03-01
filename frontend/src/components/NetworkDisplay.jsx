@@ -311,11 +311,11 @@ const NetworkDisplay = () => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_FILTERS);
       return saved ? JSON.parse(saved) : {
-        cpu: 0,
-        memory: 0,
-        disk: 0,
-        download: 0,
-        upload: 0
+    cpu: 0,
+    memory: 0,
+    disk: 0,
+    download: 0,
+    upload: 0
       };
     } catch (e) {
       console.error('Error loading filter preferences:', e);
@@ -1155,8 +1155,8 @@ const NetworkDisplay = () => {
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
             }
           }}>
-            <Box 
-              sx={{ 
+                    <Box 
+                      sx={{ 
                 mb: 2, 
                 p: 2, 
                 backgroundColor: theme => darkMode 
@@ -1178,7 +1178,7 @@ const NetworkDisplay = () => {
                 {/* CPU Filter */}
                 <Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <SpeedIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                        <SpeedIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
                     <Typography 
                       variant="body2" 
                       sx={{ fontWeight: 500 }}
@@ -1188,98 +1188,98 @@ const NetworkDisplay = () => {
                     </Typography>
                   </Box>
                   <Tooltip title={`CPU usage ≥ ${formatPercentage(filters.cpu)}`} arrow placement="top">
-                    <Slider
-                      value={filters.cpu}
+                            <Slider
+                              value={filters.cpu}
                       onChange={(_, newValue) => updateFilter('cpu', newValue)}
-                      onMouseDown={() => handleSliderDragStart('cpu')}
+                              onMouseDown={() => handleSliderDragStart('cpu')}
                       onMouseUp={handleSliderDragEnd}
                       aria-labelledby="cpu-filter-label"
                       aria-valuetext={`${formatPercentage(filters.cpu)}`}
                       valueLabelDisplay="auto"
                       valueLabelFormat={value => `${formatPercentage(value)}`}
-                      sx={{
+                              sx={{ 
                         color: theme => alpha(theme.palette.primary.main, filters.cpu > 0 ? 0.8 : 0.4),
-                        height: 4,
-                        '& .MuiSlider-thumb': {
+                                  height: 4,
+                                '& .MuiSlider-thumb': { 
                           height: 14,
                           width: 14,
-                          '&:hover, &.Mui-focusVisible': {
+                                  '&:hover, &.Mui-focusVisible': { 
                             boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
-                          }
-                        },
-                        '& .MuiSlider-valueLabel': {
+                                  }
+                                },
+                                '& .MuiSlider-valueLabel': {
                           fontWeight: 'bold',
                           lineHeight: 1.2
-                        }
-                      }}
-                    />
+                                }
+                              }}
+                            />
                   </Tooltip>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
                     <Typography variant="caption" color="text.secondary">0%</Typography>
                     <Typography variant="caption" color="text.secondary">100%</Typography>
-                  </Box>
+                          </Box>
                 </Box>
                 
                 {/* Memory Filter */}
                 <Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <MemoryIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                    <Typography 
-                      variant="body2" 
+                            <Typography 
+                              variant="body2" 
                       sx={{ fontWeight: 500 }}
                       id="memory-filter-label"
                     >
                       Memory Usage
-                    </Typography>
-                  </Box>
+                            </Typography>
+                          </Box>
                   <Tooltip title={`Memory usage ≥ ${formatPercentage(filters.memory)}`} arrow placement="top">
-                    <Slider
-                      value={filters.memory}
+                            <Slider
+                              value={filters.memory}
                       onChange={(_, newValue) => updateFilter('memory', newValue)}
-                      onMouseDown={() => handleSliderDragStart('memory')}
+                              onMouseDown={() => handleSliderDragStart('memory')}
                       onMouseUp={handleSliderDragEnd}
                       aria-labelledby="memory-filter-label"
                       aria-valuetext={`${formatPercentage(filters.memory)}`}
                       valueLabelDisplay="auto"
                       valueLabelFormat={value => `${formatPercentage(value)}`}
-                      sx={{
+                              sx={{ 
                         color: theme => alpha(theme.palette.primary.main, filters.memory > 0 ? 0.8 : 0.4),
-                        height: 4,
-                        '& .MuiSlider-thumb': {
+                                  height: 4,
+                                '& .MuiSlider-thumb': { 
                           height: 14,
                           width: 14,
-                          '&:hover, &.Mui-focusVisible': {
+                                  '&:hover, &.Mui-focusVisible': { 
                             boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
-                          }
-                        },
-                        '& .MuiSlider-valueLabel': {
+                                  }
+                                },
+                                '& .MuiSlider-valueLabel': {
                           fontWeight: 'bold',
                           lineHeight: 1.2
-                        }
-                      }}
-                    />
+                                }
+                              }}
+                            />
                   </Tooltip>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
                     <Typography variant="caption" color="text.secondary">0%</Typography>
                     <Typography variant="caption" color="text.secondary">100%</Typography>
-                  </Box>
+                          </Box>
                 </Box>
                 
                 {/* Disk Filter */}
                 <Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <StorageIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                    <Typography 
-                      variant="body2" 
+                            <Typography 
+                              variant="body2" 
                       sx={{ fontWeight: 500 }}
                       id="disk-filter-label"
                     >
                       Disk Usage
-                    </Typography>
-                  </Box>
+                            </Typography>
+                          </Box>
                   <Tooltip title={`Disk usage ≥ ${formatPercentage(filters.disk)}`} arrow placement="top">
                     <Slider
-                      value={filters.disk}
+                              value={filters.disk} 
                       onChange={(_, newValue) => updateFilter('disk', newValue)}
                       onMouseDown={() => handleSliderDragStart('disk')}
                       onMouseUp={handleSliderDragEnd}
@@ -1287,9 +1287,9 @@ const NetworkDisplay = () => {
                       aria-valuetext={`${formatPercentage(filters.disk)}`}
                       valueLabelDisplay="auto"
                       valueLabelFormat={value => `${formatPercentage(value)}`}
-                      sx={{
+                              sx={{ 
                         color: theme => alpha(theme.palette.primary.main, filters.disk > 0 ? 0.8 : 0.4),
-                        height: 4,
+                                height: 4,
                         '& .MuiSlider-thumb': {
                           height: 14,
                           width: 14,
@@ -1300,9 +1300,9 @@ const NetworkDisplay = () => {
                         '& .MuiSlider-valueLabel': {
                           fontWeight: 'bold',
                           lineHeight: 1.2
-                        }
-                      }}
-                    />
+                                }
+                              }} 
+                            />
                   </Tooltip>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
                     <Typography variant="caption" color="text.secondary">0%</Typography>
@@ -1323,7 +1323,7 @@ const NetworkDisplay = () => {
                     </Typography>
                   </Box>
                   <Tooltip title={`Download ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}`} arrow placement="top">
-                    <Slider
+                            <Slider
                       value={filters.download}
                       onChange={(_, newValue) => updateFilter('download', newValue)}
                       onMouseDown={() => handleSliderDragStart('download')}
@@ -1332,41 +1332,41 @@ const NetworkDisplay = () => {
                       aria-valuetext={`${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}`}
                       valueLabelDisplay="auto"
                       valueLabelFormat={value => formatNetworkRateForFilter(sliderValueToNetworkRate(value))}
-                      sx={{
+                              sx={{ 
                         color: theme => alpha(theme.palette.primary.main, filters.download > 0 ? 0.8 : 0.4),
-                        height: 4,
-                        '& .MuiSlider-thumb': {
+                                  height: 4,
+                                '& .MuiSlider-thumb': { 
                           height: 14,
                           width: 14,
-                          '&:hover, &.Mui-focusVisible': {
+                                  '&:hover, &.Mui-focusVisible': { 
                             boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
-                          }
-                        },
-                        '& .MuiSlider-valueLabel': {
+                                  }
+                                },
+                                '& .MuiSlider-valueLabel': {
                           fontWeight: 'bold',
                           lineHeight: 1.2
-                        }
-                      }}
-                    />
+                                }
+                              }}
+                            />
                   </Tooltip>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
                     <Typography variant="caption" color="text.secondary">0 B/s</Typography>
                     <Typography variant="caption" color="text.secondary">10 MB/s</Typography>
-                  </Box>
+                          </Box>
                 </Box>
                 
                 {/* Upload Filter */}
                 <Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <ArrowUpwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                    <Typography 
-                      variant="body2" 
+                            <Typography 
+                              variant="body2" 
                       sx={{ fontWeight: 500 }}
                       id="upload-filter-label"
                     >
                       Upload Rate
-                    </Typography>
-                  </Box>
+                            </Typography>
+                          </Box>
                   <Tooltip title={`Upload ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}`} arrow placement="top">
                     <Slider
                       value={filters.upload}
@@ -1397,9 +1397,9 @@ const NetworkDisplay = () => {
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
                     <Typography variant="caption" color="text.secondary">0 B/s</Typography>
                     <Typography variant="caption" color="text.secondary">10 MB/s</Typography>
-                  </Box>
-                </Box>
-              </Box>
+                        </Box>
+                      </Box>
+                    </Box>
               
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
                 <Typography 
@@ -1417,8 +1417,8 @@ const NetworkDisplay = () => {
                   onClick={resetFilters}
                   variant={Object.values(filters).some(val => val > 0) ? "filled" : "outlined"}
                   size="small"
-                  color="primary"
-                  sx={{ 
+                              color="primary"
+                              sx={{ 
                     height: 28,
                     transition: 'all 0.2s ease',
                     fontWeight: Object.values(filters).some(val => val > 0) ? 600 : 400,
@@ -1436,9 +1436,9 @@ const NetworkDisplay = () => {
           
           <TableContainer 
             component={Paper} 
-            sx={{ 
+                              sx={{ 
               boxShadow: 'none', 
-              borderRadius: 2,
+                                  borderRadius: 2,
               overflow: 'auto',
               position: 'relative',
               border: '1px solid',
@@ -1556,7 +1556,7 @@ const NetworkDisplay = () => {
                         aria-hidden="true"
                         >
                           {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                        </Box>
+                          </Box>
                       )}
                     </Box>
                   </TableCell>
@@ -1566,7 +1566,7 @@ const NetworkDisplay = () => {
                     width="19%" 
                     ref={cpuColumnRef} 
                     onClick={() => requestSort('cpu')}
-                    sx={{ 
+                              sx={{ 
                       fontWeight: 'bold', 
                       minHeight: '48px', 
                       position: 'relative',
@@ -1599,7 +1599,7 @@ const NetworkDisplay = () => {
                         aria-hidden="true"
                         >
                           {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                        </Box>
+                          </Box>
                       )}
                     </Box>
                   </TableCell>
@@ -1610,9 +1610,9 @@ const NetworkDisplay = () => {
                     ref={memoryColumnRef}
                     onClick={() => requestSort('memory')}
                     sx={{ 
-                      fontWeight: 'bold', 
-                      minHeight: '48px', 
-                      position: 'relative',
+                    fontWeight: 'bold', 
+                    minHeight: '48px', 
+                    position: 'relative',
                       cursor: 'pointer',
                       borderBottom: theme => filters.memory > 0 ? 
                         `2px solid ${theme.palette.primary.main}` : undefined,
@@ -1642,7 +1642,7 @@ const NetworkDisplay = () => {
                         aria-hidden="true"
                         >
                           {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                        </Box>
+                      </Box>
                       )}
                     </Box>
                   </TableCell>
@@ -1652,10 +1652,10 @@ const NetworkDisplay = () => {
                     width="19%" 
                     ref={diskColumnRef}
                     onClick={() => requestSort('disk')}
-                    sx={{ 
+                      sx={{ 
                       fontWeight: 'bold', 
                       minHeight: '48px', 
-                      position: 'relative',
+                        position: 'relative',
                       cursor: 'pointer',
                       borderBottom: theme => filters.disk > 0 ? 
                         `2px solid ${theme.palette.primary.main}` : undefined,
@@ -1671,9 +1671,9 @@ const NetworkDisplay = () => {
                       {sortConfig.key === 'disk' && (
                         <Box sx={{ 
                           ml: 0.5,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                           width: 18,
                           height: 18,
                           borderRadius: '50%',
@@ -1695,7 +1695,7 @@ const NetworkDisplay = () => {
                     width="12%" 
                     ref={downloadColumnRef}
                     onClick={() => requestSort('download')}
-                    sx={{ 
+                              sx={{ 
                       fontWeight: 'bold', 
                       minHeight: '48px', 
                       position: 'relative',
@@ -1717,7 +1717,7 @@ const NetworkDisplay = () => {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          width: 18,
+                                    width: 18,
                           height: 18,
                           borderRadius: '50%',
                           bgcolor: theme => alpha(theme.palette.primary.main, 0.1),
@@ -1728,7 +1728,7 @@ const NetworkDisplay = () => {
                         aria-hidden="true"
                         >
                           {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                        </Box>
+                          </Box>
                       )}
                     </Box>
                   </TableCell>
@@ -1738,7 +1738,7 @@ const NetworkDisplay = () => {
                     width="13%" 
                     ref={uploadColumnRef}
                     onClick={() => requestSort('upload')}
-                    sx={{ 
+                              sx={{ 
                       fontWeight: 'bold', 
                       minHeight: '48px', 
                       position: 'relative',
@@ -1771,7 +1771,7 @@ const NetworkDisplay = () => {
                         aria-hidden="true"
                         >
                           {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                        </Box>
+                          </Box>
                       )}
                     </Box>
                   </TableCell>
@@ -1942,12 +1942,12 @@ const NetworkDisplay = () => {
                           Try adjusting your filters or search terms
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                          <Chip 
-                            label="Reset Filters" 
-                            color="primary" 
-                            onClick={resetFilters}
-                            sx={{ mt: 1 }}
-                          />
+                        <Chip 
+                          label="Reset Filters" 
+                          color="primary" 
+                          onClick={resetFilters}
+                          sx={{ mt: 1 }}
+                        />
                           <Chip 
                             label="Show Stopped Systems" 
                             color="default" 
