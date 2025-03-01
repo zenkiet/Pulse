@@ -18,7 +18,7 @@ export class WebSocketServer {
       },
       transports: ['websocket', 'polling'],
       pingTimeout: 20000,         // Increased from 10000
-      pingInterval: 10000,        // Increased from 5000
+      pingInterval: 5000,         // Set to match node polling interval
       connectTimeout: 10000,      // Increased from 5000
       allowUpgrades: true,
       perMessageDeflate: {

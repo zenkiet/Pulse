@@ -93,7 +93,7 @@ const config: AppConfig = {
   metricsHistoryMinutes: parseInt(process.env.METRICS_HISTORY_MINUTES || '60', 10),
   ignoreSSLErrors: process.env.IGNORE_SSL_ERRORS === 'true',
   // More responsive polling intervals
-  nodePollingIntervalMs: parseInt(process.env.NODE_POLLING_INTERVAL_MS || '10000', 10),
+  nodePollingIntervalMs: parseInt(process.env.NODE_POLLING_INTERVAL_MS || '5000', 10),
   eventPollingIntervalMs: parseInt(process.env.EVENT_POLLING_INTERVAL_MS || '2000', 10),
   nodes: parseNodeConfigs()
 };
