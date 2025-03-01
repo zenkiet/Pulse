@@ -27,6 +27,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import NetworkDisplay from './components/NetworkDisplay';
 import { AppThemeProvider, useThemeContext } from './context/ThemeContext';
 import useSocket from './hooks/useSocket';
+import { VERSION } from './utils/version';
 
 function AppContent() {
   const { darkMode, toggleDarkMode } = useThemeContext();
@@ -201,7 +202,7 @@ function AppContent() {
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  v1.0.10
+                  v{VERSION}
                 </Typography>
               </Box>
             </Box>

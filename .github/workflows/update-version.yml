@@ -1,0 +1,45 @@
+name: Update Version
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.release.target_commitish }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Update version file
+        run: |
+          # Extract version from the release tag (remove 'v' prefix if present)
+          VERSION=$(echo ${{ github.event.release.tag_name }} | sed 's/^v//')
+          
+          # Update the version.js file
+          echo "// This file contains the version information for the application" > frontend/src/utils/version.js
+          echo "// It is automatically updated when a new release is created" >> frontend/src/utils/version.js
+          echo "" >> frontend/src/utils/version.js
+          echo "export const VERSION = '$VERSION'; // Updated by GitHub Actions" >> frontend/src/utils/version.js
+          
+          # Also update package.json versions
+          npm version $VERSION --no-git-tag-version
+          cd frontend && npm version $VERSION --no-git-tag-version
+      
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add frontend/src/utils/version.js package.json frontend/package.json
+          git commit -m "Update version to ${{ github.event.release.tag_name }}"
+          git push 

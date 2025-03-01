@@ -8,6 +8,17 @@ A lightweight, responsive ProxMox monitoring application that displays real-time
 - Dashboard with summary cards for nodes, guests, and resources
 - Responsive design that works on desktop and mobile
 - WebSocket connection for live updates
+- Automatic version display linked to GitHub releases
+
+## Versioning
+
+The application version displayed in the header is automatically updated when a new GitHub release is created. This is handled by a GitHub Actions workflow that:
+
+1. Updates the version in the source code when a release is published
+2. Updates the package.json files to match the release version
+3. Commits and pushes these changes back to the repository
+
+For more details on how to create releases, see the [workflow documentation](.github/workflows/README.md).
 
 ## Environment Variables
 
