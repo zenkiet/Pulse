@@ -65,9 +65,9 @@ The easiest way to get started with Pulse is to use the pre-built Docker image:
 For a more robust setup with Docker Compose:
 
 1. Create a `.env` file with your ProxMox node details
-2. Run using the provided Docker Compose file:
+2. Run using Docker Compose:
    ```bash
-   docker-compose -f docker-compose.hub.yml up -d
+   docker-compose up -d pulse
    ```
 3. Access the application at http://localhost:7654
 
@@ -99,11 +99,18 @@ For a more robust setup with Docker Compose:
    cp .env.example .env
    ```
 3. Edit the `.env` file with your ProxMox node details
-4. Start the application in production mode:
+4. Start the application using the pre-built Docker Hub image (default):
    ```
    docker-compose up -d pulse
    ```
-   Or in development mode:
+   
+   Or build from source (uncomment the pulse-build service in docker-compose.yml first):
+   ```
+   # First uncomment the pulse-build service in docker-compose.yml
+   docker-compose up -d pulse-build
+   ```
+   
+   Or run in development mode with live reloading:
    ```
    docker-compose up -d pulse-dev
    ```
@@ -113,11 +120,14 @@ For a more robust setup with Docker Compose:
 
 1. Build and run the container:
    ```
-   # For production
+   # Using pre-built image
+   docker run -d -p 7654:7654 --env-file .env --name pulse-app rcourtman/pulse:latest
+   
+   # Building from source (production)
    docker build --target production -t proxmox-pulse:prod .
    docker run -d -p 7654:7654 --env-file .env --name proxmox-pulse proxmox-pulse:prod
    
-   # For development
+   # Building from source (development with live reloading)
    docker build --target development -t proxmox-pulse:dev .
    docker run -d -p 7654:7654 -p 9513:9513 --env-file .env --name proxmox-pulse-dev proxmox-pulse:dev
    ```
