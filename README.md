@@ -9,6 +9,31 @@ A lightweight, responsive ProxMox monitoring application that displays real-time
 - Responsive design that works on desktop and mobile
 - WebSocket connection for live updates
 
+## Environment Variables
+
+### Backend Environment Variables
+
+The backend server uses the following environment variables, which can be set in the `.env` file:
+
+- `PORT`: The port on which the server will run (default: 7654)
+- `NODE_ENV`: Set to `production` for production or `development` for development
+- `LOG_LEVEL`: Log level (`error`, `warn`, `info`, `debug`)
+- `ENABLE_DEV_TOOLS`: Enable development tools (`true` or `false`)
+- `IGNORE_SSL_ERRORS`: Whether to ignore SSL errors when connecting to ProxMox nodes
+- `NODE_TLS_REJECT_UNAUTHORIZED`: Set to `0` to disable SSL certificate validation (not recommended for production)
+
+### Frontend Environment Variables
+
+The frontend can be configured using the following environment variables:
+
+- `VITE_API_URL`: The URL of the backend API (defaults to the current origin if not specified)
+
+### Security Considerations
+
+- For development or internal networks, you can set `IGNORE_SSL_ERRORS=true` and `NODE_TLS_REJECT_UNAUTHORIZED=0`
+- For production, set these to `false` and `1` respectively, and ensure proper SSL certificates are installed
+- Setting these to `true` and `0` disables SSL certificate validation and is not secure for production environments
+
 ## Installation
 
 ### Standard Installation

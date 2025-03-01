@@ -26,7 +26,7 @@ const consoleTransport = new winston.transports.Console({
 const logger = winston.createLogger({
   level: config.logLevel,
   format: logFormat,
-  defaultMeta: { service: 'proxmox-monitor' },
+  defaultMeta: { service: 'pulse' },
   transports: [consoleTransport]
 });
 

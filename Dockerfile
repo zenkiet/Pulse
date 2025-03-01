@@ -50,6 +50,9 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/frontend/dist ./frontend/dist
 COPY --from=builder /app/start-pulse.sh ./
 
+# Create a symbolic link from /app/dist/public to /app/frontend/dist
+RUN mkdir -p /app/dist/public && rm -rf /app/dist/public && ln -s /app/frontend/dist /app/dist/public
+
 # Install only production dependencies
 RUN npm ci --only=production
 

@@ -10,12 +10,12 @@ export default defineConfig({
     proxy: {
       // Proxy WebSocket connections to the real backend
       '/socket.io': {
-        target: 'http://localhost:3000',
+        target: process.env.VITE_API_URL || 'http://localhost:7654',
         ws: true,
       },
       // Proxy API requests to the real backend
       '/api': {
-        target: 'http://localhost:3000',
+        target: process.env.VITE_API_URL || 'http://localhost:7654',
         changeOrigin: true,
       }
     },
@@ -24,4 +24,9 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
   },
+  // Define environment variables that will be available in the frontend code
+  define: {
+    // Stringify the values to ensure they're treated as strings in the frontend
+    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || ''),
+  }
 }); 

@@ -35,7 +35,12 @@ const DEBUG_METRICS_DATA = [
  * @param {string} url - WebSocket server URL (defaults to current origin)
  * @returns {Object} Socket state and message handlers
  */
-const useSocket = (url = 'http://localhost:3000') => {
+const useSocket = (url) => {
+  // Use the provided URL, or the environment variable, or fall back to window.location.origin
+  // This ensures the frontend connects to the same server that served it,
+  // avoiding hardcoded URLs that might not work in different environments
+  const socketUrl = url || import.meta.env.VITE_API_URL || window.location.origin;
+  
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState(null);
   const [nodeData, setNodeData] = useState([]);
@@ -50,7 +55,7 @@ const useSocket = (url = 'http://localhost:3000') => {
   // Initialize socket connection
   useEffect(() => {
     // Socket.io connection configuration
-    socketRef.current = io(url, {
+    socketRef.current = io(socketUrl, {
       transports: ['websocket'],
       reconnectionAttempts: 5,
       reconnectionDelay: 500,
@@ -59,7 +64,7 @@ const useSocket = (url = 'http://localhost:3000') => {
       autoConnect: true
     });
 
-    console.log('Attempting to connect to WebSocket server at:', url);
+    console.log('Attempting to connect to WebSocket server at:', socketUrl);
     
     // Connection event handlers
     socketRef.current.on('connect', () => {
@@ -148,7 +153,7 @@ const useSocket = (url = 'http://localhost:3000') => {
         socketRef.current = null;
       }
     };
-  }, [url]);
+  }, [socketUrl]);
 
   // Handler for node status updates
   const handleNodeStatusUpdate = useCallback((payload) => {
