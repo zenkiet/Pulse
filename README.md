@@ -1,5 +1,7 @@
 # ProxMox Pulse
 
+[![Docker Pulls](https://img.shields.io/docker/pulls/rcourtman/pulse.svg)](https://hub.docker.com/r/rcourtman/pulse)
+
 A lightweight, responsive ProxMox monitoring application that displays real-time metrics for CPU, memory, network, and disk usage across multiple nodes.
 
 ## Features
@@ -46,6 +48,28 @@ The frontend can be configured using the following environment variables:
 - Setting these to `true` and `0` disables SSL certificate validation and is not secure for production environments
 
 ## Installation
+
+### Quick Start with Docker Hub
+
+The easiest way to get started with Pulse is to use the pre-built Docker image:
+
+1. Create a `.env` file with your ProxMox node details (see Configuration section)
+2. Run the container:
+   ```bash
+   docker run -d -p 7654:7654 --env-file .env --name pulse-app rcourtman/pulse:latest
+   ```
+3. Access the application at http://localhost:7654
+
+#### Using Docker Compose with Docker Hub
+
+For a more robust setup with Docker Compose:
+
+1. Create a `.env` file with your ProxMox node details
+2. Run using the provided Docker Compose file:
+   ```bash
+   docker-compose -f docker-compose.hub.yml up -d
+   ```
+3. Access the application at http://localhost:7654
 
 ### Standard Installation
 
@@ -152,54 +176,4 @@ The `NODE_TLS_REJECT_UNAUTHORIZED=0` setting is particularly important when usin
 
 ### Important Note on API Tokens
 
-If your ProxMox API token ID contains special characters (like `!`, `?`, `&`, etc.), make sure your `.env` file has the correct format. The application handles this internally, but it's important for the configuration to be correct.
-
-## Troubleshooting
-
-If you're having trouble connecting to your ProxMox nodes, check the following:
-
-1. **Network Connectivity**: Make sure you can reach the ProxMox node from your machine
-2. **API Access**: Verify that the ProxMox API is accessible on the specified port
-3. **API Token**: Ensure that your API token has the correct permissions and is properly formatted
-4. **SSL Certificates**: If you're using self-signed certificates, make sure both `IGNORE_SSL_ERRORS` is set to `true` and `NODE_TLS_REJECT_UNAUTHORIZED=0` is included in your `.env` file
-
-### SSL Certificate Issues
-
-When connecting to ProxMox nodes with self-signed certificates, you may encounter SSL verification errors. To resolve this:
-
-1. Set `IGNORE_SSL_ERRORS=true` in your `.env` file
-2. Add `NODE_TLS_REJECT_UNAUTHORIZED=0` to your `.env` file
-3. When using Docker, ensure these environment variables are passed to the container using the `--env-file .env` flag
-
-### Port Conflicts
-
-If you encounter port conflicts when running the application:
-
-1. Check for processes using the same ports:
-   ```bash
-   lsof -i :7654
-   lsof -i :9513
-   ```
-2. Stop the conflicting processes or use different ports in your configuration
-3. For Docker, you can map to different host ports:
-   ```bash
-   docker run -p 7655:7654 -p 9514:9513 --env-file .env proxmox-pulse
-   ```
-   Then access the application at http://localhost:7655
-
-### Verifying the Application is Running
-
-You can check if the application is running properly by accessing the health endpoint:
-
-```bash
-curl http://localhost:7654/api/health
-```
-
-This should return a JSON response like:
-```json
-{"success":true,"data":{"status":"ok","timestamp":1234567890123},"timestamp":1234567890123}
-```
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details. 
+If your ProxMox API token ID contains special characters (like `!`, `
