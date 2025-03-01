@@ -26,7 +26,8 @@ import {
   IconButton,
   Collapse,
   alpha,
-  useTheme
+  useTheme,
+  Button
 } from '@mui/material';
 import NetworkCheckIcon from '@mui/icons-material/NetworkCheck';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
@@ -44,6 +45,7 @@ import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import InputBase from '@mui/material/InputBase';
 import DnsIcon from '@mui/icons-material/Dns';
+import RefreshIcon from '@mui/icons-material/Refresh';
 
 // Define pulse animation
 const pulseAnimation = keyframes`
@@ -243,13 +245,120 @@ const KeyboardShortcut = ({ shortcut, sx = {} }) => (
   </Box>
 );
 
+// Add a new ConnectionErrorDisplay component
+const ConnectionErrorDisplay = ({ connectionStatus, error, onReconnect }) => {
+  const { isDarkMode } = useThemeContext();
+  const theme = useTheme();
+  let title, message, icon, severity;
+  
+  switch (connectionStatus) {
+    case 'error':
+      title = 'Connection Error';
+      message = error || 'Unable to connect to the server. The server may be offline or unreachable.';
+      icon = <CancelIcon sx={{ mr: 1 }} />;
+      severity = 'error';
+      break;
+    case 'disconnected':
+      title = 'Server Disconnected';
+      message = 'The connection to the server has been lost. This may happen if the server was stopped or restarted.';
+      icon = <CancelIcon sx={{ mr: 1 }} />;
+      severity = 'warning';
+      break;
+    default:
+      title = 'Connection Issue';
+      message = 'There is an issue with the connection to the server.';
+      icon = <CancelIcon sx={{ mr: 1 }} />;
+      severity = 'error';
+  }
+  
+  // Use theme directly to ensure proper dark mode detection
+  const mode = theme.palette.mode;
+  const isDark = mode === 'dark';
+  
+  // Define colors based on theme mode and severity
+  const bgColor = isDark 
+    ? (severity === 'error' ? 'rgba(244, 67, 54, 0.15)' : 'rgba(255, 193, 7, 0.15)') 
+    : (severity === 'error' ? '#FFF4F4' : '#FFF8E1');
+  
+  const borderColor = isDark
+    ? (severity === 'error' ? 'rgba(244, 67, 54, 0.3)' : 'rgba(255, 193, 7, 0.3)')
+    : (severity === 'error' ? '#ffcdd2' : '#ffe082');
+  
+  const textColor = isDark ? theme.palette.text.primary : 'rgba(0, 0, 0, 0.87)';
+  const secondaryTextColor = isDark ? theme.palette.text.secondary : 'rgba(0, 0, 0, 0.6)';
+  
+  return (
+    <Card 
+      sx={{ 
+        mb: 2, 
+        bgcolor: bgColor,
+        borderRadius: 2,
+        overflow: 'hidden',
+        border: `1px solid ${borderColor}`,
+        animation: `${fadeIn} 0.3s ease-out`,
+        // Force dark mode styles
+        ...(isDark && {
+          backgroundColor: severity === 'error' ? 'rgba(244, 67, 54, 0.15)' : 'rgba(255, 193, 7, 0.15)',
+          borderColor: severity === 'error' ? 'rgba(244, 67, 54, 0.3)' : 'rgba(255, 193, 7, 0.3)',
+          color: theme.palette.text.primary
+        })
+      }}
+    >
+      <CardContent sx={{ ...(isDark && { color: theme.palette.text.primary }) }}>
+        <Typography 
+          color={severity} 
+          variant="h6" 
+          sx={{ display: 'flex', alignItems: 'center', mb: 1 }}
+        >
+          {icon}
+          {title}
+        </Typography>
+        <Typography sx={{ mb: 2, color: textColor }}>{message}</Typography>
+        <Typography variant="body2" sx={{ mb: 2, color: secondaryTextColor }}>
+          Please check that:
+          <ul>
+            <li>The server application is running</li>
+            <li>Your network connection is working</li>
+            <li>Any firewalls or security software are not blocking the connection</li>
+          </ul>
+        </Typography>
+        {onReconnect && (
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <IconButton 
+              onClick={onReconnect} 
+              color="primary" 
+              sx={{ 
+                border: '1px solid', 
+                borderColor: 'primary.main',
+                borderRadius: 1,
+                px: 2,
+                py: 0.5,
+                fontSize: '0.875rem',
+                '& .MuiSvgIcon-root': { mr: 1 },
+                ...(isDark && {
+                  color: theme.palette.primary.main,
+                  borderColor: theme.palette.primary.main
+                })
+              }}
+            >
+              <RefreshIcon fontSize="small" />
+              Try Reconnecting
+            </IconButton>
+          </Box>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
 const NetworkDisplay = ({ selectedNode = 'all' }) => {
   const { 
     isConnected, 
     guestData, 
     metricsData, 
     error,
-    isDebugMode,
+    connectionStatus,
+    reconnect,
     nodeData
   } = useSocket();
   
@@ -507,159 +616,96 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
   
   // Sorting function
   const requestSort = (key) => {
-    let direction = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
+    const direction = sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
     setSortConfig({ key, direction });
   };
   
-  // Add debug logging for metrics data
-  useEffect(() => {
-    console.log("Current metrics data:", metricsData);
-    console.log("Current guest data:", guestData);
-    
-    // Check if metrics exist for each guest
-    if (guestData.length > 0 && metricsData.length > 0) {
-      guestData.forEach(guest => {
-        const hasMetrics = metricsData.some(metric => metric.guestId === guest.id);
-        console.log(`Guest ${guest.name} (${guest.id}) has metrics: ${hasMetrics}`);
-      });
-    }
-  }, [metricsData, guestData]);
-  
-  // Local state for demo metrics that auto-update in debug mode
-  const [demoMetrics, setDemoMetrics] = useState([]);
-  
-  // Update demo metrics every 3 seconds in debug mode
-  useEffect(() => {
-    if (!isDebugMode) return;
-    
-    const updateInterval = setInterval(() => {
-      const updatedMetrics = metricsData.map(metric => {
-        // Create base metrics if they don't exist
-        const currentMetrics = metric.metrics || {};
-        
-        return {
-          ...metric,
-          timestamp: Date.now(),
-          metrics: {
-            ...currentMetrics,
-            network: {
-              inRate: (currentMetrics.network?.inRate || 1024) * (0.8 + Math.random() * 0.4),
-              outRate: (currentMetrics.network?.outRate || 512) * (0.8 + Math.random() * 0.4)
-            },
-            cpu: Math.random() * 100,
-            memory: {
-              used: Math.random() * 8000000000, // ~8GB
-              total: 16000000000,  // 16GB
-              percentUsed: Math.random() * 100
-            },
-            disk: {
-              used: Math.random() * 100000000000, // ~100GB
-              total: 500000000000,  // 500GB
-              percentUsed: Math.random() * 100
-            }
-          }
-        };
-      });
-      
-      setDemoMetrics(updatedMetrics);
-    }, 3000);
-    
-    return () => clearInterval(updateInterval);
-  }, [isDebugMode, metricsData]);
-  
-  // Use either real metrics or demo metrics depending on mode
-  const displayMetrics = isDebugMode ? demoMetrics.length > 0 ? demoMetrics : metricsData : metricsData;
+  // Use real metrics instead of demo metrics
+  const displayMetrics = metricsData;
   
   // Helper function to get metrics for a guest
   const getMetricsForGuest = (guestId) => {
-    console.log(`Looking for metrics for guest ${guestId}...`);
-    console.log('Available metrics:', displayMetrics);
-    
     // Try to find the metric with matching guestId
     const metric = displayMetrics.find(metric => metric.guestId === guestId);
-    
-    // If we found a metric, log it, otherwise log that none was found
-    if (metric) {
-      console.log(`Found metrics for ${guestId}:`, metric);
-      return metric;
-    } else {
-      console.log(`No metrics found for ${guestId}`);
-      
-      // For debugging, log all guest IDs in the metrics data
-      if (displayMetrics.length > 0) {
-        console.log('Available guest IDs in metrics:', displayMetrics.map(m => m.guestId).join(', '));
-      }
-      
-      return null;
-    }
+    return metric || null;
   };
   
-  // Sort and filter data before displaying
+  // Update the getSortedAndFilteredData function to fix the variable redeclaration
   const getSortedAndFilteredData = (data) => {
-    // First filter by selected node
-    const nodeFilteredData = getNodeFilteredGuests(data);
+    if (!data || data.length === 0) return [];
     
-    const sortableData = [...nodeFilteredData];
+    // Filter by node if a specific node is selected
+    let filteredData = selectedNode !== 'all' 
+      ? getNodeFilteredGuests(data, selectedNode)
+      : [...data];
     
-    // Then filter the data
-    const filteredData = sortableData.filter(guest => {
-      // If not showing stopped and guest is not running, filter it out
-      if (!showStopped && guest.status !== 'running') {
-        return false;
-      }
-      
+    // Filter by status if showStopped is false
+    if (!showStopped) {
+      filteredData = filteredData.filter(guest => guest.status === 'running');
+    }
+    
+    // Then filter the data based on search terms and filters
+    filteredData = filteredData.filter(guest => {
       // Check if name matches either active search terms OR current search term
       if (activeSearchTerms.length > 0 || searchTerm) {
-        // Check if guest name matches any active search term
-        const matchesActiveTerms = activeSearchTerms.some(term => 
-          guest.name.toLowerCase().includes(term.toLowerCase())
-        );
+        const guestName = guest.name.toLowerCase();
         
-        // Check if guest name matches current search term being typed
-        const matchesCurrentTerm = searchTerm ? 
-          guest.name.toLowerCase().includes(searchTerm.toLowerCase()) : 
-          false;
+        // Check against active search terms
+        if (activeSearchTerms.length > 0) {
+          const matchesActiveTerms = activeSearchTerms.some(term => 
+            guestName.includes(term.toLowerCase())
+          );
+          
+          if (!matchesActiveTerms) {
+            return false;
+          }
+        }
         
-        // If it doesn't match either active terms or current term, filter it out
-        if (!matchesActiveTerms && !matchesCurrentTerm) {
+        // Check against current search term
+        if (searchTerm && !guestName.includes(searchTerm.toLowerCase())) {
           return false;
         }
       }
       
-      const metrics = getMetricsForGuest(guest.id);
-      if (!metrics) return true; // Keep entries without metrics data
+      // Apply resource filters
+      if (filters.cpu > 0) {
+        const cpuUsage = getMetricsForGuest(guest.id)?.metrics?.cpu || 0;
+        if (cpuUsage < filters.cpu) return false;
+      }
       
-      // Get metrics values
-      const cpuUsage = metrics?.metrics?.cpu || 0;
+      if (filters.memory > 0) {
+        const memoryData = getMetricsForGuest(guest.id)?.metrics?.memory || {};
+        const memoryUsage = memoryData.percentUsed || 
+          (memoryData.total && memoryData.used ? 
+            (memoryData.used / memoryData.total) * 100 : 0);
+        
+        if (memoryUsage < filters.memory) return false;
+      }
       
-      const memoryData = metrics?.metrics?.memory || {};
-      const memoryUsage = memoryData.percentUsed || 
-        (memoryData.total && memoryData.used ? 
-          (memoryData.used / memoryData.total) * 100 : 0);
+      if (filters.disk > 0) {
+        const diskData = getMetricsForGuest(guest.id)?.metrics?.disk || {};
+        const diskUsage = diskData.percentUsed || 
+          (diskData.total && diskData.used ? 
+            (diskData.used / diskData.total) * 100 : 0);
+        
+        if (diskUsage < filters.disk) return false;
+      }
       
-      const diskData = metrics?.metrics?.disk || {};
-      const diskUsage = diskData.percentUsed || 
-        (diskData.total && diskData.used ? 
-          (diskData.used / diskData.total) * 100 : 0);
-          
-      const downloadRate = metrics?.metrics?.network?.inRate || 0;
-      const uploadRate = metrics?.metrics?.network?.outRate || 0;
+      if (filters.download > 0) {
+        const downloadRate = getMetricsForGuest(guest.id)?.metrics?.network?.inRate || 0;
+        if (downloadRate < sliderValueToNetworkRate(filters.download)) return false;
+      }
       
-      // Apply filters - only show items that have values higher than the filter values
-      return (
-        cpuUsage >= filters.cpu &&
-        memoryUsage >= filters.memory &&
-        diskUsage >= filters.disk &&
-        downloadRate >= sliderValueToNetworkRate(filters.download) &&
-        uploadRate >= sliderValueToNetworkRate(filters.upload)
-      );
+      if (filters.upload > 0) {
+        const uploadRate = getMetricsForGuest(guest.id)?.metrics?.network?.outRate || 0;
+        if (uploadRate < sliderValueToNetworkRate(filters.upload)) return false;
+      }
+      
+      return true;
     });
     
-    // Then sort the filtered data
-    filteredData.sort((a, b) => {
+    // Sort the filtered data
+    return filteredData.sort((a, b) => {
       // For each sort key, define how to get the value to sort by
       switch (sortConfig.key) {
         case 'name':
@@ -724,8 +770,6 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
           return 0;
       }
     });
-    
-    return filteredData;
   };
   
   // Network max values in bytes/second for reference
@@ -761,30 +805,12 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
   
-  if (error) {
-    return (
-      <Card 
-        sx={{ 
-          mb: 2, 
-          bgcolor: '#FFF4F4',
-          borderRadius: 2,
-          overflow: 'hidden',
-          border: '1px solid #ffcdd2',
-          animation: `${fadeIn} 0.3s ease-out`,
-        }}
-      >
-        <CardContent>
-          <Typography color="error" variant="h6" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <CancelIcon sx={{ mr: 1 }} />
-            Connection Error
-          </Typography>
-          <Typography>{error}</Typography>
-        </CardContent>
-      </Card>
-    );
+  // Replace the existing error and connection checks with our new component
+  if (connectionStatus === 'error' || connectionStatus === 'disconnected') {
+    return <ConnectionErrorDisplay connectionStatus={connectionStatus} error={error} onReconnect={reconnect} />;
   }
   
-  if (!isConnected) {
+  if (!isConnected || connectionStatus === 'connecting') {
     return (
       <Box 
         sx={{ 
@@ -1174,21 +1200,6 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
               />
             </Box>
           </Box>
-          
-          {isDebugMode && (
-            <Alert 
-              severity="warning" 
-              sx={{ 
-                mb: 2,
-                borderRadius: 1.5,
-                '& .MuiAlert-icon': {
-                  alignItems: 'center'
-                }
-              }}
-            >
-              Running in debug mode with simulated data. The server connection is unavailable.
-            </Alert>
-          )}
           
           {/* Filter Panel that shows when filters are active */}
           <Collapse in={showFilters} timeout="auto" sx={{

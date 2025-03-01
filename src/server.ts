@@ -22,7 +22,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Static files - look in both locations for flexibility
-app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
 
 // API routes
@@ -34,16 +33,13 @@ if (config.enableDevTools) {
   logger.info('Development tools enabled');
 }
 
-// Serve index.html for all other routes - check both locations
+// Serve index.html for all other routes
 app.get('*', (req, res) => {
-  const publicPath = path.join(__dirname, 'public', 'index.html');
   const frontendDistPath = path.join(__dirname, '..', 'frontend', 'dist', 'index.html');
   
-  // Try to serve from frontend/dist first, then fall back to public
+  // Serve from frontend/dist
   if (require('fs').existsSync(frontendDistPath)) {
     res.sendFile(frontendDistPath);
-  } else if (require('fs').existsSync(publicPath)) {
-    res.sendFile(publicPath);
   } else {
     res.status(404).send('Frontend not found. Make sure to build the frontend with "cd frontend && npm run build"');
   }

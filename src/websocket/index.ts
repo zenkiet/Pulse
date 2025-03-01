@@ -15,13 +15,29 @@ export class WebSocketServer {
       cors: {
         origin: '*',
         methods: ['GET', 'POST']
+      },
+      transports: ['websocket', 'polling'],
+      pingTimeout: 20000,         // Increased from 10000
+      pingInterval: 10000,        // Increased from 5000
+      connectTimeout: 10000,      // Increased from 5000
+      allowUpgrades: true,
+      perMessageDeflate: {
+        threshold: 1024
+      },
+      maxHttpBufferSize: 1e8, // 100 MB
+      // Add connection retry logic
+      connectionStateRecovery: {
+        // the backup duration of the sessions and the packets
+        maxDisconnectionDuration: 2 * 60 * 1000,
+        // whether to skip middlewares upon successful recovery
+        skipMiddlewares: true,
       }
     });
     
     this.setupSocketHandlers();
     this.subscribeToEvents();
     
-    this.logger.info('WebSocket server initialized');
+    this.logger.info('WebSocket server initialized with multiple socket connections');
   }
 
   /**

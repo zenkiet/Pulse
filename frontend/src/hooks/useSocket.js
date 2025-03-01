@@ -1,35 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { io } from 'socket.io-client';
 
-// Sample debug data for when connection fails
-const DEBUG_GUEST_DATA = [
-  {
-    id: 'debug-101',
-    name: 'Debug Server',
-    status: 'running',
-    type: 'debug'
-  },
-  {
-    id: 'debug-102',
-    name: 'Test Machine',
-    status: 'stopped',
-    type: 'debug'
-  }
-];
-
-const DEBUG_METRICS_DATA = [
-  {
-    guestId: 'debug-101',
-    timestamp: Date.now(),
-    metrics: {
-      network: {
-        inRate: 1024 * 1024 * 2, // 2 MB/s
-        outRate: 1024 * 512 // 512 KB/s
-      }
-    }
-  }
-];
-
 /**
  * Custom hook to manage WebSocket connections with Socket.io
  * @param {string} url - WebSocket server URL (defaults to current origin)
@@ -47,7 +18,7 @@ const useSocket = (url) => {
   const [guestData, setGuestData] = useState([]);
   const [metricsData, setMetricsData] = useState([]);
   const [error, setError] = useState(null);
-  const [useDebugData, setUseDebugData] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState('connecting'); // 'connecting', 'connected', 'disconnected', 'error'
   
   // Use ref to maintain socket instance across renders
   const socketRef = useRef(null);
@@ -56,43 +27,77 @@ const useSocket = (url) => {
   useEffect(() => {
     // Socket.io connection configuration
     socketRef.current = io(socketUrl, {
-      transports: ['websocket'],
-      reconnectionAttempts: 5,
-      reconnectionDelay: 500,
-      timeout: 3000,
+      transports: ['websocket', 'polling'],  // Allow fallback to polling
+      reconnectionAttempts: 15,              // Increased from 10
+      reconnectionDelay: 1500,               // Increased from 1000
+      timeout: 10000,                        // Increased from 5000
       forceNew: true,
-      autoConnect: true
+      autoConnect: true,
+      reconnection: true,
+      reconnectionDelayMax: 10000,           // Increased from 5000
+      randomizationFactor: 0.5,
+      // Add connection state recovery
+      connectionStateRecovery: {
+        maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
+        skipMiddlewares: true,
+      }
     });
 
     console.log('Attempting to connect to WebSocket server at:', socketUrl);
+    setConnectionStatus('connecting');
     
     // Connection event handlers
     socketRef.current.on('connect', () => {
       console.log('Socket connected successfully');
       setIsConnected(true);
       setError(null);
-      setUseDebugData(false);
+      setConnectionStatus('connected');
     });
+
+    // Add graceful shutdown handler for page navigation/refresh
+    const handleBeforeUnload = () => {
+      if (socketRef.current) {
+        console.log('Gracefully closing socket connection before page unload');
+        socketRef.current.disconnect();
+      }
+    };
+    
+    // Add visibility change handler to manage connections when tab is hidden/visible
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        console.log('Page hidden, preparing for potential disconnect');
+        // Don't disconnect, but prepare for it
+        if (socketRef.current) {
+          socketRef.current.io.opts.reconnection = true;
+        }
+      } else if (document.visibilityState === 'visible') {
+        console.log('Page visible, ensuring connection');
+        // Ensure we're connected when the page becomes visible again
+        if (socketRef.current && !socketRef.current.connected) {
+          console.log('Reconnecting after visibility change');
+          socketRef.current.connect();
+          setConnectionStatus('connecting');
+        }
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     socketRef.current.on('connect_error', (err) => {
       console.error('Socket connection error:', err);
       setIsConnected(false);
       setError(`Connection error: ${err.message}`);
+      setConnectionStatus('error');
       
-      // If connection fails, use debug data after 3 seconds
-      setTimeout(() => {
-        if (!socketRef.current?.connected) {
-          console.log('Using debug data due to connection failure');
-          setUseDebugData(true);
-          setGuestData(DEBUG_GUEST_DATA);
-          setMetricsData(DEBUG_METRICS_DATA);
-        }
-      }, 3000);
+      // Instead of using debug data, we'll just update the connection status
+      console.log('Backend server appears to be offline or unreachable');
     });
 
     socketRef.current.on('disconnect', () => {
       console.log('Socket disconnected');
       setIsConnected(false);
+      setConnectionStatus('disconnected');
     });
 
     // Check connection after 1 second and try fallback if needed
@@ -147,6 +152,9 @@ const useSocket = (url) => {
     // Cleanup function
     return () => {
       clearTimeout(timeoutId);
+      // Remove event listeners
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current.off();
@@ -253,6 +261,15 @@ const useSocket = (url) => {
     });
   }, []);
 
+  // Function to manually attempt reconnection
+  const reconnect = useCallback(() => {
+    if (socketRef.current) {
+      console.log('Manually attempting to reconnect...');
+      setConnectionStatus('connecting');
+      socketRef.current.connect();
+    }
+  }, []);
+
   // Function to subscribe to specific node or guest
   const subscribeToNode = useCallback((nodeId) => {
     if (socketRef.current && isConnected) {
@@ -281,16 +298,17 @@ const useSocket = (url) => {
 
   return {
     socket: socketRef.current,
-    isConnected: isConnected || useDebugData,
+    isConnected,
     lastMessage,
-    error: useDebugData ? null : error,
+    error,
     nodeData,
     guestData,
     metricsData,
+    connectionStatus,
+    reconnect,
     subscribeToNode,
     subscribeToGuest,
-    getHistory,
-    isDebugMode: useDebugData
+    getHistory
   };
 };
 
