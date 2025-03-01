@@ -176,4 +176,22 @@ The `NODE_TLS_REJECT_UNAUTHORIZED=0` setting is particularly important when usin
 
 ### Important Note on API Tokens
 
-If your ProxMox API token ID contains special characters (like `!`, `
+If your ProxMox API token ID contains special characters (like `!`, `@`, or `%`), make sure to properly encode them in your environment variables. In some cases, you may need to escape these characters or enclose the entire token ID in quotes.
+
+For example:
+```
+PROXMOX_NODE_1_TOKEN_ID="root@pam!pulse"
+```
+
+## Support
+
+If you encounter any issues or have questions, please open an issue on the [GitHub repository](https://github.com/rcourtman/pulse/issues).
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- Thanks to the ProxMox team for their excellent virtualization platform
+- All contributors who have helped improve this project
