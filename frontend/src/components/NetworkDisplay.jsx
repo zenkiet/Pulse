@@ -43,6 +43,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import InputBase from '@mui/material/InputBase';
+import DnsIcon from '@mui/icons-material/Dns';
 
 // Define pulse animation
 const pulseAnimation = keyframes`
@@ -242,13 +243,14 @@ const KeyboardShortcut = ({ shortcut, sx = {} }) => (
   </Box>
 );
 
-const NetworkDisplay = () => {
+const NetworkDisplay = ({ selectedNode = 'all' }) => {
   const { 
     isConnected, 
     guestData, 
     metricsData, 
     error,
-    isDebugMode
+    isDebugMode,
+    nodeData
   } = useSocket();
   
   const theme = useTheme();
@@ -311,11 +313,11 @@ const NetworkDisplay = () => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_FILTERS);
       return saved ? JSON.parse(saved) : {
-    cpu: 0,
-    memory: 0,
-    disk: 0,
-    download: 0,
-    upload: 0
+        cpu: 0,
+        memory: 0,
+        disk: 0,
+        download: 0,
+        upload: 0
       };
     } catch (e) {
       console.error('Error loading filter preferences:', e);
@@ -328,6 +330,30 @@ const NetworkDisplay = () => {
       };
     }
   });
+  
+  // Filter guests based on selected node
+  const getNodeFilteredGuests = useCallback((guests) => {
+    if (selectedNode === 'all') {
+      return guests;
+    }
+    
+    // Filter guests based on the node property from the API
+    return guests.filter(guest => {
+      // Extract the node ID from the guest's node property
+      // The node property from the API is in the format "node-1", "node-2", etc.
+      // The selectedNode from the dropdown is in the format "node1", "node2", etc.
+      // We need to convert between these formats
+      const nodeIdFromApi = guest.node;
+      
+      // If the node property doesn't exist, include the guest in all nodes
+      if (!nodeIdFromApi) return true;
+      
+      // Convert "node-1" to "node1" format
+      const normalizedNodeId = nodeIdFromApi.replace('-', '');
+      
+      return normalizedNodeId === selectedNode;
+    });
+  }, [selectedNode]);
   
   const [activeSlider, setActiveSlider] = useState(null);
   
@@ -573,9 +599,12 @@ const NetworkDisplay = () => {
   
   // Sort and filter data before displaying
   const getSortedAndFilteredData = (data) => {
-    const sortableData = [...data];
+    // First filter by selected node
+    const nodeFilteredData = getNodeFilteredGuests(data);
     
-    // First filter the data
+    const sortableData = [...nodeFilteredData];
+    
+    // Then filter the data
     const filteredData = sortableData.filter(guest => {
       // If not showing stopped and guest is not running, filter it out
       if (!showStopped && guest.status !== 'running') {
@@ -713,7 +742,7 @@ const NetworkDisplay = () => {
   // Memoize getSortedAndFilteredData to optimize performance
   const sortedAndFilteredData = useMemo(
     () => getSortedAndFilteredData(guestData),
-    [guestData, sortConfig, filters, showStopped, searchTerm, activeSearchTerms, displayMetrics]
+    [guestData, sortConfig, filters, showStopped, searchTerm, activeSearchTerms, displayMetrics, selectedNode, getNodeFilteredGuests]
   );
   
   // Add keyboard shortcut handler for 'F' key to toggle filters
@@ -796,7 +825,9 @@ const NetworkDisplay = () => {
             mb: { xs: 1.5, sm: 2 },
             gap: { xs: 1.5, md: 0 }
           }}>
-            {/* Search box */}
+            {/* Dark Mode Toggle removed - now in App header */}
+            
+            {/* Search box - moved to the left */}
             <Box sx={{ 
               display: 'flex', 
               alignItems: 'center',
@@ -815,7 +846,8 @@ const NetworkDisplay = () => {
               '&:focus-within': {
                 borderColor: theme => theme.palette.primary.main,
                 boxShadow: theme => `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`
-              }
+              },
+              mr: { md: 2 }  // Add margin to the right on medium+ screens
             }}>
               <SearchIcon fontSize="small" sx={{ color: 'text.secondary', mr: 1 }} />
               <InputBase
@@ -873,6 +905,38 @@ const NetworkDisplay = () => {
                 <KeyboardShortcut shortcut="ESC" sx={{ mr: 0.5 }} />
               </Box>
             </Box>
+            
+            {/* Node indicator */}
+            {selectedNode !== 'all' && (
+              <Chip
+                icon={<DnsIcon fontSize="small" />}
+                label={(() => {
+                  // Find the actual node name from nodeData
+                  if (nodeData && nodeData.length > 0) {
+                    // Convert selectedNode format (e.g., "node1") to API format (e.g., "node-1")
+                    const nodeIdForApi = selectedNode.replace(/^node(\d+)$/, "node-$1");
+                    const node = nodeData.find(n => n.id === nodeIdForApi);
+                    if (node) {
+                      return `Node: ${node.name}`;
+                    }
+                  }
+                  // Fallback to the node ID if we can't find the name
+                  return `Node: ${selectedNode}`;
+                })()}
+                size="small"
+                color="primary"
+                variant="outlined"
+                sx={{ 
+                  height: 28, 
+                  mr: 2,
+                  fontWeight: 500,
+                  borderRadius: 1.5,
+                  '& .MuiChip-icon': {
+                    color: 'primary.main'
+                  }
+                }}
+              />
+            )}
 
             <Box sx={{ flexGrow: 1, minHeight: { xs: 8, md: 0 } }} />
             
@@ -884,32 +948,9 @@ const NetworkDisplay = () => {
               gap: { xs: 1, sm: 1.5 },
               ml: { xs: 0, md: 'auto' },
               width: { xs: '100%', md: 'auto' },
-              justifyContent: { xs: 'space-between', md: 'flex-start' }
+              justifyContent: { xs: 'space-between', md: 'flex-start' },
+              pr: { md: 5 }  // Add right padding to avoid overlap with dark mode toggle
             }}>
-              {/* Dark Mode Toggle */}
-              <Tooltip title={darkMode ? "Switch to light mode" : "Switch to dark mode"}>
-                <IconButton
-                  onClick={toggleDarkMode}
-                  size="small"
-                  color={darkMode ? "primary" : "default"}
-                  sx={{ 
-                    borderRadius: 2,
-                    p: { xs: 0.8, sm: 1 },
-                    bgcolor: darkMode 
-                      ? alpha(theme.palette.primary.main, 0.08)
-                      : alpha(theme.palette.grey[100], 0.8),
-                    border: '1px solid',
-                    borderColor: darkMode 
-                      ? alpha(theme.palette.primary.main, 0.2)
-                      : 'grey.200',
-                    transition: 'all 0.2s ease'
-                  }}
-                  aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-                >
-                  {darkMode ? <Brightness7Icon fontSize="small" /> : <Brightness4Icon fontSize="small" />}
-                </IconButton>
-              </Tooltip>
-              
               {/* Filter controls - updated for better mobile experience */}
               <Box sx={{ 
                 display: 'flex', 
@@ -1404,12 +1445,12 @@ const NetworkDisplay = () => {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
                 <Typography 
                   variant="caption" 
-                  color={Object.values(filters).some(val => val > 0) ? 'primary.main' : 'text.secondary'} 
+                  color={Object.values(filters).some(val => val > 0) || selectedNode !== 'all' ? 'primary.main' : 'text.secondary'} 
                   sx={{ fontWeight: 500 }}
                   aria-live="polite" // Announce when this changes
                 >
-                  {Object.values(filters).some(val => val > 0) ? 
-                    `Showing ${sortedAndFilteredData.length} of ${guestData.length} systems` : 
+                  {Object.values(filters).some(val => val > 0) || selectedNode !== 'all' ? 
+                    `Showing ${sortedAndFilteredData.length} of ${getNodeFilteredGuests(guestData).length} systems${selectedNode !== 'all' ? ` on ${selectedNode === 'node1' ? 'Production' : selectedNode === 'node2' ? 'Development' : 'Testing'}` : ''}` : 
                     ''}
                 </Typography>
                 <Chip 
@@ -1417,8 +1458,8 @@ const NetworkDisplay = () => {
                   onClick={resetFilters}
                   variant={Object.values(filters).some(val => val > 0) ? "filled" : "outlined"}
                   size="small"
-                              color="primary"
-                              sx={{ 
+                  color="primary"
+                  sx={{ 
                     height: 28,
                     transition: 'all 0.2s ease',
                     fontWeight: Object.values(filters).some(val => val > 0) ? 600 : 400,
