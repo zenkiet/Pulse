@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: '192.168.0.130',
+    host: process.env.DOCKER_CONTAINER ? '0.0.0.0' : 'localhost',
     port: 5173,
     proxy: {
       // Proxy WebSocket connections to the real backend
