@@ -27,7 +27,8 @@ import {
   Collapse,
   alpha,
   useTheme,
-  Button
+  Button,
+  Stack
 } from '@mui/material';
 import NetworkCheckIcon from '@mui/icons-material/NetworkCheck';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
@@ -61,6 +62,8 @@ import CircleIcon from '@mui/icons-material/Circle';
 import AllInclusiveIcon from '@mui/icons-material/AllInclusive';
 import ClearIcon from '@mui/icons-material/Clear';
 import InputAdornment from '@mui/material/InputAdornment';
+import Popover from '@mui/material/Popover';
+import Badge from '@mui/material/Badge';
 
 // Define pulse animation
 const pulseAnimation = keyframes`
@@ -382,11 +385,17 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
   } = useSocket();
   
   const theme = useTheme();
+  const { darkMode } = useThemeContext();
   
-  // Use the theme context instead of local state
-  const { darkMode, toggleDarkMode } = useThemeContext();
+  // Search state
+  const [searchTerm, setSearchTerm] = useState('');
+  const searchInputRef = React.useRef(null);
   
-  // Add sorting state - load from localStorage or use default
+  // Filter popover state - for displaying the filter panel
+  const [filterAnchorEl, setFilterAnchorEl] = useState(null);
+  const openFiltersPopover = Boolean(filterAnchorEl);
+  
+  // Sort state
   const [sortConfig, setSortConfig] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_SORT);
@@ -397,46 +406,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     }
   });
   
-  // Add state to track whether to show stopped systems - load from localStorage or use default
-  const [showStopped, setShowStopped] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_SHOW_STOPPED);
-      return saved ? JSON.parse(saved) === true : false;
-    } catch (e) {
-      console.error('Error loading show stopped preference:', e);
-      return false;
-    }
-  });
-  
-  // Add state to toggle filters visibility - load from localStorage or use default
-  const [showFilters, setShowFilters] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_SHOW_FILTERS);
-      return saved ? JSON.parse(saved) === true : false;
-    } catch (e) {
-      console.error('Error loading show filters preference:', e);
-      return false;
-    }
-  });
-  
-  // Add search state
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  // Add search terms array to store active search filters - load from localStorage or use default
-  const [activeSearchTerms, setActiveSearchTerms] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_SEARCH_TERMS);
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error('Error loading search terms:', e);
-      return [];
-    }
-  });
-  
-  // Reference to the search input element
-  const searchInputRef = React.useRef(null);
-  
-  // Add filter state - load from localStorage or use default
+  // Filter states
   const [filters, setFilters] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_FILTERS);
@@ -459,8 +429,56 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     }
   });
   
-  // Add state to track which slider is currently being dragged
-  const [activeSlider, setActiveSlider] = useState(null);
+  // Search terms array for active search filters
+  const [activeSearchTerms, setActiveSearchTerms] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_SEARCH_TERMS);
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error('Error loading active search terms:', e);
+      return [];
+    }
+  });
+  
+  // UI state
+  const [showStopped, setShowStopped] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_SHOW_STOPPED);
+      return saved ? JSON.parse(saved) === true : false;
+    } catch (e) {
+      console.error('Error loading show stopped preference:', e);
+      return false;
+    }
+  });
+  
+  const [showFilters, setShowFilters] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_SHOW_FILTERS);
+      return saved ? JSON.parse(saved) === true : false;
+    } catch (e) {
+      console.error('Error loading show filters preference:', e);
+      return false;
+    }
+  });
+  
+  const [escRecentlyPressed, setEscRecentlyPressed] = useState(false);
+  const [sliderDragging, setSliderDragging] = useState(null);
+  
+  // Filter popover handlers
+  const handleFilterButtonClick = (event) => {
+    setFilterAnchorEl(event.currentTarget);
+  };
+  
+  const handleCloseFilterPopover = () => {
+    setFilterAnchorEl(null);
+  };
+  
+  // Count active filters
+  const activeFilterCount = useMemo(() => {
+    return activeSearchTerms.length + 
+      (searchTerm && !activeSearchTerms.includes(searchTerm) ? 1 : 0) + 
+      Object.values(filters).filter(val => val > 0).length;
+  }, [activeSearchTerms, searchTerm, filters]);
   
   // Add guest type filter state - load from localStorage or use default
   const [guestTypeFilter, setGuestTypeFilter] = useState(() => {
@@ -555,61 +573,64 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     });
   }, [resetFilters]);
   
-  // Add event listeners for keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Handle ESC key behavior
-      if (e.key === 'Escape') {
-        // Reset everything to defaults with a single ESC press
-        const isSearchInputFocused = document.activeElement === searchInputRef.current;
-        
-        // If search is focused, blur it
-        if (isSearchInputFocused) {
-          searchInputRef.current.blur();
-        }
-        
-        // Close filters if open
-        if (showFilters) {
-          setShowFilters(false);
-        }
-        
-        // Clear all filters and reset sorting
-        clearAllFiltersAndSorting();
-        
-        // Prevent default action
-        e.preventDefault();
+  // Function to handle the Escape key for filter popover
+  const handleKeyDown = useCallback((e) => {
+    // Close filter popover on Escape
+    if (e.key === 'Escape' && openFiltersPopover) {
+      handleCloseFilterPopover();
+      e.preventDefault(); // Prevent other escape handlers
+      return;
+    }
+    
+    // Toggle filters panel with Alt+F
+    if (e.key === 'f' && e.altKey) {
+      if (activeFilterCount > 0) {
+        handleFilterButtonClick(e);
+      }
+      e.preventDefault();
+      return;
+    }
+    
+    // Reset all filters with Alt+R
+    if (e.key === 'r' && e.altKey) {
+      resetFilters();
+      if (openFiltersPopover) {
+        handleCloseFilterPopover();
+      }
+      e.preventDefault();
+      return;
+    }
+    
+    // Existing keyboard functionality...
+    if (e.key === 'Escape') {
+      setEscRecentlyPressed(true);
+      setTimeout(() => setEscRecentlyPressed(false), 300);
+      
+      // If filter popover is open, close it
+      if (openFiltersPopover) {
+        handleCloseFilterPopover();
         return;
       }
       
-      // If user starts typing, focus the search input without opening filters
-      // Only if not already in an input field or contentEditable element
-      if (e.key.length === 1 && 
-          !/^(Control|Alt|Shift|Meta)$/.test(e.key) &&
-          !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) &&
-          !document.activeElement.isContentEditable) {
-        
-        // Focus the search input without opening filters
-        if (searchInputRef.current) {
-          searchInputRef.current.focus();
-          
-          // If it's a printable character, we'll set it as the search term
-          // This doesn't interfere with normal typing because we only do this 
-          // when the search input wasn't already focused
-          if (!e.ctrlKey && !e.altKey && !e.metaKey) {
-            setSearchTerm(e.key);
-            e.preventDefault();
-          }
-        }
+      // Focus search box on Escape if not in input already
+      if (document.activeElement !== searchInputRef.current) {
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      } else {
+        // Clear search if already focused
+        setSearchTerm('');
+        searchInputRef.current?.blur();
       }
-    };
+    }
+  }, [openFiltersPopover, handleCloseFilterPopover, searchInputRef, setSearchTerm, setEscRecentlyPressed, activeFilterCount, resetFilters]);
 
+  // Add key event listener
+  useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
-    
-    // Clean up event listener
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showFilters, resetFilters, clearAllFiltersAndSorting]); // Removed escRecentlyPressed dependency
+  }, [handleKeyDown]);
   
   // Function to add a search term to active filters
   const addSearchTerm = (term) => {
@@ -633,12 +654,12 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
   
   // Function to handle slider drag start
   const handleSliderDragStart = (filterName) => {
-    setActiveSlider(filterName);
+    setSliderDragging(filterName);
   };
 
   // Function to handle slider drag end
   const handleSliderDragEnd = () => {
-    setActiveSlider(null);
+    setSliderDragging(null);
     
     // Remove focus from the active element to allow keyboard shortcuts to work
     if (document.activeElement) {
@@ -1375,341 +1396,219 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                   </Box>
                 </Tooltip>
 
-                {/* Remove the dropdown and show filter chips directly */}
-                {(Object.values(filters).some(val => val > 0) || activeSearchTerms.length > 0 || searchTerm) && (
-                  <Box sx={{ 
-                    display: 'flex', 
-                    flexWrap: 'wrap',
-                    alignItems: 'center',
-                    gap: 0.75,
-                    ml: 1.5,
-                    maxWidth: { xs: '100%', md: '400px' },
-                    mt: { xs: 1, md: 0 }
-                  }}>
-                    {/* Active search term chips */}
-                    {activeSearchTerms.map((term, index) => (
-                      <React.Fragment key={term}>
-                        <Box 
-                          sx={{ 
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            bgcolor: 'primary.main',
-                            color: 'primary.contrastText',
-                            borderRadius: 1,
-                            px: 1,
-                            py: 0.5,
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            boxShadow: 1,
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                              bgcolor: 'primary.dark',
-                            }
-                          }}
-                        >
-                          <SearchIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                          {`"${term}"`}
-                          <Box 
-                            component="span" 
-                            onClick={() => removeSearchTerm(term)}
-                            sx={{ 
-                              display: 'flex',
-                              alignItems: 'center',
-                              ml: 0.5,
-                              cursor: 'pointer',
-                              borderRadius: '50%',
-                              p: 0.25,
-                              '&:hover': {
-                                bgcolor: 'rgba(255,255,255,0.2)'
-                              }
-                            }}
-                          >
-                            <CancelIcon sx={{ fontSize: '0.875rem' }} />
-                          </Box>
-                        </Box>
-                      </React.Fragment>
-                    ))}
-                    
-                    {/* Current search term chip (shown only if not empty and not yet in activeSearchTerms) */}
-                    {searchTerm && !activeSearchTerms.includes(searchTerm) && (
-                      <Box 
-                        sx={{ 
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          bgcolor: 'secondary.main',
-                          color: 'secondary.contrastText',
-                          borderRadius: 1,
-                          px: 1,
-                          py: 0.5,
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          boxShadow: 1,
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            bgcolor: 'secondary.dark',
-                          }
-                        }}
-                      >
-                        <SearchIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                        {`"${searchTerm}"`}
-                        <Box 
-                          component="span" 
-                          onClick={() => setSearchTerm('')}
-                          sx={{ 
-                            display: 'flex',
-                            alignItems: 'center',
-                            ml: 0.5,
-                            cursor: 'pointer',
-                            borderRadius: '50%',
-                            p: 0.25,
-                            '&:hover': {
-                              bgcolor: 'rgba(255,255,255,0.2)'
-                            }
-                          }}
-                        >
-                          <CancelIcon sx={{ fontSize: '0.875rem' }} />
-                        </Box>
-                      </Box>
-                    )}
-                    
-                    {/* CPU filter chip */}
-                    {filters.cpu > 0 && (
-                      <Box 
-                        sx={{ 
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          bgcolor: 'primary.main',
-                          color: 'primary.contrastText',
-                          borderRadius: 1,
-                          px: 1,
-                          py: 0.5,
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          boxShadow: 1,
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            bgcolor: 'primary.dark',
-                          }
-                        }}
-                      >
-                        <SpeedIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                        {`CPU ≥ ${formatPercentage(filters.cpu)}`}
-                        <Box 
-                          component="span" 
-                          onClick={() => clearFilter('cpu')}
-                          sx={{ 
-                            display: 'flex',
-                            alignItems: 'center',
-                            ml: 0.5,
-                            cursor: 'pointer',
-                            borderRadius: '50%',
-                            p: 0.25,
-                            '&:hover': {
-                              bgcolor: 'rgba(255,255,255,0.2)'
-                            }
-                          }}
-                        >
-                          <CancelIcon sx={{ fontSize: '0.875rem' }} />
-                        </Box>
-                      </Box>
-                    )}
-                    
-                    {/* Memory filter chip */}
-                    {filters.memory > 0 && (
-                      <Box 
-                        sx={{ 
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          bgcolor: 'primary.main',
-                          color: 'primary.contrastText',
-                          borderRadius: 1,
-                          px: 1,
-                          py: 0.5,
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          boxShadow: 1,
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            bgcolor: 'primary.dark',
-                          }
-                        }}
-                      >
-                        <MemoryIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                        {`MEM ≥ ${formatPercentage(filters.memory)}`}
-                        <Box 
-                          component="span" 
-                          onClick={() => clearFilter('memory')}
-                          sx={{ 
-                            display: 'flex',
-                            alignItems: 'center',
-                            ml: 0.5,
-                            cursor: 'pointer',
-                            borderRadius: '50%',
-                            p: 0.25,
-                            '&:hover': {
-                              bgcolor: 'rgba(255,255,255,0.2)'
-                            }
-                          }}
-                        >
-                          <CancelIcon sx={{ fontSize: '0.875rem' }} />
-                        </Box>
-                      </Box>
-                    )}
-                    
-                    {/* Disk filter chip */}
-                    {filters.disk > 0 && (
-                      <Box 
-                        sx={{ 
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          bgcolor: 'primary.main',
-                          color: 'primary.contrastText',
-                          borderRadius: 1,
-                          px: 1,
-                          py: 0.5,
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          boxShadow: 1,
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            bgcolor: 'primary.dark',
-                          }
-                        }}
-                      >
-                        <StorageIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                        {`DISK ≥ ${formatPercentage(filters.disk)}`}
-                        <Box 
-                          component="span" 
-                          onClick={() => clearFilter('disk')}
-                          sx={{ 
-                            display: 'flex',
-                            alignItems: 'center',
-                            ml: 0.5,
-                            cursor: 'pointer',
-                            borderRadius: '50%',
-                            p: 0.25,
-                            '&:hover': {
-                              bgcolor: 'rgba(255,255,255,0.2)'
-                            }
-                          }}
-                        >
-                          <CancelIcon sx={{ fontSize: '0.875rem' }} />
-                        </Box>
-                      </Box>
-                    )}
-                    
-                    {/* Download filter chip */}
-                    {filters.download > 0 && (
-                      <Box 
-                        sx={{ 
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          bgcolor: 'primary.main',
-                          color: 'primary.contrastText',
-                          borderRadius: 1,
-                          px: 1,
-                          py: 0.5,
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          boxShadow: 1,
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            bgcolor: 'primary.dark',
-                          }
-                        }}
-                      >
-                        <ArrowDownwardIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                        {`DL ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}`}
-                        <Box 
-                          component="span" 
-                          onClick={() => clearFilter('download')}
-                          sx={{ 
-                            display: 'flex',
-                            alignItems: 'center',
-                            ml: 0.5,
-                            cursor: 'pointer',
-                            borderRadius: '50%',
-                            p: 0.25,
-                            '&:hover': {
-                              bgcolor: 'rgba(255,255,255,0.2)'
-                            }
-                          }}
-                        >
-                          <CancelIcon sx={{ fontSize: '0.875rem' }} />
-                        </Box>
-                      </Box>
-                    )}
-                    
-                    {/* Upload filter chip */}
-                    {filters.upload > 0 && (
-                      <Box 
-                        sx={{ 
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          bgcolor: 'secondary.main',
-                          color: 'secondary.contrastText',
-                          borderRadius: 1,
-                          px: 1,
-                          py: 0.5,
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          boxShadow: 1,
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            bgcolor: 'secondary.dark',
-                          }
-                        }}
-                      >
-                        <ArrowUpwardIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                        {`UL ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}`}
-                        <Box 
-                          component="span" 
-                          onClick={() => clearFilter('upload')}
-                          sx={{ 
-                            display: 'flex',
-                            alignItems: 'center',
-                            ml: 0.5,
-                            cursor: 'pointer',
-                            borderRadius: '50%',
-                            p: 0.25,
-                            '&:hover': {
-                              bgcolor: 'rgba(255,255,255,0.2)'
-                            }
-                          }}
-                        >
-                          <CancelIcon sx={{ fontSize: '0.875rem' }} />
-                        </Box>
-                      </Box>
-                    )}
-                    
-                    {/* Reset all filters button */}
-                    <Box 
-                      onClick={resetFilters}
+                {/* Replace the filter chips with a compact button and popover */}
+                <Box sx={{ display: 'flex', alignItems: 'center', ml: 1.5 }}>
+                  {activeFilterCount > 0 && (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="primary"
+                      onClick={handleFilterButtonClick}
+                      startIcon={<FilterAltIcon fontSize="small" />}
+                      title="Toggle Filters Panel (Alt+F)" // Add tooltip with keyboard shortcut
                       sx={{ 
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        bgcolor: 'transparent',
-                        color: 'primary.main',
-                        border: '1px solid',
-                        borderColor: 'primary.main',
-                        borderRadius: 1,
-                        px: 1,
-                        py: 0.5,
-                        fontSize: '0.75rem',
+                        height: 28, 
+                        textTransform: 'none',
+                        fontSize: '0.8rem',
                         fontWeight: 600,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          bgcolor: 'action.hover',
-                          boxShadow: 1
-                        }
+                        borderRadius: '4px',
                       }}
                     >
-                      <RestartAltIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                      Reset
+                      <Badge 
+                        badgeContent={activeFilterCount} 
+                        color="error"
+                        sx={{ 
+                          '& .MuiBadge-badge': { 
+                            fontSize: '0.65rem', 
+                            height: 16, 
+                            minWidth: 16, 
+                            padding: '0 4px'
+                          } 
+                        }}
+                      >
+                        Filters
+                      </Badge>
+                    </Button>
+                  )}
+                  
+                  <Popover
+                    open={openFiltersPopover}
+                    anchorEl={filterAnchorEl}
+                    onClose={handleCloseFilterPopover}
+                    anchorOrigin={{
+                      vertical: 'bottom',
+                      horizontal: 'left',
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'left',
+                    }}
+                    sx={{
+                      '& .MuiPopover-paper': {
+                        mt: 1,
+                        boxShadow: 3,
+                        overflow: 'visible',
+                        '&:before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: '-6px',
+                          left: '16px',
+                          width: 12,
+                          height: 12,
+                          bgcolor: 'background.paper',
+                          transform: 'rotate(45deg)',
+                          boxShadow: '-3px -3px 5px rgba(0,0,0,0.04)',
+                          zIndex: 0,
+                        }
+                      }
+                    }}
+                  >
+                    <Box sx={{ 
+                      width: 320, 
+                      maxHeight: 400, 
+                      overflow: 'auto',
+                      p: 2
+                    }}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        mb: 2,
+                        pb: 1.5,
+                        borderBottom: '1px solid',
+                        borderColor: 'divider'
+                      }}>
+                        <Typography variant="subtitle2">
+                          Active Filters ({activeFilterCount})
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Button 
+                            size="small" 
+                            variant="outlined" 
+                            startIcon={<FilterAltOffIcon />}
+                            title="Reset All Filters (Alt+R)" // Add tooltip with keyboard shortcut
+                            onClick={() => {
+                              resetFilters();
+                              handleCloseFilterPopover();
+                            }}
+                          >
+                            Reset All
+                          </Button>
+                          <IconButton
+                            size="small"
+                            onClick={handleCloseFilterPopover}
+                            title="Close Panel (Esc)" // Add tooltip with keyboard shortcut
+                            sx={{ ml: 0.5 }}
+                          >
+                            <CloseIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                        {/* Search filters */}
+                        {(activeSearchTerms.length > 0 || (searchTerm && !activeSearchTerms.includes(searchTerm))) && (
+                          <Box>
+                            <Typography variant="caption" fontWeight="bold" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                              Search Terms
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                              {activeSearchTerms.map((term) => (
+                                <Chip
+                                  key={term}
+                                  size="small"
+                                  icon={<SearchIcon fontSize="small" />}
+                                  label={`"${term}"`}
+                                  color="primary"
+                                  onDelete={() => removeSearchTerm(term)}
+                                />
+                              ))}
+                              {searchTerm && !activeSearchTerms.includes(searchTerm) && (
+                                <Chip
+                                  size="small"
+                                  icon={<SearchIcon fontSize="small" />}
+                                  label={`"${searchTerm}"`}
+                                  color="secondary"
+                                  onDelete={() => setSearchTerm('')}
+                                />
+                              )}
+                            </Box>
+                          </Box>
+                        )}
+                        
+                        {/* Resource filters */}
+                        {Object.entries(filters).some(([key, value]) => value > 0) && (
+                          <Box>
+                            <Typography variant="caption" fontWeight="bold" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                              Resource Filters
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                              {filters.cpu > 0 && (
+                                <Chip
+                                  size="small"
+                                  icon={<SpeedIcon fontSize="small" />}
+                                  label={`CPU ≥ ${formatPercentage(filters.cpu)}`}
+                                  color="primary"
+                                  onDelete={() => clearFilter('cpu')}
+                                />
+                              )}
+                              
+                              {filters.memory > 0 && (
+                                <Chip
+                                  size="small"
+                                  icon={<MemoryIcon fontSize="small" />}
+                                  label={`MEM ≥ ${formatPercentage(filters.memory)}`}
+                                  color="primary"
+                                  onDelete={() => clearFilter('memory')}
+                                />
+                              )}
+                              
+                              {filters.disk > 0 && (
+                                <Chip
+                                  size="small"
+                                  icon={<StorageIcon fontSize="small" />}
+                                  label={`DISK ≥ ${formatPercentage(filters.disk)}`}
+                                  color="primary"
+                                  onDelete={() => clearFilter('disk')}
+                                />
+                              )}
+                            </Box>
+                          </Box>
+                        )}
+                        
+                        {/* Network filters */}
+                        {(filters.download > 0 || filters.upload > 0) && (
+                          <Box>
+                            <Typography variant="caption" fontWeight="bold" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                              Network Filters
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                              {filters.download > 0 && (
+                                <Chip
+                                  size="small"
+                                  icon={<ArrowDownwardIcon fontSize="small" />}
+                                  label={`DL ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}`}
+                                  color="primary"
+                                  onDelete={() => clearFilter('download')}
+                                />
+                              )}
+                              
+                              {filters.upload > 0 && (
+                                <Chip
+                                  size="small"
+                                  icon={<ArrowUpwardIcon fontSize="small" />}
+                                  label={`UL ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}`}
+                                  color="secondary"
+                                  onDelete={() => clearFilter('upload')}
+                                />
+                              )}
+                            </Box>
+                          </Box>
+                        )}
+                      </Box>
                     </Box>
-                  </Box>
-                )}
+                  </Popover>
+                </Box>
               </Box>
               
               {/* Display controls */}
@@ -2140,6 +2039,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                   color="primary"
                   onClick={resetFilters}
                   startIcon={<RestartAltIcon />}
+                  title="Reset All Filters (Alt+R)" // Add tooltip with keyboard shortcut
                   sx={{ 
                     height: 32,
                     transition: 'all 0.2s ease',
