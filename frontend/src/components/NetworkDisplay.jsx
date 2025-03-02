@@ -43,6 +43,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import PersonIcon from '@mui/icons-material/Person';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
+import ComputerIcon from '@mui/icons-material/Computer';
+import ViewInArIcon from '@mui/icons-material/ViewInAr';
 import InputBase from '@mui/material/InputBase';
 import DnsIcon from '@mui/icons-material/Dns';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -50,6 +52,9 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import DownloadIcon from '@mui/icons-material/Download';
+import UploadIcon from '@mui/icons-material/Upload';
 
 // Define pulse animation
 const pulseAnimation = keyframes`
@@ -448,6 +453,20 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     }
   });
   
+  // Add state to track which slider is currently being dragged
+  const [activeSlider, setActiveSlider] = useState(null);
+  
+  // Add guest type filter state - load from localStorage or use default
+  const [guestTypeFilter, setGuestTypeFilter] = useState(() => {
+    try {
+      const saved = localStorage.getItem('guestTypeFilter');
+      return saved ? JSON.parse(saved) : 'all'; // 'all', 'vm', or 'lxc'
+    } catch (e) {
+      console.error('Error loading guest type filter preference:', e);
+      return 'all';
+    }
+  });
+  
   // Filter guests based on selected node
   const getNodeFilteredGuests = useCallback((guests) => {
     if (selectedNode === 'all') {
@@ -472,7 +491,14 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     });
   }, [selectedNode]);
   
-  const [activeSlider, setActiveSlider] = useState(null);
+  // Save guest type filter preference whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('guestTypeFilter', JSON.stringify(guestTypeFilter));
+    } catch (e) {
+      console.error('Error saving guest type filter preference:', e);
+    }
+  }, [guestTypeFilter]);
   
   // Save sort preferences whenever they change
   useEffect(() => {
@@ -652,6 +678,13 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
       filteredData = filteredData.filter(guest => guest.status === 'running');
     }
     
+    // Filter by guest type if a specific type is selected
+    if (guestTypeFilter !== 'all') {
+      filteredData = filteredData.filter(guest => 
+        guestTypeFilter === 'vm' ? guest.type === 'qemu' : guest.type === 'lxc'
+      );
+    }
+    
     // Then filter the data based on search terms and filters
     filteredData = filteredData.filter(guest => {
       const guestName = guest.name.toLowerCase();
@@ -723,6 +756,11 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
           return sortConfig.direction === 'asc' 
             ? a.status.localeCompare(b.status)
             : b.status.localeCompare(a.status);
+        
+        case 'type':
+          return sortConfig.direction === 'asc' 
+            ? a.type.localeCompare(b.type)
+            : b.type.localeCompare(a.type);
         
         case 'cpu':
           const cpuA = getMetricsForGuest(a.id)?.metrics?.cpu || 0;
@@ -1040,115 +1078,227 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
             
             {/* Search box - moved to the left */}
             <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center',
-              bgcolor: darkMode ? 'background.default' : 'background.paper',
-              borderRadius: 2,
-              border: theme => `1px solid ${darkMode ? theme.palette.divider : theme.palette.grey[300]}`,
-              px: 1.5,
-              py: 0.5,
-              width: { xs: '100%', md: 'auto' },
-              minWidth: { md: 220 },
-              transition: 'all 0.2s ease-in-out',
-              '&:hover': {
-                borderColor: theme => theme.palette.primary.main,
-                boxShadow: darkMode ? '0 2px 6px rgba(0, 0, 0, 0.15)' : '0 1px 3px rgba(0,0,0,0.05)'
-              },
-              '&:focus-within': {
-                borderColor: theme => theme.palette.primary.main,
-                boxShadow: theme => `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`
-              },
-              mr: { md: 2 }  // Add margin to the right on medium+ screens
+              display: 'flex',
+              alignItems: 'center'
             }}>
-              <SearchIcon fontSize="small" sx={{ color: 'text.secondary', mr: 1 }} />
-              <InputBase
-                placeholder="Search guests..."
-                value={searchTerm}
-                onChange={(e) => {
-                  // Set the search term directly to ensure immediate filtering
-                  setSearchTerm(e.target.value);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && searchTerm.trim()) {
-                    e.preventDefault();
-                    // Add current search term to active filters
-                    addSearchTerm(searchTerm.trim());
-                    // Clear the search input after adding the term
-                    setSearchTerm('');
-                    e.target.focus();
-                  } else if (e.key === 'Escape') {
-                    // Let the global handler handle this completely
-                    // The global handler will detect that search is focused
-                    // and both blur and collapse the filter window
-                    e.preventDefault();
-                  }
-                }}
-                fullWidth
-                size="small"
-                inputRef={searchInputRef}
-                sx={{ 
-                  fontSize: '0.875rem', 
-                  '& input': { 
-                    p: 0.5,
-                    '&::placeholder': {
-                      opacity: 0.7,
-                      fontSize: '0.875rem'
-                    }
-                  } 
-                }}
-              />
-              {searchTerm && (
-                <IconButton 
-                  size="small" 
-                  onClick={() => setSearchTerm('')}
-                  sx={{ p: 0.3, ml: 0.5 }}
-                >
-                  <CloseIcon fontSize="small" />
-                </IconButton>
-              )}
-              
+              <Typography variant="caption" sx={{ color: 'text.secondary', mr: 1, fontSize: '0.7rem', fontWeight: 500 }}>
+                SEARCH:
+              </Typography>
               <Box sx={{ 
-                display: { xs: 'none', md: 'flex' }, 
+                display: 'flex', 
                 alignItems: 'center',
-                ml: 0.5,
-                mr: -0.5,
-                opacity: 0.6,
-                '&:hover': { opacity: 1 }
+                bgcolor: darkMode ? 'background.default' : 'background.paper',
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: 'divider',
+                px: 1,
+                py: 0.5,
+                width: { xs: '100%', md: 'auto' },
+                minWidth: { md: 220 },
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  borderColor: theme => theme.palette.primary.main,
+                },
+                '&:focus-within': {
+                  borderColor: theme => theme.palette.primary.main,
+                  boxShadow: theme => `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`
+                }
               }}>
-                <KeyboardShortcut shortcut="ESC" sx={{ mr: 0.5 }} />
+                <SearchIcon sx={{ fontSize: '0.875rem', color: 'text.secondary', mr: 0.5 }} />
+                <InputBase
+                  placeholder="Search guests..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    // Set the search term directly to ensure immediate filtering
+                    setSearchTerm(e.target.value);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && searchTerm.trim()) {
+                      e.preventDefault();
+                      // Add current search term to active filters
+                      addSearchTerm(searchTerm.trim());
+                      // Clear the search input after adding the term
+                      setSearchTerm('');
+                      e.target.focus();
+                    } else if (e.key === 'Escape') {
+                      // Let the global handler handle this completely
+                      // The global handler will detect that search is focused
+                      // and both blur and collapse the filter window
+                      e.preventDefault();
+                    }
+                  }}
+                  fullWidth
+                  size="small"
+                  inputRef={searchInputRef}
+                  sx={{ 
+                    fontSize: '0.875rem', 
+                    '& input': { 
+                      p: 0.5,
+                      '&::placeholder': {
+                        opacity: 0.7,
+                        fontSize: '0.875rem'
+                      }
+                    } 
+                  }}
+                />
+                {searchTerm && (
+                  <Box 
+                    component="span" 
+                    onClick={() => setSearchTerm('')}
+                    sx={{ 
+                      display: 'flex',
+                      alignItems: 'center',
+                      ml: 0.5,
+                      cursor: 'pointer',
+                      '&:hover': {
+                        opacity: 0.8
+                      }
+                    }}
+                  >
+                    <CancelIcon sx={{ fontSize: '0.875rem' }} />
+                  </Box>
+                )}
+                
+                <Box sx={{ 
+                  display: { xs: 'none', md: 'flex' }, 
+                  alignItems: 'center',
+                  ml: 0.5,
+                  mr: -0.5,
+                  opacity: 0.6,
+                  '&:hover': { opacity: 1 }
+                }}>
+                  <KeyboardShortcut shortcut="ESC" sx={{ mr: 0.5 }} />
+                </Box>
+              </Box>
+            </Box>
+            
+            {/* Guest Type Filter */}
+            <Box sx={{ display: 'flex', alignItems: 'center', ml: 2 }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', mr: 1, fontSize: '0.7rem', fontWeight: 500 }}>
+                TYPE:
+              </Typography>
+              <Box sx={{ display: 'flex', borderRadius: 1, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+                <Tooltip title="Show all guests">
+                  <Box
+                    onClick={() => setGuestTypeFilter('all')}
+                    sx={{
+                      px: 1,
+                      py: 0.5,
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      bgcolor: guestTypeFilter === 'all' ? 'primary.main' : 'transparent',
+                      color: guestTypeFilter === 'all' ? 'primary.contrastText' : 'text.primary',
+                      '&:hover': {
+                        bgcolor: guestTypeFilter === 'all' ? 'primary.dark' : 'action.hover',
+                      }
+                    }}
+                  >
+                    All
+                  </Box>
+                </Tooltip>
+                <Tooltip title="Show only virtual machines">
+                  <Box
+                    onClick={() => setGuestTypeFilter('vm')}
+                    sx={{
+                      px: 1,
+                      py: 0.5,
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      bgcolor: guestTypeFilter === 'vm' ? 'info.main' : 'transparent',
+                      color: guestTypeFilter === 'vm' ? 'info.contrastText' : 'text.primary',
+                      borderLeft: '1px solid',
+                      borderLeftColor: 'divider',
+                      '&:hover': {
+                        bgcolor: guestTypeFilter === 'vm' ? 'info.dark' : 'action.hover',
+                      }
+                    }}
+                  >
+                    <ComputerIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
+                    VM
+                  </Box>
+                </Tooltip>
+                <Tooltip title="Show only LXC containers">
+                  <Box
+                    onClick={() => setGuestTypeFilter('lxc')}
+                    sx={{
+                      px: 1,
+                      py: 0.5,
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      bgcolor: guestTypeFilter === 'lxc' ? 'success.main' : 'transparent',
+                      color: guestTypeFilter === 'lxc' ? 'success.contrastText' : 'text.primary',
+                      borderLeft: '1px solid',
+                      borderLeftColor: 'divider',
+                      '&:hover': {
+                        bgcolor: guestTypeFilter === 'lxc' ? 'success.dark' : 'action.hover',
+                      }
+                    }}
+                  >
+                    <ViewInArIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
+                    LXC
+                  </Box>
+                </Tooltip>
               </Box>
             </Box>
             
             {/* Node indicator */}
             {selectedNode !== 'all' && (
-              <Chip
-                icon={<DnsIcon fontSize="small" />}
-                label={(() => {
+              <Box sx={{ display: 'flex', alignItems: 'center', ml: 2 }}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', mr: 1, fontSize: '0.7rem', fontWeight: 500 }}>
+                  NODE:
+                </Typography>
+                <Tooltip title={(() => {
                   // Find the actual node name from nodeData
                   if (nodeData && nodeData.length > 0) {
                     // Convert selectedNode format (e.g., "node1") to API format (e.g., "node-1")
                     const nodeIdForApi = selectedNode.replace(/^node(\d+)$/, "node-$1");
                     const node = nodeData.find(n => n.id === nodeIdForApi);
                     if (node) {
-                      return `Node: ${node.name}`;
+                      return `Filtering by Node: ${node.name}`;
                     }
                   }
                   // Fallback to the node ID if we can't find the name
-                  return `Node: ${selectedNode}`;
-                })()}
-                size="small"
-                color="primary"
-                variant="outlined"
-                sx={{ 
-                  height: 28, 
-                  mr: 2,
-                  fontWeight: 500,
-                  borderRadius: 1.5,
-                  '& .MuiChip-icon': {
-                    color: 'primary.main'
-                  }
-                }}
-              />
+                  return `Filtering by Node: ${selectedNode}`;
+                })()}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                      borderRadius: 1,
+                      px: 1,
+                      py: 0.5,
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
+                    }}
+                  >
+                    <DnsIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
+                    {(() => {
+                      // Find the actual node name from nodeData
+                      if (nodeData && nodeData.length > 0) {
+                        // Convert selectedNode format (e.g., "node1") to API format (e.g., "node-1")
+                        const nodeIdForApi = selectedNode.replace(/^node(\d+)$/, "node-$1");
+                        const node = nodeData.find(n => n.id === nodeIdForApi);
+                        if (node) {
+                          return node.name;
+                        }
+                      }
+                      // Fallback to the node ID if we can't find the name
+                      return selectedNode;
+                    })()}
+                  </Box>
+                </Tooltip>
+              </Box>
             )}
 
             <Box sx={{ flexGrow: 1, minHeight: { xs: 8, md: 0 } }} />
@@ -1171,33 +1321,33 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                 flexGrow: { xs: 1, md: 0 },
                 justifyContent: { xs: 'center', md: 'flex-start' }
               }}>
-                <Tooltip title={
-                  <>
-                    {showFilters ? "Hide filters" : "Show filters"}
-                  </>
-                }>
+                <Typography variant="caption" sx={{ color: 'text.secondary', mr: 1, fontSize: '0.7rem', fontWeight: 500 }}>
+                  FILTERS:
+                </Typography>
+                <Tooltip title={showFilters ? "Hide filters" : "Show filters"}>
                   <Box 
                     onClick={() => setShowFilters(!showFilters)}
                     sx={{ 
                       display: 'flex', 
                       alignItems: 'center',
-                      bgcolor: theme => (Object.values(filters).some(val => val > 0) || searchTerm)
-                        ? alpha(theme.palette.primary.main, 0.08)
-                        : alpha(theme.palette.primary.main, 0.04),
-                      borderRadius: 2,
-                      py: { xs: 0.5, sm: 0.7 },
-                      px: { xs: 1, sm: 1.5 },
-                      transition: 'all 0.2s ease-in-out',
+                      borderRadius: 1,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      px: 1,
+                      py: 0.5,
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
                       cursor: 'pointer',
-                      border: theme => (Object.values(filters).some(val => val > 0) || searchTerm) && !showFilters
-                        ? `1px solid ${alpha(theme.palette.primary.main, 0.3)}`
-                        : `1px solid transparent`,
+                      bgcolor: (Object.values(filters).some(val => val > 0) || searchTerm || showFilters) 
+                        ? 'primary.main' 
+                        : 'transparent',
+                      color: (Object.values(filters).some(val => val > 0) || searchTerm || showFilters) 
+                        ? 'primary.contrastText' 
+                        : 'text.primary',
                       '&:hover': {
-                        bgcolor: theme => alpha(theme.palette.primary.main, 0.12),
-                      },
-                      '&:focus-visible': {
-                        outline: '2px solid',
-                        outlineColor: 'primary.main',
+                        bgcolor: (Object.values(filters).some(val => val > 0) || searchTerm || showFilters)
+                          ? 'primary.dark'
+                          : 'action.hover',
                       }
                     }}
                     role="button"
@@ -1212,28 +1362,17 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     }}
                   >
                     <FilterAltIcon 
-                      fontSize="small" 
-                      color={(Object.values(filters).some(val => val > 0) || searchTerm) ? "primary" : (showFilters ? "primary" : "action")} 
-                      sx={{ mr: 0.8 }}
+                      sx={{ fontSize: '0.75rem', mr: 0.5 }}
                     />
                     
                     {(Object.values(filters).some(val => val > 0) || searchTerm) ? (
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Typography variant="body2" color="primary" sx={{ fontWeight: 600 }}>
-                          {`${sortedAndFilteredData.length}/${guestData.length}`}
-                        </Typography>
+                        {`${sortedAndFilteredData.length}/${guestData.length}`}
                       </Box>
                     ) : (
-                      <Typography 
-                        variant="body2" 
-                        color="text.secondary" 
-                        sx={{ 
-                          fontWeight: 500,
-                          display: { xs: 'none', sm: 'block' }
-                        }}
-                      >
-                        Filters
-                      </Typography>
+                      <Box component="span" sx={{ display: { xs: 'none', sm: 'block' } }}>
+                        {showFilters ? "Hide" : "Show"}
+                      </Box>
                     )}
                   </Box>
                 </Tooltip>
@@ -1252,137 +1391,323 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     {/* Active search term chips */}
                     {activeSearchTerms.map((term, index) => (
                       <React.Fragment key={term}>
-                        <Chip 
-                          label={`"${term}"`}
-                          onDelete={() => removeSearchTerm(term)}
-                          color="primary"
-                          size="small"
-                          deleteIcon={<CancelIcon fontSize="small" />}
-                          sx={{ height: 24, fontWeight: 600, mr: 0.5 }}
-                        />
+                        <Box 
+                          sx={{ 
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            bgcolor: 'primary.main',
+                            color: 'primary.contrastText',
+                            borderRadius: 1,
+                            px: 1,
+                            py: 0.5,
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            mr: 0.5
+                          }}
+                        >
+                          {`"${term}"`}
+                          <Box 
+                            component="span" 
+                            onClick={() => removeSearchTerm(term)}
+                            sx={{ 
+                              display: 'flex',
+                              alignItems: 'center',
+                              ml: 0.5,
+                              cursor: 'pointer',
+                              '&:hover': {
+                                opacity: 0.8
+                              }
+                            }}
+                          >
+                            <CancelIcon sx={{ fontSize: '0.875rem' }} />
+                          </Box>
+                        </Box>
                       </React.Fragment>
                     ))}
                     
                     {/* Current search term chip (shown only if not empty and not yet in activeSearchTerms) */}
                     {searchTerm && !activeSearchTerms.includes(searchTerm) && (
-                      <Chip 
-                        label={`"${searchTerm}"`}
-                        onDelete={() => setSearchTerm('')}
-                        color="secondary"
-                        size="small"
-                        deleteIcon={<CancelIcon fontSize="small" />}
-                        sx={{ height: 24, fontWeight: 600 }}
-                      />
+                      <Box 
+                        sx={{ 
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          bgcolor: 'secondary.main',
+                          color: 'secondary.contrastText',
+                          borderRadius: 1,
+                          px: 1,
+                          py: 0.5,
+                          fontSize: '0.75rem',
+                          fontWeight: 500
+                        }}
+                      >
+                        {`"${searchTerm}"`}
+                        <Box 
+                          component="span" 
+                          onClick={() => setSearchTerm('')}
+                          sx={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            ml: 0.5,
+                            cursor: 'pointer',
+                            '&:hover': {
+                              opacity: 0.8
+                            }
+                          }}
+                        >
+                          <CancelIcon sx={{ fontSize: '0.875rem' }} />
+                        </Box>
+                      </Box>
                     )}
                     
                     {/* CPU filter chip */}
                     {filters.cpu > 0 && (
-                      <Chip 
-                        label={`CPU ≥ ${formatPercentage(filters.cpu)}`}
-                        onDelete={() => clearFilter('cpu')}
-                        color="primary"
-                        size="small"
-                        deleteIcon={<CancelIcon fontSize="small" />}
-                        sx={{ height: 24, '& .MuiChip-label': { fontWeight: 500 } }}
-                      />
+                      <Box 
+                        sx={{ 
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          bgcolor: 'primary.main',
+                          color: 'primary.contrastText',
+                          borderRadius: 1,
+                          px: 1,
+                          py: 0.5,
+                          fontSize: '0.75rem',
+                          fontWeight: 500
+                        }}
+                      >
+                        {`CPU ≥ ${formatPercentage(filters.cpu)}`}
+                        <Box 
+                          component="span" 
+                          onClick={() => clearFilter('cpu')}
+                          sx={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            ml: 0.5,
+                            cursor: 'pointer',
+                            '&:hover': {
+                              opacity: 0.8
+                            }
+                          }}
+                        >
+                          <CancelIcon sx={{ fontSize: '0.875rem' }} />
+                        </Box>
+                      </Box>
                     )}
                     
                     {/* Memory filter chip */}
                     {filters.memory > 0 && (
-                      <Chip 
-                        label={`Mem ≥ ${formatPercentage(filters.memory)}`}
-                        onDelete={() => clearFilter('memory')}
-                        color="primary"
-                        size="small"
-                        deleteIcon={<CancelIcon fontSize="small" />}
-                        sx={{ height: 24, '& .MuiChip-label': { fontWeight: 500 } }}
-                      />
+                      <Box 
+                        sx={{ 
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          bgcolor: 'primary.main',
+                          color: 'primary.contrastText',
+                          borderRadius: 1,
+                          px: 1,
+                          py: 0.5,
+                          fontSize: '0.75rem',
+                          fontWeight: 500
+                        }}
+                      >
+                        {`Mem ≥ ${formatPercentage(filters.memory)}`}
+                        <Box 
+                          component="span" 
+                          onClick={() => clearFilter('memory')}
+                          sx={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            ml: 0.5,
+                            cursor: 'pointer',
+                            '&:hover': {
+                              opacity: 0.8
+                            }
+                          }}
+                        >
+                          <CancelIcon sx={{ fontSize: '0.875rem' }} />
+                        </Box>
+                      </Box>
                     )}
                     
                     {/* Disk filter chip */}
                     {filters.disk > 0 && (
-                      <Chip 
-                        label={`Disk ≥ ${formatPercentage(filters.disk)}`}
-                        onDelete={() => clearFilter('disk')}
-                        color="primary"
-                        size="small"
-                        deleteIcon={<CancelIcon fontSize="small" />}
-                        sx={{ height: 24, '& .MuiChip-label': { fontWeight: 500 } }}
-                      />
+                      <Box 
+                        sx={{ 
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          bgcolor: 'primary.main',
+                          color: 'primary.contrastText',
+                          borderRadius: 1,
+                          px: 1,
+                          py: 0.5,
+                          fontSize: '0.75rem',
+                          fontWeight: 500
+                        }}
+                      >
+                        {`Disk ≥ ${formatPercentage(filters.disk)}`}
+                        <Box 
+                          component="span" 
+                          onClick={() => clearFilter('disk')}
+                          sx={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            ml: 0.5,
+                            cursor: 'pointer',
+                            '&:hover': {
+                              opacity: 0.8
+                            }
+                          }}
+                        >
+                          <CancelIcon sx={{ fontSize: '0.875rem' }} />
+                        </Box>
+                      </Box>
                     )}
                     
                     {/* Download filter chip */}
                     {filters.download > 0 && (
-                      <Chip 
-                        label={`DL ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}`}
-                        onDelete={() => clearFilter('download')}
-                        color="primary"
-                        size="small"
-                        deleteIcon={<CancelIcon fontSize="small" />}
-                        sx={{ height: 24, '& .MuiChip-label': { fontWeight: 500 } }}
-                      />
+                      <Box 
+                        sx={{ 
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          bgcolor: 'primary.main',
+                          color: 'primary.contrastText',
+                          borderRadius: 1,
+                          px: 1,
+                          py: 0.5,
+                          fontSize: '0.75rem',
+                          fontWeight: 500
+                        }}
+                      >
+                        {`DL ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}`}
+                        <Box 
+                          component="span" 
+                          onClick={() => clearFilter('download')}
+                          sx={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            ml: 0.5,
+                            cursor: 'pointer',
+                            '&:hover': {
+                              opacity: 0.8
+                            }
+                          }}
+                        >
+                          <CancelIcon sx={{ fontSize: '0.875rem' }} />
+                        </Box>
+                      </Box>
                     )}
                     
                     {/* Upload filter chip */}
                     {filters.upload > 0 && (
-                      <Chip 
-                        label={`UL ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}`}
-                        onDelete={() => clearFilter('upload')}
-                        color="secondary"
-                        size="small"
-                        deleteIcon={<CancelIcon fontSize="small" />}
-                        sx={{ height: 24, '& .MuiChip-label': { fontWeight: 500 } }}
-                      />
+                      <Box 
+                        sx={{ 
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          bgcolor: 'secondary.main',
+                          color: 'secondary.contrastText',
+                          borderRadius: 1,
+                          px: 1,
+                          py: 0.5,
+                          fontSize: '0.75rem',
+                          fontWeight: 500
+                        }}
+                      >
+                        {`UL ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}`}
+                        <Box 
+                          component="span" 
+                          onClick={() => clearFilter('upload')}
+                          sx={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            ml: 0.5,
+                            cursor: 'pointer',
+                            '&:hover': {
+                              opacity: 0.8
+                            }
+                          }}
+                        >
+                          <CancelIcon sx={{ fontSize: '0.875rem' }} />
+                        </Box>
+                      </Box>
                     )}
                     
                     {/* Reset all filters button */}
-                    <Chip 
-                      label="Reset"
+                    <Box 
                       onClick={resetFilters}
-                      variant="outlined"
-                      size="small"
-                      color="primary"
-                      sx={{ height: 24 }}
-                    />
+                      sx={{ 
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        bgcolor: 'transparent',
+                        color: 'primary.main',
+                        border: '1px solid',
+                        borderColor: 'primary.main',
+                        borderRadius: 1,
+                        px: 1,
+                        py: 0.5,
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        '&:hover': {
+                          bgcolor: 'action.hover'
+                        }
+                      }}
+                    >
+                      Reset
+                    </Box>
                   </Box>
                 )}
               </Box>
               
               {/* Display controls */}
-              <FormControlLabel
-                control={
-                  <Switch 
-                    checked={showStopped}
-                    onChange={(e) => setShowStopped(e.target.checked)}
-                    color="primary"
-                    size="small"
-                  />
-                }
-                label={
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      fontWeight: 500,
-                      display: { xs: 'none', sm: 'block' }
-                    }}
-                  >
-                    Show stopped
-                  </Typography>
-                }
-                sx={{ 
-                  m: 0, 
-                  '& .MuiFormControlLabel-label': { ml: 0.5 },
-                  bgcolor: theme => darkMode 
-                    ? alpha(theme.palette.background.default, 0.6)
-                    : alpha(theme.palette.grey[100], 0.7),
-                  borderRadius: 2,
-                  px: { xs: 0.5, sm: 1 },
-                  py: 0.2,
-                  border: '1px solid',
-                  borderColor: darkMode ? 'divider' : 'grey.200',
-                  minWidth: { xs: 42, sm: 'auto' }
-                }}
-              />
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', mr: 1, fontSize: '0.7rem', fontWeight: 500 }}>
+                  STATUS:
+                </Typography>
+                <Box sx={{ display: 'flex', borderRadius: 1, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+                  <Tooltip title="Show only running systems">
+                    <Box
+                      onClick={() => setShowStopped(false)}
+                      sx={{
+                        px: 1,
+                        py: 0.5,
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        bgcolor: !showStopped ? 'primary.main' : 'transparent',
+                        color: !showStopped ? 'primary.contrastText' : 'text.primary',
+                        '&:hover': {
+                          bgcolor: !showStopped ? 'primary.dark' : 'action.hover',
+                        }
+                      }}
+                    >
+                      Running
+                    </Box>
+                  </Tooltip>
+                  <Tooltip title="Show all systems including stopped ones">
+                    <Box
+                      onClick={() => setShowStopped(true)}
+                      sx={{
+                        px: 1,
+                        py: 0.5,
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        bgcolor: showStopped ? 'primary.main' : 'transparent',
+                        color: showStopped ? 'primary.contrastText' : 'text.primary',
+                        borderLeft: '1px solid',
+                        borderLeftColor: 'divider',
+                        '&:hover': {
+                          bgcolor: showStopped ? 'primary.dark' : 'action.hover',
+                        }
+                      }}
+                    >
+                      All
+                    </Box>
+                  </Tooltip>
+                </Box>
+              </Box>
             </Box>
           </Box>
           
@@ -1763,47 +2088,96 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         outlineOffset: -2,
                       }
                     }}
-                    role="columnheader"
                     aria-sort={sortConfig.key === 'name' ? sortConfig.direction : undefined}
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        requestSort('name');
-                      }
-                    }}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <PersonIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                      Guest Name
-                      {sortConfig.key === 'name' && (
-                        <Box sx={{ 
-                          ml: 0.5,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 18,
-                          height: 18,
-                          borderRadius: '50%',
-                          bgcolor: theme => alpha(theme.palette.primary.main, 0.1),
-                          color: 'primary.main',
-                          fontSize: '0.8rem',
-                          fontWeight: 'bold'
+                      Name
+                      <TableSortLabel
+                        active={sortConfig.key === 'name'}
+                        direction={sortConfig.key === 'name' ? sortConfig.direction : 'asc'}
+                        sx={{
+                          '& .MuiTableSortLabel-icon': {
+                            opacity: sortConfig.key === 'name' ? 1 : 0.3,
+                            marginLeft: '4px !important',
+                          },
+                          '&.Mui-active': {
+                            color: 'inherit',
+                          },
+                          '&:hover': {
+                            color: 'primary.main',
+                          }
                         }}
-                        aria-hidden="true"
-                        >
-                          {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                          </Box>
-                      )}
+                        IconComponent={props => (
+                          <ArrowDropDownIcon
+                            {...props}
+                            sx={{
+                              fontSize: '1.2rem',
+                              transform: sortConfig.key === 'name' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                              transition: 'transform 0.2s'
+                            }}
+                          />
+                        )}
+                      />
                     </Box>
                   </TableCell>
+                  
+                  {/* Type Column - Hide when filtered to a specific type */}
+                  {guestTypeFilter === 'all' && (
+                    <TableCell 
+                      width="8%" 
+                      onClick={() => requestSort('type')}
+                      sx={{ 
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                        },
+                        '&:focus-visible': {
+                          outline: '2px solid',
+                          outlineColor: 'primary.main',
+                          outlineOffset: -2,
+                        }
+                      }}
+                      aria-sort={sortConfig.key === 'type' ? sortConfig.direction : undefined}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        Type
+                        <TableSortLabel
+                          active={sortConfig.key === 'type'}
+                          direction={sortConfig.key === 'type' ? sortConfig.direction : 'asc'}
+                          sx={{
+                            '& .MuiTableSortLabel-icon': {
+                              opacity: sortConfig.key === 'type' ? 1 : 0.3,
+                              marginLeft: '4px !important',
+                            },
+                            '&.Mui-active': {
+                              color: 'inherit',
+                            },
+                            '&:hover': {
+                              color: 'primary.main',
+                            }
+                          }}
+                          IconComponent={props => (
+                            <ArrowDropDownIcon
+                              {...props}
+                              sx={{
+                                fontSize: '1.2rem',
+                                transform: sortConfig.key === 'type' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                                transition: 'transform 0.2s'
+                              }}
+                            />
+                          )}
+                        />
+                      </Box>
+                    </TableCell>
+                  )}
                   
                   {/* CPU Column */}
                   <TableCell 
                     width="19%" 
                     ref={cpuColumnRef} 
                     onClick={() => requestSort('cpu')}
-                              sx={{ 
+                    sx={{ 
                       fontWeight: 'bold', 
                       minHeight: '48px', 
                       position: 'relative',
@@ -1813,31 +2187,44 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       color: theme => filters.cpu > 0 ? 'primary.main' : 'inherit',
                       '&:hover': {
                         backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                      },
+                      '&:focus-visible': {
+                        outline: '2px solid',
+                        outlineColor: 'primary.main',
+                        outlineOffset: -2,
                       }
                     }}
+                    aria-sort={sortConfig.key === 'cpu' ? sortConfig.direction : undefined}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <SpeedIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
                       CPU
-                      {sortConfig.key === 'cpu' && (
-                        <Box sx={{ 
-                          ml: 0.5,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 18,
-                          height: 18,
-                          borderRadius: '50%',
-                          bgcolor: theme => alpha(theme.palette.primary.main, 0.1),
-                          color: 'primary.main',
-                          fontSize: '0.8rem',
-                          fontWeight: 'bold'
+                      <TableSortLabel
+                        active={sortConfig.key === 'cpu'}
+                        direction={sortConfig.key === 'cpu' ? sortConfig.direction : 'asc'}
+                        sx={{
+                          '& .MuiTableSortLabel-icon': {
+                            opacity: sortConfig.key === 'cpu' ? 1 : 0.3,
+                            marginLeft: '4px !important',
+                          },
+                          '&.Mui-active': {
+                            color: 'inherit',
+                          },
+                          '&:hover': {
+                            color: 'primary.main',
+                          }
                         }}
-                        aria-hidden="true"
-                        >
-                          {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                          </Box>
-                      )}
+                        IconComponent={props => (
+                          <ArrowDropDownIcon
+                            {...props}
+                            sx={{
+                              fontSize: '1.2rem',
+                              transform: sortConfig.key === 'cpu' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                              transition: 'transform 0.2s'
+                            }}
+                          />
+                        )}
+                      />
                     </Box>
                   </TableCell>
                   
@@ -1847,40 +2234,53 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     ref={memoryColumnRef}
                     onClick={() => requestSort('memory')}
                     sx={{ 
-                    fontWeight: 'bold', 
-                    minHeight: '48px', 
-                    position: 'relative',
+                      fontWeight: 'bold', 
+                      minHeight: '48px', 
+                      position: 'relative',
                       cursor: 'pointer',
                       borderBottom: theme => filters.memory > 0 ? 
                         `2px solid ${theme.palette.primary.main}` : undefined,
                       color: theme => filters.memory > 0 ? 'primary.main' : 'inherit',
                       '&:hover': {
                         backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                      },
+                      '&:focus-visible': {
+                        outline: '2px solid',
+                        outlineColor: 'primary.main',
+                        outlineOffset: -2,
                       }
                     }}
+                    aria-sort={sortConfig.key === 'memory' ? sortConfig.direction : undefined}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <MemoryIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
                       Memory
-                      {sortConfig.key === 'memory' && (
-                        <Box sx={{ 
-                          ml: 0.5,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 18,
-                          height: 18,
-                          borderRadius: '50%',
-                          bgcolor: theme => alpha(theme.palette.primary.main, 0.1),
-                          color: 'primary.main',
-                          fontSize: '0.8rem',
-                          fontWeight: 'bold'
+                      <TableSortLabel
+                        active={sortConfig.key === 'memory'}
+                        direction={sortConfig.key === 'memory' ? sortConfig.direction : 'asc'}
+                        sx={{
+                          '& .MuiTableSortLabel-icon': {
+                            opacity: sortConfig.key === 'memory' ? 1 : 0.3,
+                            marginLeft: '4px !important',
+                          },
+                          '&.Mui-active': {
+                            color: 'inherit',
+                          },
+                          '&:hover': {
+                            color: 'primary.main',
+                          }
                         }}
-                        aria-hidden="true"
-                        >
-                          {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                      </Box>
-                      )}
+                        IconComponent={props => (
+                          <ArrowDropDownIcon
+                            {...props}
+                            sx={{
+                              fontSize: '1.2rem',
+                              transform: sortConfig.key === 'memory' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                              transition: 'transform 0.2s'
+                            }}
+                          />
+                        )}
+                      />
                     </Box>
                   </TableCell>
                   
@@ -1889,41 +2289,54 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     width="19%" 
                     ref={diskColumnRef}
                     onClick={() => requestSort('disk')}
-                      sx={{ 
+                    sx={{ 
                       fontWeight: 'bold', 
                       minHeight: '48px', 
-                        position: 'relative',
+                      position: 'relative',
                       cursor: 'pointer',
                       borderBottom: theme => filters.disk > 0 ? 
                         `2px solid ${theme.palette.primary.main}` : undefined,
                       color: theme => filters.disk > 0 ? 'primary.main' : 'inherit',
                       '&:hover': {
                         backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                      },
+                      '&:focus-visible': {
+                        outline: '2px solid',
+                        outlineColor: 'primary.main',
+                        outlineOffset: -2,
                       }
                     }}
+                    aria-sort={sortConfig.key === 'disk' ? sortConfig.direction : undefined}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <StorageIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
                       Disk
-                      {sortConfig.key === 'disk' && (
-                        <Box sx={{ 
-                          ml: 0.5,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                          width: 18,
-                          height: 18,
-                          borderRadius: '50%',
-                          bgcolor: theme => alpha(theme.palette.primary.main, 0.1),
-                          color: 'primary.main',
-                          fontSize: '0.8rem',
-                          fontWeight: 'bold'
+                      <TableSortLabel
+                        active={sortConfig.key === 'disk'}
+                        direction={sortConfig.key === 'disk' ? sortConfig.direction : 'asc'}
+                        sx={{
+                          '& .MuiTableSortLabel-icon': {
+                            opacity: sortConfig.key === 'disk' ? 1 : 0.3,
+                            marginLeft: '4px !important',
+                          },
+                          '&.Mui-active': {
+                            color: 'inherit',
+                          },
+                          '&:hover': {
+                            color: 'primary.main',
+                          }
                         }}
-                        aria-hidden="true"
-                        >
-                          {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                        </Box>
-                      )}
+                        IconComponent={props => (
+                          <ArrowDropDownIcon
+                            {...props}
+                            sx={{
+                              fontSize: '1.2rem',
+                              transform: sortConfig.key === 'disk' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                              transition: 'transform 0.2s'
+                            }}
+                          />
+                        )}
+                      />
                     </Box>
                   </TableCell>
                   
@@ -1932,7 +2345,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     width="12%" 
                     ref={downloadColumnRef}
                     onClick={() => requestSort('download')}
-                              sx={{ 
+                    sx={{ 
                       fontWeight: 'bold', 
                       minHeight: '48px', 
                       position: 'relative',
@@ -1942,40 +2355,53 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       color: theme => filters.download > 0 ? 'primary.main' : 'inherit',
                       '&:hover': {
                         backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                      },
+                      '&:focus-visible': {
+                        outline: '2px solid',
+                        outlineColor: 'primary.main',
+                        outlineOffset: -2,
                       }
                     }}
+                    aria-sort={sortConfig.key === 'download' ? sortConfig.direction : undefined}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <ArrowDownwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                      <DownloadIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
                       Download
-                      {sortConfig.key === 'download' && (
-                        <Box sx={{ 
-                          ml: 0.5,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                                    width: 18,
-                          height: 18,
-                          borderRadius: '50%',
-                          bgcolor: theme => alpha(theme.palette.primary.main, 0.1),
-                          color: 'primary.main',
-                          fontSize: '0.8rem',
-                          fontWeight: 'bold'
+                      <TableSortLabel
+                        active={sortConfig.key === 'download'}
+                        direction={sortConfig.key === 'download' ? sortConfig.direction : 'asc'}
+                        sx={{
+                          '& .MuiTableSortLabel-icon': {
+                            opacity: sortConfig.key === 'download' ? 1 : 0.3,
+                            marginLeft: '4px !important',
+                          },
+                          '&.Mui-active': {
+                            color: 'inherit',
+                          },
+                          '&:hover': {
+                            color: 'primary.main',
+                          }
                         }}
-                        aria-hidden="true"
-                        >
-                          {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                          </Box>
-                      )}
+                        IconComponent={props => (
+                          <ArrowDropDownIcon
+                            {...props}
+                            sx={{
+                              fontSize: '1.2rem',
+                              transform: sortConfig.key === 'download' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                              transition: 'transform 0.2s'
+                            }}
+                          />
+                        )}
+                      />
                     </Box>
                   </TableCell>
                   
                   {/* Upload Column */}
                   <TableCell 
-                    width="13%" 
+                    width="12%" 
                     ref={uploadColumnRef}
                     onClick={() => requestSort('upload')}
-                              sx={{ 
+                    sx={{ 
                       fontWeight: 'bold', 
                       minHeight: '48px', 
                       position: 'relative',
@@ -1985,31 +2411,44 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       color: theme => filters.upload > 0 ? 'secondary.main' : 'inherit',
                       '&:hover': {
                         backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                      },
+                      '&:focus-visible': {
+                        outline: '2px solid',
+                        outlineColor: 'primary.main',
+                        outlineOffset: -2,
                       }
                     }}
+                    aria-sort={sortConfig.key === 'upload' ? sortConfig.direction : undefined}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <ArrowUpwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                      <UploadIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
                       Upload
-                      {sortConfig.key === 'upload' && (
-                        <Box sx={{ 
-                          ml: 0.5,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 18,
-                          height: 18,
-                          borderRadius: '50%',
-                          bgcolor: theme => alpha(theme.palette.secondary.main, 0.1),
-                          color: 'secondary.main',
-                          fontSize: '0.8rem',
-                          fontWeight: 'bold'
+                      <TableSortLabel
+                        active={sortConfig.key === 'upload'}
+                        direction={sortConfig.key === 'upload' ? sortConfig.direction : 'asc'}
+                        sx={{
+                          '& .MuiTableSortLabel-icon': {
+                            opacity: sortConfig.key === 'upload' ? 1 : 0.3,
+                            marginLeft: '4px !important',
+                          },
+                          '&.Mui-active': {
+                            color: 'inherit',
+                          },
+                          '&:hover': {
+                            color: 'primary.main',
+                          }
                         }}
-                        aria-hidden="true"
-                        >
-                          {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                          </Box>
-                      )}
+                        IconComponent={props => (
+                          <ArrowDropDownIcon
+                            {...props}
+                            sx={{
+                              fontSize: '1.2rem',
+                              transform: sortConfig.key === 'upload' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                              transition: 'transform 0.2s'
+                            }}
+                          />
+                        )}
+                      />
                     </Box>
                   </TableCell>
                 </TableRow>
@@ -2095,6 +2534,46 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                             </Typography>
                           </Box>
                         </TableCell>
+                        
+                        {/* Type Column - Hide when filtered to a specific type */}
+                        {guestTypeFilter === 'all' && (
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                              {guest.type === 'qemu' ? (
+                                <Tooltip title="Virtual Machine">
+                                  <Box
+                                    sx={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      color: 'info.main',
+                                      fontSize: '0.7rem',
+                                      opacity: 0.8
+                                    }}
+                                  >
+                                    <ComputerIcon sx={{ fontSize: '0.8rem', mr: 0.3 }} />
+                                    <Box component="span" sx={{ fontSize: '0.65rem', fontWeight: 500, letterSpacing: '0.02em' }}>VM</Box>
+                                  </Box>
+                                </Tooltip>
+                              ) : (
+                                <Tooltip title="LXC Container">
+                                  <Box
+                                    sx={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      color: 'success.main',
+                                      fontSize: '0.7rem',
+                                      opacity: 0.8
+                                    }}
+                                  >
+                                    <ViewInArIcon sx={{ fontSize: '0.8rem', mr: 0.3 }} />
+                                    <Box component="span" sx={{ fontSize: '0.65rem', fontWeight: 500, letterSpacing: '0.02em' }}>LXC</Box>
+                                  </Box>
+                                </Tooltip>
+                              )}
+                            </Box>
+                          </TableCell>
+                        )}
+                        
                         <TableCell>
                           <ProgressWithLabel 
                             value={cpuUsage} 
@@ -2335,5 +2814,4 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     </Box>
   );
 };
-
-export default NetworkDisplay; 
+export default NetworkDisplay;
