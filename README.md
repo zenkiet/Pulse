@@ -316,6 +316,34 @@ npm run lint            # Run ESLint
 npm run build          # Build the TypeScript backend
 ```
 
+#### Release Process
+
+A release script is provided to automate the process of creating new releases. The script handles:
+
+- Version bumping (patch, minor, or major)
+- Updating version in all relevant files
+- Git tagging and pushing
+- Docker image building and pushing
+- GitHub release creation
+
+To create a new release:
+
+```bash
+# Create a new patch release (1.0.x → 1.0.x+1)
+./scripts/release.sh
+
+# Create a new minor release (1.x.0 → 1.x+1.0)
+./scripts/release.sh -t minor
+
+# Create a new major release (x.0.0 → x+1.0.0)
+./scripts/release.sh -t major
+
+# Show all available options
+./scripts/release.sh --help
+```
+
+The script will prompt for confirmation before making any changes and will check for uncommitted changes before proceeding.
+
 These commands are particularly useful when:
 - You need to restart specific components
 - You're debugging connection issues
