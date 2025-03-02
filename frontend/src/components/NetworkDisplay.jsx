@@ -46,6 +46,10 @@ import Brightness7Icon from '@mui/icons-material/Brightness7';
 import InputBase from '@mui/material/InputBase';
 import DnsIcon from '@mui/icons-material/Dns';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 // Define pulse animation
 const pulseAnimation = keyframes`
@@ -186,6 +190,8 @@ const ProgressWithLabel = ({ value, color = "primary", disabled = false, tooltip
 
 // Status indicator circle
 const StatusIndicator = ({ status }) => {
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === 'dark';
   let color = 'grey';
   
   switch (status.toLowerCase()) {
@@ -205,11 +211,13 @@ const StatusIndicator = ({ status }) => {
   return (
     <Box
       sx={{
-        width: 10,
-        height: 10,
+        width: 8,
+        height: 8,
         borderRadius: '50%',
         bgcolor: color,
-        boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.8)',
+        boxShadow: isDarkMode 
+          ? `0 0 0 1px ${alpha(color, 0.5)}` 
+          : '0 0 0 1px rgba(255, 255, 255, 0.8)',
         ...(status.toLowerCase() === 'running' && {
           animation: `${pulseAnimation} 2s infinite`
         })
@@ -781,11 +789,10 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
   const downloadColumnRef = React.useRef(null);
   const uploadColumnRef = React.useRef(null);
   
-  // Memoize getSortedAndFilteredData to optimize performance
-  const sortedAndFilteredData = useMemo(
-    () => getSortedAndFilteredData(guestData),
-    [guestData, sortConfig, filters, showStopped, searchTerm, activeSearchTerms, displayMetrics, selectedNode, getNodeFilteredGuests]
-  );
+  // Get the sorted and filtered data
+  const sortedAndFilteredData = useMemo(() => {
+    return getSortedAndFilteredData(getNodeFilteredGuests(guestData));
+  }, [getSortedAndFilteredData, getNodeFilteredGuests, guestData, sortConfig, filters, showStopped, searchTerm, activeSearchTerms, selectedNode]);
   
   // Add keyboard shortcut handler for 'F' key to toggle filters
   useEffect(() => {
@@ -802,6 +809,202 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
+  
+  // Function to generate and download PDF
+  const generatePDF = useCallback(() => {
+    try {
+      console.log('PDF export started');
+      
+      if (!sortedAndFilteredData || sortedAndFilteredData.length === 0) {
+        console.error('No data available to export');
+        return;
+      }
+      
+      console.log('Data to export:', sortedAndFilteredData);
+      
+      // Create a new PDF document with explicit page size
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      console.log('PDF document created');
+      
+      // Add title with current date
+      const title = `Container Status Report - ${new Date().toLocaleString()}`;
+      doc.setFontSize(14);
+      doc.text(title, 14, 15);
+      console.log('Title added');
+      
+      // Add node information
+      const nodeInfo = selectedNode === 'all' ? 'All Nodes' : `Node: ${selectedNode}`;
+      doc.setFontSize(10);
+      doc.text(nodeInfo, 14, 25);
+      console.log('Node info added');
+      
+      // Define the table columns and rows
+      const tableColumn = [
+        'Name', 
+        'Status', 
+        'CPU Usage', 
+        'Memory Usage', 
+        'Disk Usage', 
+        'Download', 
+        'Upload'
+      ];
+      
+      // Generate the rows from the filtered data - with safer data handling
+      const tableRows = [];
+      
+      for (const guest of sortedAndFilteredData) {
+        try {
+          console.log('Processing guest:', guest.name);
+          const metrics = getMetricsForGuest(guest.id);
+          console.log('Guest metrics:', metrics);
+          const networkMetrics = metrics?.metrics?.network;
+          
+          // Get resource metrics with safer defaults
+          const cpuUsage = (metrics?.metrics?.cpu !== undefined) ? metrics.metrics.cpu : 0;
+          
+          const memoryData = metrics?.metrics?.memory || {};
+          const memoryUsage = memoryData.percentUsed || 
+            (memoryData.total && memoryData.used ? 
+              (memoryData.used / memoryData.total) * 100 : 0);
+          
+          const diskData = metrics?.metrics?.disk || {};
+          const diskUsage = diskData.percentUsed || 
+            (diskData.total && diskData.used ? 
+              (diskData.used / diskData.total) * 100 : 0);
+          
+          // Format for the PDF table with safer string handling
+          tableRows.push([
+            String(guest.name || 'Unknown'),
+            String(guest.status || 'Unknown'),
+            String(formatPercentage(cpuUsage)),
+            String(formatPercentage(memoryUsage)),
+            String(formatPercentage(diskUsage)),
+            guest.status === 'running' && networkMetrics ? 
+              String(formatNetworkRate(networkMetrics.inRate || 0)) : '-',
+            guest.status === 'running' && networkMetrics ? 
+              String(formatNetworkRate(networkMetrics.outRate || 0)) : '-'
+          ]);
+        } catch (rowError) {
+          console.error('Error processing row for guest:', guest?.name, rowError);
+          // Add a fallback row with error information
+          tableRows.push([
+            String(guest?.name || 'Unknown'),
+            String(guest?.status || 'Unknown'),
+            'Error',
+            'Error',
+            'Error',
+            'Error',
+            'Error'
+          ]);
+        }
+      }
+      
+      console.log('Table rows prepared:', tableRows);
+      
+      // Generate the PDF table with error handling
+      try {
+        // Use autoTable directly with the doc object
+        autoTable(doc, {
+          head: [tableColumn],
+          body: tableRows,
+          startY: 30,
+          theme: 'grid',
+          styles: {
+            fontSize: 8,
+            cellPadding: 2,
+          },
+          headStyles: {
+            fillColor: [41, 128, 185],
+            textColor: 255,
+            fontSize: 9,
+            fontStyle: 'bold',
+          },
+          alternateRowStyles: {
+            fillColor: [240, 240, 240]
+          },
+          margin: { top: 30 }
+        });
+        
+        console.log('Table generated');
+      } catch (tableError) {
+        console.error('Error generating table:', tableError);
+        // Try a simpler table as fallback
+        doc.text('Error generating detailed table. Showing simplified data:', 14, 30);
+        
+        // Use autoTable directly with the doc object for the fallback table
+        autoTable(doc, {
+          head: [['Name', 'Status']],
+          body: sortedAndFilteredData.map(guest => [
+            String(guest.name || 'Unknown'),
+            String(guest.status || 'Unknown')
+          ]),
+          startY: 40,
+          theme: 'plain'
+        });
+      }
+      
+      try {
+        // Add a footer with timestamp and page numbers
+        const pageCount = doc.internal.getNumberOfPages();
+        for(let i = 1; i <= pageCount; i++) {
+          doc.setPage(i);
+          doc.setFontSize(8);
+          doc.text(
+            `Generated on ${new Date().toLocaleString()} - Page ${i} of ${pageCount}`, 
+            doc.internal.pageSize.getWidth() / 2, 
+            doc.internal.pageSize.getHeight() - 10, 
+            { align: 'center' }
+          );
+        }
+        
+        console.log('Footer added, saving PDF...');
+      } catch (footerError) {
+        console.error('Error adding footer:', footerError);
+        // Continue without footer if there's an error
+      }
+      
+      // Save the PDF with a simpler filename to avoid any issues
+      try {
+        const filename = `container-status-${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(filename);
+        console.log('PDF saved successfully as:', filename);
+      } catch (saveError) {
+        console.error('Error saving PDF:', saveError);
+        // Try an alternative approach to trigger download
+        try {
+          const pdfBlob = doc.output('blob');
+          const url = URL.createObjectURL(pdfBlob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'container-status.pdf';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          console.log('PDF saved using alternative method');
+        } catch (altSaveError) {
+          console.error('Alternative save method failed:', altSaveError);
+          alert('Could not save PDF file. Please try again later.');
+        }
+      }
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      // Show more detailed error information
+      if (error.stack) {
+        console.error('Error stack:', error.stack);
+      }
+      if (error.message) {
+        alert(`Failed to generate PDF: ${error.message}`);
+      } else {
+        alert('Failed to generate PDF. Please check the console for details.');
+      }
+    }
+  }, [selectedNode, sortedAndFilteredData, getMetricsForGuest]);
   
   // Replace the existing error and connection checks with our new component
   if (connectionStatus === 'error' || connectionStatus === 'disconnected') {
@@ -2016,6 +2219,136 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
               </TableBody>
             </Table>
           </TableContainer>
+
+          {/* PDF Export Button */}
+          {guestData.length > 0 && sortedAndFilteredData.length > 0 && (
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'flex-end', 
+              mt: 0.5, 
+              px: 1,
+              gap: 0.5
+            }}>
+              <Tooltip title="Export as PDF">
+                <IconButton
+                  size="small"
+                  onClick={generatePDF}
+                  sx={{
+                    opacity: 0.5,
+                    padding: 0.5,
+                    '&:hover': {
+                      opacity: 0.8,
+                      backgroundColor: 'transparent'
+                    }
+                  }}
+                >
+                  <PictureAsPdfIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              
+              <Tooltip title="Export as CSV">
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    try {
+                      console.log('CSV export started');
+                      
+                      // Create CSV content
+                      const headers = ['Name', 'Status', 'CPU Usage', 'Memory Usage', 'Disk Usage', 'Download', 'Upload'];
+                      const csvRows = [headers];
+                      
+                      // Helper function to escape CSV values properly
+                      const escapeCSV = (value) => {
+                        if (value === null || value === undefined) return '';
+                        const str = String(value);
+                        // If the value contains commas, quotes, or newlines, wrap it in quotes
+                        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                          // Double up any quotes
+                          return `"${str.replace(/"/g, '""')}"`;
+                        }
+                        return str;
+                      };
+                      
+                      // Add data rows
+                      sortedAndFilteredData.forEach(guest => {
+                        try {
+                          const metrics = getMetricsForGuest(guest.id);
+                          const networkMetrics = metrics?.metrics?.network;
+                          
+                          // Get resource metrics
+                          const cpuUsage = metrics?.metrics?.cpu || 0;
+                          
+                          const memoryData = metrics?.metrics?.memory || {};
+                          const memoryUsage = memoryData.percentUsed || 
+                            (memoryData.total && memoryData.used ? 
+                              (memoryData.used / memoryData.total) * 100 : 0);
+                          
+                          const diskData = metrics?.metrics?.disk || {};
+                          const diskUsage = diskData.percentUsed || 
+                            (diskData.total && diskData.used ? 
+                              (diskData.used / diskData.total) * 100 : 0);
+                          
+                          csvRows.push([
+                            escapeCSV(guest.name || 'Unknown'),
+                            escapeCSV(guest.status || 'Unknown'),
+                            escapeCSV(formatPercentage(cpuUsage)),
+                            escapeCSV(formatPercentage(memoryUsage)),
+                            escapeCSV(formatPercentage(diskUsage)),
+                            escapeCSV(guest.status === 'running' && networkMetrics ? 
+                              formatNetworkRate(networkMetrics.inRate || 0) : '-'),
+                            escapeCSV(guest.status === 'running' && networkMetrics ? 
+                              formatNetworkRate(networkMetrics.outRate || 0) : '-')
+                          ]);
+                        } catch (rowError) {
+                          console.error('Error processing CSV row for guest:', guest?.name, rowError);
+                          // Add a fallback row with error information
+                          csvRows.push([
+                            escapeCSV(guest?.name || 'Unknown'),
+                            escapeCSV(guest?.status || 'Unknown'),
+                            'Error', 'Error', 'Error', 'Error', 'Error'
+                          ]);
+                        }
+                      });
+                      
+                      // Convert to CSV string
+                      const csvContent = csvRows.map(row => row.join(',')).join('\n');
+                      console.log('CSV content generated');
+                      
+                      // Create and download the file
+                      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.setAttribute('href', url);
+                      link.setAttribute('download', `container-status-${new Date().toISOString().split('T')[0]}.csv`);
+                      link.style.visibility = 'hidden';
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      URL.revokeObjectURL(url);
+                      console.log('CSV downloaded successfully');
+                    } catch (error) {
+                      console.error('Error exporting CSV:', error);
+                      if (error.message) {
+                        alert(`Failed to export CSV: ${error.message}`);
+                      } else {
+                        alert('Failed to export CSV. Please check the console for details.');
+                      }
+                    }
+                  }}
+                  sx={{
+                    opacity: 0.5,
+                    padding: 0.5,
+                    '&:hover': {
+                      opacity: 0.8,
+                      backgroundColor: 'transparent'
+                    }
+                  }}
+                >
+                  <FileDownloadIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          )}
         </CardContent>
       </Card>
     </Box>
