@@ -1279,9 +1279,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                 flexGrow: { xs: 1, md: 0 },
                 justifyContent: { xs: 'center', md: 'flex-start' }
               }}>
-                <Typography variant="caption" sx={{ color: 'text.secondary', mr: 1, fontSize: '0.7rem', fontWeight: 500 }}>
-                  FILTERS:
-                </Typography>
+                {/* Removed FILTERS: title to create more space and simplify UI */}
                 <Tooltip title={showFilters ? "Hide filters" : "Show filters"}>
                   <Box 
                     onClick={() => setShowFilters(!showFilters)}
