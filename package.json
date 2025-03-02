@@ -1,6 +1,6 @@
 {
-  "name": "proxmox-pulse",
-  "version": "1.0.5",
+  "name": "pulse",
+  "version": "1.0.9",
   "main": "dist/server.js",
   "scripts": {
     "start": "node dist/server.js",
