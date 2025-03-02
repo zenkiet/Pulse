@@ -13,7 +13,7 @@ export NODE_ENV=development
 
 # Start the real backend server
 echo "Starting real backend server..."
-npm run dev &
+npm run dev:server &
 BACKEND_PID=$!
 
 # Wait a moment for the server to start
