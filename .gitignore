@@ -32,3 +32,6 @@ Thumbs.db
 
 # Test coverage
 coverage/ .cursor/
+
+# Maintainer-only scripts
+scripts/release.sh

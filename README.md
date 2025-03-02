@@ -318,38 +318,16 @@ npm run build          # Build the TypeScript backend
 
 #### Release Process
 
-A release script is provided to automate the process of creating new releases. The script handles:
-
-- Version bumping (patch, minor, or major)
-- Updating version in all relevant files
-- Git tagging and pushing
-- Docker image building and pushing
-- GitHub release creation
-
-> **⚠️ Note for Contributors**: This release script is intended for repository maintainers only. It requires:
-> - Write access to the GitHub repository
-> - Docker Hub authentication with push permissions
-> - GitHub CLI authentication with release creation permissions
+> **⚠️ Note for Contributors**: The release process is restricted to repository maintainers only.
 >
-> Regular contributors should not attempt to run this script. Instead, please follow the [Contributing](#contributing) guidelines for submitting changes.
-
-For repository maintainers, to create a new release:
-
-```bash
-# Create a new patch release (1.0.x → 1.0.x+1)
-./scripts/release.sh
-
-# Create a new minor release (1.x.0 → 1.x+1.0)
-./scripts/release.sh -t minor
-
-# Create a new major release (x.0.0 → x+1.0.0)
-./scripts/release.sh -t major
-
-# Show all available options
-./scripts/release.sh --help
-```
-
-The script will prompt for confirmation before making any changes and will check for uncommitted changes before proceeding.
+> Regular contributors should not attempt to create releases. Instead, please follow the [Contributing](#contributing) guidelines for submitting changes.
+>
+> Repository maintainers use internal tools to handle:
+> - Version bumping (patch, minor, major)
+> - Updating version in all relevant files
+> - Git tagging and pushing
+> - Docker image building and pushing
+> - GitHub release creation
 
 These commands are particularly useful when:
 - You need to restart specific components
