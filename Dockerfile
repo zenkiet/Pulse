@@ -29,6 +29,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends dumb-init \
 
 WORKDIR /app
 
+# Add labels for better metadata
+LABEL org.opencontainers.image.title="ProxMox Pulse"
+LABEL org.opencontainers.image.description="A lightweight, responsive ProxMox monitoring application"
+LABEL org.opencontainers.image.version="1.0.12"
+LABEL org.opencontainers.image.authors="Richard Courtman"
+LABEL org.opencontainers.image.url="https://github.com/rcourtman/pulse"
+LABEL org.opencontainers.image.source="https://github.com/rcourtman/pulse"
+LABEL org.opencontainers.image.licenses="MIT"
+
 # Define build arguments with defaults
 ARG NODE_ENV=production
 ARG LOG_LEVEL=info
