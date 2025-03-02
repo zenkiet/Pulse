@@ -55,6 +55,12 @@ import autoTable from 'jspdf-autotable';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import DownloadIcon from '@mui/icons-material/Download';
 import UploadIcon from '@mui/icons-material/Upload';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import CircleIcon from '@mui/icons-material/Circle';
+import AllInclusiveIcon from '@mui/icons-material/AllInclusive';
+import ClearIcon from '@mui/icons-material/Clear';
+import InputAdornment from '@mui/material/InputAdornment';
 
 // Define pulse animation
 const pulseAnimation = keyframes`
@@ -1078,98 +1084,72 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
             
             {/* Search box - moved to the left */}
             <Box sx={{ 
-              display: 'flex',
-              alignItems: 'center'
+              display: 'flex', 
+              alignItems: 'center',
+              position: 'relative',
+              width: { xs: '100%', md: '240px' },
+              mr: { xs: 0, md: 2 },
+              mb: { xs: 1, md: 0 }
             }}>
-              <Typography variant="caption" sx={{ color: 'text.secondary', mr: 1, fontSize: '0.7rem', fontWeight: 500 }}>
-                SEARCH:
-              </Typography>
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center',
-                bgcolor: darkMode ? 'background.default' : 'background.paper',
-                borderRadius: 1,
-                border: '1px solid',
-                borderColor: 'divider',
-                px: 1,
-                py: 0.5,
-                width: { xs: '100%', md: 'auto' },
-                minWidth: { md: 220 },
-                transition: 'all 0.2s ease-in-out',
-                '&:hover': {
-                  borderColor: theme => theme.palette.primary.main,
-                },
-                '&:focus-within': {
-                  borderColor: theme => theme.palette.primary.main,
-                  boxShadow: theme => `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`
+              <InputBase
+                placeholder="Search systems..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && searchTerm.trim()) {
+                    addSearchTerm(searchTerm.trim());
+                    setSearchTerm('');
+                  }
+                }}
+                startAdornment={
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ fontSize: '1.1rem', color: 'text.secondary' }} />
+                  </InputAdornment>
                 }
-              }}>
-                <SearchIcon sx={{ fontSize: '0.875rem', color: 'text.secondary', mr: 0.5 }} />
-                <InputBase
-                  placeholder="Search guests..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    // Set the search term directly to ensure immediate filtering
-                    setSearchTerm(e.target.value);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && searchTerm.trim()) {
-                      e.preventDefault();
-                      // Add current search term to active filters
-                      addSearchTerm(searchTerm.trim());
-                      // Clear the search input after adding the term
-                      setSearchTerm('');
-                      e.target.focus();
-                    } else if (e.key === 'Escape') {
-                      // Let the global handler handle this completely
-                      // The global handler will detect that search is focused
-                      // and both blur and collapse the filter window
-                      e.preventDefault();
+                endAdornment={
+                  searchTerm && (
+                    <InputAdornment position="end">
+                      <IconButton 
+                        size="small" 
+                        onClick={() => setSearchTerm('')}
+                        sx={{ p: 0.5 }}
+                      >
+                        <ClearIcon sx={{ fontSize: '0.9rem' }} />
+                      </IconButton>
+                    </InputAdornment>
+                  )
+                }
+                sx={{
+                  width: '100%',
+                  fontSize: '0.875rem',
+                  px: 1.5,
+                  py: 0.75,
+                  borderRadius: 1,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  bgcolor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+                  },
+                  '&.Mui-focused': {
+                    borderColor: 'primary.main',
+                    boxShadow: theme => `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`,
+                  },
+                  '& .MuiInputBase-input': {
+                    p: 0,
+                    '&::placeholder': {
+                      color: 'text.secondary',
+                      opacity: 0.7,
                     }
-                  }}
-                  fullWidth
-                  size="small"
-                  inputRef={searchInputRef}
-                  sx={{ 
-                    fontSize: '0.875rem', 
-                    '& input': { 
-                      p: 0.5,
-                      '&::placeholder': {
-                        opacity: 0.7,
-                        fontSize: '0.875rem'
-                      }
-                    } 
-                  }}
-                />
-                {searchTerm && (
-                  <Box 
-                    component="span" 
-                    onClick={() => setSearchTerm('')}
-                    sx={{ 
-                      display: 'flex',
-                      alignItems: 'center',
-                      ml: 0.5,
-                      cursor: 'pointer',
-                      '&:hover': {
-                        opacity: 0.8
-                      }
-                    }}
-                  >
-                    <CancelIcon sx={{ fontSize: '0.875rem' }} />
-                  </Box>
-                )}
-                
-                <Box sx={{ 
-                  display: { xs: 'none', md: 'flex' }, 
-                  alignItems: 'center',
-                  ml: 0.5,
-                  mr: -0.5,
-                  opacity: 0.6,
-                  '&:hover': { opacity: 1 }
-                }}>
-                  <KeyboardShortcut shortcut="ESC" sx={{ mr: 0.5 }} />
-                </Box>
-              </Box>
+                  }
+                }}
+                inputProps={{
+                  'aria-label': 'search systems',
+                }}
+              />
             </Box>
             
             {/* Guest Type Filter */}
@@ -1332,11 +1312,13 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       alignItems: 'center',
                       borderRadius: 1,
                       border: '1px solid',
-                      borderColor: 'divider',
-                      px: 1,
+                      borderColor: (Object.values(filters).some(val => val > 0) || searchTerm || showFilters) 
+                        ? 'primary.main' 
+                        : 'divider',
+                      px: 1.5,
                       py: 0.5,
                       fontSize: '0.75rem',
-                      fontWeight: 500,
+                      fontWeight: 600,
                       cursor: 'pointer',
                       bgcolor: (Object.values(filters).some(val => val > 0) || searchTerm || showFilters) 
                         ? 'primary.main' 
@@ -1344,10 +1326,17 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       color: (Object.values(filters).some(val => val > 0) || searchTerm || showFilters) 
                         ? 'primary.contrastText' 
                         : 'text.primary',
+                      transition: 'all 0.2s ease',
+                      boxShadow: (Object.values(filters).some(val => val > 0) || searchTerm || showFilters)
+                        ? 1
+                        : 0,
                       '&:hover': {
                         bgcolor: (Object.values(filters).some(val => val > 0) || searchTerm || showFilters)
                           ? 'primary.dark'
                           : 'action.hover',
+                        borderColor: (Object.values(filters).some(val => val > 0) || searchTerm || showFilters)
+                          ? 'primary.dark'
+                          : 'primary.main',
                       }
                     }}
                     role="button"
@@ -1362,11 +1351,20 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     }}
                   >
                     <FilterAltIcon 
-                      sx={{ fontSize: '0.75rem', mr: 0.5 }}
+                      sx={{ 
+                        fontSize: '0.875rem', 
+                        mr: 0.75,
+                        transition: 'transform 0.2s ease',
+                        transform: showFilters ? 'rotate(180deg)' : 'rotate(0deg)'
+                      }}
                     />
                     
                     {(Object.values(filters).some(val => val > 0) || searchTerm) ? (
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        fontWeight: 600
+                      }}>
                         {`${sortedAndFilteredData.length}/${guestData.length}`}
                       </Box>
                     ) : (
@@ -1401,10 +1399,15 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                             px: 1,
                             py: 0.5,
                             fontSize: '0.75rem',
-                            fontWeight: 500,
-                            mr: 0.5
+                            fontWeight: 600,
+                            boxShadow: 1,
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              bgcolor: 'primary.dark',
+                            }
                           }}
                         >
+                          <SearchIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
                           {`"${term}"`}
                           <Box 
                             component="span" 
@@ -1414,8 +1417,10 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                               alignItems: 'center',
                               ml: 0.5,
                               cursor: 'pointer',
+                              borderRadius: '50%',
+                              p: 0.25,
                               '&:hover': {
-                                opacity: 0.8
+                                bgcolor: 'rgba(255,255,255,0.2)'
                               }
                             }}
                           >
@@ -1437,9 +1442,15 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                           px: 1,
                           py: 0.5,
                           fontSize: '0.75rem',
-                          fontWeight: 500
+                          fontWeight: 600,
+                          boxShadow: 1,
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            bgcolor: 'secondary.dark',
+                          }
                         }}
                       >
+                        <SearchIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
                         {`"${searchTerm}"`}
                         <Box 
                           component="span" 
@@ -1449,8 +1460,10 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                             alignItems: 'center',
                             ml: 0.5,
                             cursor: 'pointer',
+                            borderRadius: '50%',
+                            p: 0.25,
                             '&:hover': {
-                              opacity: 0.8
+                              bgcolor: 'rgba(255,255,255,0.2)'
                             }
                           }}
                         >
@@ -1471,9 +1484,15 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                           px: 1,
                           py: 0.5,
                           fontSize: '0.75rem',
-                          fontWeight: 500
+                          fontWeight: 600,
+                          boxShadow: 1,
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            bgcolor: 'primary.dark',
+                          }
                         }}
                       >
+                        <SpeedIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
                         {`CPU ≥ ${formatPercentage(filters.cpu)}`}
                         <Box 
                           component="span" 
@@ -1483,8 +1502,10 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                             alignItems: 'center',
                             ml: 0.5,
                             cursor: 'pointer',
+                            borderRadius: '50%',
+                            p: 0.25,
                             '&:hover': {
-                              opacity: 0.8
+                              bgcolor: 'rgba(255,255,255,0.2)'
                             }
                           }}
                         >
@@ -1505,10 +1526,16 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                           px: 1,
                           py: 0.5,
                           fontSize: '0.75rem',
-                          fontWeight: 500
+                          fontWeight: 600,
+                          boxShadow: 1,
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            bgcolor: 'primary.dark',
+                          }
                         }}
                       >
-                        {`Mem ≥ ${formatPercentage(filters.memory)}`}
+                        <MemoryIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
+                        {`MEM ≥ ${formatPercentage(filters.memory)}`}
                         <Box 
                           component="span" 
                           onClick={() => clearFilter('memory')}
@@ -1517,8 +1544,10 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                             alignItems: 'center',
                             ml: 0.5,
                             cursor: 'pointer',
+                            borderRadius: '50%',
+                            p: 0.25,
                             '&:hover': {
-                              opacity: 0.8
+                              bgcolor: 'rgba(255,255,255,0.2)'
                             }
                           }}
                         >
@@ -1539,10 +1568,16 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                           px: 1,
                           py: 0.5,
                           fontSize: '0.75rem',
-                          fontWeight: 500
+                          fontWeight: 600,
+                          boxShadow: 1,
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            bgcolor: 'primary.dark',
+                          }
                         }}
                       >
-                        {`Disk ≥ ${formatPercentage(filters.disk)}`}
+                        <StorageIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
+                        {`DISK ≥ ${formatPercentage(filters.disk)}`}
                         <Box 
                           component="span" 
                           onClick={() => clearFilter('disk')}
@@ -1551,8 +1586,10 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                             alignItems: 'center',
                             ml: 0.5,
                             cursor: 'pointer',
+                            borderRadius: '50%',
+                            p: 0.25,
                             '&:hover': {
-                              opacity: 0.8
+                              bgcolor: 'rgba(255,255,255,0.2)'
                             }
                           }}
                         >
@@ -1573,9 +1610,15 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                           px: 1,
                           py: 0.5,
                           fontSize: '0.75rem',
-                          fontWeight: 500
+                          fontWeight: 600,
+                          boxShadow: 1,
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            bgcolor: 'primary.dark',
+                          }
                         }}
                       >
+                        <ArrowDownwardIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
                         {`DL ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}`}
                         <Box 
                           component="span" 
@@ -1585,8 +1628,10 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                             alignItems: 'center',
                             ml: 0.5,
                             cursor: 'pointer',
+                            borderRadius: '50%',
+                            p: 0.25,
                             '&:hover': {
-                              opacity: 0.8
+                              bgcolor: 'rgba(255,255,255,0.2)'
                             }
                           }}
                         >
@@ -1607,9 +1652,15 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                           px: 1,
                           py: 0.5,
                           fontSize: '0.75rem',
-                          fontWeight: 500
+                          fontWeight: 600,
+                          boxShadow: 1,
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            bgcolor: 'secondary.dark',
+                          }
                         }}
                       >
+                        <ArrowUpwardIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
                         {`UL ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}`}
                         <Box 
                           component="span" 
@@ -1619,8 +1670,10 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                             alignItems: 'center',
                             ml: 0.5,
                             cursor: 'pointer',
+                            borderRadius: '50%',
+                            p: 0.25,
                             '&:hover': {
-                              opacity: 0.8
+                              bgcolor: 'rgba(255,255,255,0.2)'
                             }
                           }}
                         >
@@ -1643,13 +1696,16 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         px: 1,
                         py: 0.5,
                         fontSize: '0.75rem',
-                        fontWeight: 500,
+                        fontWeight: 600,
                         cursor: 'pointer',
+                        transition: 'all 0.2s ease',
                         '&:hover': {
-                          bgcolor: 'action.hover'
+                          bgcolor: 'action.hover',
+                          boxShadow: 1
                         }
                       }}
                     >
+                      <RestartAltIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
                       Reset
                     </Box>
                   </Box>
@@ -1661,25 +1717,39 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                 <Typography variant="caption" sx={{ color: 'text.secondary', mr: 1, fontSize: '0.7rem', fontWeight: 500 }}>
                   STATUS:
                 </Typography>
-                <Box sx={{ display: 'flex', borderRadius: 1, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  borderRadius: 1, 
+                  border: '1px solid', 
+                  borderColor: 'divider', 
+                  overflow: 'hidden',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                }}>
                   <Tooltip title="Show only running systems">
                     <Box
                       onClick={() => setShowStopped(false)}
                       sx={{
-                        px: 1,
+                        px: 1.5,
                         py: 0.5,
                         fontSize: '0.75rem',
-                        fontWeight: 500,
+                        fontWeight: 600,
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         bgcolor: !showStopped ? 'primary.main' : 'transparent',
                         color: !showStopped ? 'primary.contrastText' : 'text.primary',
+                        transition: 'all 0.2s ease',
+                        boxShadow: !showStopped ? 1 : 0,
                         '&:hover': {
                           bgcolor: !showStopped ? 'primary.dark' : 'action.hover',
                         }
                       }}
                     >
+                      <CircleIcon sx={{ 
+                        fontSize: '0.625rem', 
+                        mr: 0.75, 
+                        color: !showStopped ? 'inherit' : 'success.main' 
+                      }} />
                       Running
                     </Box>
                   </Tooltip>
@@ -1687,10 +1757,10 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     <Box
                       onClick={() => setShowStopped(true)}
                       sx={{
-                        px: 1,
+                        px: 1.5,
                         py: 0.5,
                         fontSize: '0.75rem',
-                        fontWeight: 500,
+                        fontWeight: 600,
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -1698,11 +1768,14 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         color: showStopped ? 'primary.contrastText' : 'text.primary',
                         borderLeft: '1px solid',
                         borderLeftColor: 'divider',
+                        transition: 'all 0.2s ease',
+                        boxShadow: showStopped ? 1 : 0,
                         '&:hover': {
                           bgcolor: showStopped ? 'primary.dark' : 'action.hover',
                         }
                       }}
                     >
+                      <AllInclusiveIcon sx={{ fontSize: '0.75rem', mr: 0.75 }} />
                       All
                     </Box>
                   </Tooltip>
@@ -1717,33 +1790,61 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
             }
           }}>
-                    <Box 
-                      sx={{ 
+            <Box 
+              sx={{ 
                 mb: 2, 
-                p: 2, 
+                p: 2.5, 
                 backgroundColor: theme => darkMode 
                   ? alpha(theme.palette.primary.dark, 0.15)
                   : alpha(theme.palette.primary.light, 0.05),
                 borderRadius: 2,
                 border: '1px solid',
-                borderColor: 'divider'
+                borderColor: 'divider',
+                boxShadow: theme => darkMode 
+                  ? `0 4px 20px 0 ${alpha(theme.palette.common.black, 0.1)}`
+                  : `0 4px 20px 0 ${alpha(theme.palette.common.black, 0.05)}`,
+                transition: 'all 0.3s ease',
+                overflow: 'hidden'
               }}
               role="region"
               aria-label="Filter controls"
             >
-              <Typography variant="subtitle2" sx={{ mb: 2 }}>Adjust minimum thresholds:</Typography>
+              <Typography 
+                variant="subtitle2" 
+                sx={{ 
+                  mb: 2.5, 
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: 'text.primary'
+                }}
+              >
+                <FilterAltIcon sx={{ fontSize: '1rem', mr: 1, opacity: 0.7 }} />
+                Adjust minimum thresholds:
+              </Typography>
               <Box sx={{ 
                 display: 'grid', 
                 gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr', lg: '1fr 1fr 1fr 1fr 1fr' },
                 gap: 3
               }}>
                 {/* CPU Filter */}
-                <Box>
+                <Box sx={{ 
+                  backgroundColor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
+                  borderRadius: 1.5,
+                  p: 1.5,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    boxShadow: theme => `0 2px 8px 0 ${alpha(theme.palette.primary.main, 0.1)}`,
+                    borderColor: theme => alpha(theme.palette.primary.main, 0.3)
+                  }
+                }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <SpeedIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                    <SpeedIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem', color: 'primary.main' }} />
                     <Typography 
                       variant="body2" 
-                      sx={{ fontWeight: 500 }}
+                      sx={{ fontWeight: 600 }}
                       id="cpu-filter-label"
                     >
                       CPU Usage
@@ -1783,17 +1884,28 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                 </Box>
                 
                 {/* Memory Filter */}
-                <Box>
+                <Box sx={{ 
+                  backgroundColor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
+                  borderRadius: 1.5,
+                  p: 1.5,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    boxShadow: theme => `0 2px 8px 0 ${alpha(theme.palette.primary.main, 0.1)}`,
+                    borderColor: theme => alpha(theme.palette.primary.main, 0.3)
+                  }
+                }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <MemoryIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                            <Typography 
-                              variant="body2" 
-                      sx={{ fontWeight: 500 }}
+                    <MemoryIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem', color: 'primary.main' }} />
+                    <Typography 
+                      variant="body2" 
+                      sx={{ fontWeight: 600 }}
                       id="memory-filter-label"
                     >
                       Memory Usage
-                            </Typography>
-                          </Box>
+                    </Typography>
+                  </Box>
                   <Tooltip title={`Memory usage ≥ ${formatPercentage(filters.memory)}`} arrow placement="top">
                             <Slider
                               value={filters.memory}
@@ -1828,17 +1940,28 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                 </Box>
                 
                 {/* Disk Filter */}
-                <Box>
+                <Box sx={{ 
+                  backgroundColor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
+                  borderRadius: 1.5,
+                  p: 1.5,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    boxShadow: theme => `0 2px 8px 0 ${alpha(theme.palette.primary.main, 0.1)}`,
+                    borderColor: theme => alpha(theme.palette.primary.main, 0.3)
+                  }
+                }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <StorageIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                            <Typography 
-                              variant="body2" 
-                      sx={{ fontWeight: 500 }}
+                    <StorageIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem', color: 'primary.main' }} />
+                    <Typography 
+                      variant="body2" 
+                      sx={{ fontWeight: 600 }}
                       id="disk-filter-label"
                     >
                       Disk Usage
-                            </Typography>
-                          </Box>
+                    </Typography>
+                  </Box>
                   <Tooltip title={`Disk usage ≥ ${formatPercentage(filters.disk)}`} arrow placement="top">
                     <Slider
                               value={filters.disk} 
@@ -1873,12 +1996,23 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                 </Box>
                 
                 {/* Download Filter */}
-                <Box>
+                <Box sx={{ 
+                  backgroundColor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
+                  borderRadius: 1.5,
+                  p: 1.5,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    boxShadow: theme => `0 2px 8px 0 ${alpha(theme.palette.primary.main, 0.1)}`,
+                    borderColor: theme => alpha(theme.palette.primary.main, 0.3)
+                  }
+                }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <ArrowDownwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                    <ArrowDownwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem', color: 'primary.main' }} />
                     <Typography 
                       variant="body2" 
-                      sx={{ fontWeight: 500 }}
+                      sx={{ fontWeight: 600 }}
                       id="download-filter-label"
                     >
                       Download Rate
@@ -1918,17 +2052,28 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                 </Box>
                 
                 {/* Upload Filter */}
-                <Box>
+                <Box sx={{ 
+                  backgroundColor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
+                  borderRadius: 1.5,
+                  p: 1.5,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    boxShadow: theme => `0 2px 8px 0 ${alpha(theme.palette.secondary.main, 0.1)}`,
+                    borderColor: theme => alpha(theme.palette.secondary.main, 0.3)
+                  }
+                }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <ArrowUpwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                            <Typography 
-                              variant="body2" 
-                      sx={{ fontWeight: 500 }}
+                    <ArrowUpwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem', color: 'secondary.main' }} />
+                    <Typography 
+                      variant="body2" 
+                      sx={{ fontWeight: 600 }}
                       id="upload-filter-label"
                     >
                       Upload Rate
-                            </Typography>
-                          </Box>
+                    </Typography>
+                  </Box>
                   <Tooltip title={`Upload ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}`} arrow placement="top">
                     <Slider
                       value={filters.upload}
@@ -1963,27 +2108,44 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       </Box>
                     </Box>
               
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                mt: 3,
+                pt: 2,
+                borderTop: '1px solid',
+                borderTopColor: 'divider'
+              }}>
                 <Typography 
                   variant="caption" 
                   color={Object.values(filters).some(val => val > 0) || selectedNode !== 'all' ? 'primary.main' : 'text.secondary'} 
-                  sx={{ fontWeight: 500 }}
+                  sx={{ 
+                    fontWeight: 500,
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
                   aria-live="polite" // Announce when this changes
                 >
-                  {Object.values(filters).some(val => val > 0) || selectedNode !== 'all' ? 
-                    `Showing ${sortedAndFilteredData.length} of ${getNodeFilteredGuests(guestData).length} systems${selectedNode !== 'all' ? ` on ${selectedNode === 'node1' ? 'Production' : selectedNode === 'node2' ? 'Development' : 'Testing'}` : ''}` : 
-                    ''}
+                  {Object.values(filters).some(val => val > 0) || selectedNode !== 'all' ? (
+                    <>
+                      <InfoOutlinedIcon sx={{ fontSize: '0.875rem', mr: 0.5, opacity: 0.7 }} />
+                      {`Showing ${sortedAndFilteredData.length} of ${getNodeFilteredGuests(guestData).length} systems${selectedNode !== 'all' ? ` on ${selectedNode === 'node1' ? 'Production' : selectedNode === 'node2' ? 'Development' : 'Testing'}` : ''}`}
+                    </>
+                  ) : ''}
                 </Typography>
-                <Chip 
-                  label="Reset All Filters" 
-                  onClick={resetFilters}
-                  variant={Object.values(filters).some(val => val > 0) ? "filled" : "outlined"}
+                <Button 
+                  variant={Object.values(filters).some(val => val > 0) ? "contained" : "outlined"}
                   size="small"
                   color="primary"
+                  onClick={resetFilters}
+                  startIcon={<RestartAltIcon />}
                   sx={{ 
-                    height: 28,
+                    height: 32,
                     transition: 'all 0.2s ease',
                     fontWeight: Object.values(filters).some(val => val > 0) ? 600 : 400,
+                    textTransform: 'none',
+                    boxShadow: Object.values(filters).some(val => val > 0) ? 1 : 0,
                     '&:focus-visible': {
                       outline: '2px solid',
                       outlineColor: 'primary.main',
@@ -1991,7 +2153,9 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     }
                   }}
                   aria-pressed={Object.values(filters).some(val => val > 0)}
-                />
+                >
+                  Reset All Filters
+                </Button>
               </Box>
             </Box>
           </Collapse>
