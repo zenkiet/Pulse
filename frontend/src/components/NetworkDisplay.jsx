@@ -463,6 +463,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
   
   const [escRecentlyPressed, setEscRecentlyPressed] = useState(false);
   const [sliderDragging, setSliderDragging] = useState(null);
+  const [recentlyChangedFilters, setRecentlyChangedFilters] = useState({});
   
   // Filter popover handlers
   const handleFilterButtonClick = (event) => {
@@ -646,10 +647,23 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
   
   // Function to update a specific filter
   const updateFilter = (filterName, newValue) => {
-    setFilters(prev => ({
-      ...prev,
-      [filterName]: newValue
-    }));
+    setFilters(prev => {
+      // Track which filter was just changed for animation
+      setRecentlyChangedFilters(prevChangedFilters => ({
+        ...prevChangedFilters,
+        [filterName]: true
+      }));
+      
+      // Clear the animation after a delay
+      setTimeout(() => {
+        setRecentlyChangedFilters(prevChangedFilters => ({
+          ...prevChangedFilters,
+          [filterName]: false
+        }));
+      }, 1000);
+      
+      return { ...prev, [filterName]: newValue };
+    });
   };
   
   // Function to handle slider drag start
@@ -1080,8 +1094,39 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     );
   }
   
+  // Define the pulse animation keyframes
+  const pulseAnimation = {
+    '@keyframes pulse': {
+      '0%': {
+        backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+      },
+      '50%': {
+        backgroundColor: theme => alpha(theme.palette.primary.main, 0.15)
+      },
+      '100%': {
+        backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+      }
+    },
+    '@keyframes pulseSec': {
+      '0%': {
+        backgroundColor: theme => alpha(theme.palette.secondary.main, 0.08)
+      },
+      '50%': {
+        backgroundColor: theme => alpha(theme.palette.secondary.main, 0.15)
+      },
+      '100%': {
+        backgroundColor: theme => alpha(theme.palette.secondary.main, 0.08)
+      }
+    }
+  };
+  
   return (
-    <Box sx={{ animation: `${fadeIn} 0.3s ease-out` }}>
+    <Box sx={{ 
+      height: '100%', 
+      display: 'flex', 
+      flexDirection: 'column',
+      ...pulseAnimation // Add the keyframes to the root component
+    }}>
       <Card 
         sx={{ 
           mb: 3, 
@@ -2188,11 +2233,12 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                   {/* Type Column - Hide when filtered to a specific type */}
                   {guestTypeFilter === 'all' && (
                     <TableCell 
-                      width="8%" 
+                      width="8%"
                       onClick={() => requestSort('type')}
                       sx={{ 
                         fontWeight: 'bold',
                         cursor: 'pointer',
+                        userSelect: 'none',
                         '&:hover': {
                           backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
                         },
@@ -2204,7 +2250,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       }}
                       aria-sort={sortConfig.key === 'type' ? sortConfig.direction : undefined}
                     >
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', userSelect: 'none' }}>
                         Type
                         <TableSortLabel
                           active={sortConfig.key === 'type'}
@@ -2246,11 +2292,29 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       minHeight: '48px', 
                       position: 'relative',
                       cursor: 'pointer',
+                      userSelect: 'none',
                       borderBottom: theme => filters.cpu > 0 ? 
                         `2px solid ${theme.palette.primary.main}` : undefined,
                       color: theme => filters.cpu > 0 ? 'primary.main' : 'inherit',
+                      backgroundColor: theme => filters.cpu > 0 ? 
+                        alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                      animation: recentlyChangedFilters.cpu && filters.cpu > 0 ? 
+                        'pulse 1s ease-in-out' : 'none',
+                      transition: 'all 0.2s ease',
+                      '&::after': filters.cpu > 0 ? {
+                        content: '""',
+                        position: 'absolute',
+                        top: '4px',
+                        right: '8px',
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: 'primary.main',
+                      } : {},
                       '&:hover': {
-                        backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                        backgroundColor: theme => filters.cpu > 0 
+                          ? alpha(theme.palette.primary.main, 0.12)
+                          : alpha(theme.palette.primary.main, 0.08)
                       },
                       '&:focus-visible': {
                         outline: '2px solid',
@@ -2260,36 +2324,42 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     }}
                     aria-sort={sortConfig.key === 'cpu' ? sortConfig.direction : undefined}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <SpeedIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                      CPU
-                      <TableSortLabel
-                        active={sortConfig.key === 'cpu'}
-                        direction={sortConfig.key === 'cpu' ? sortConfig.direction : 'asc'}
-                        sx={{
-                          '& .MuiTableSortLabel-icon': {
-                            opacity: sortConfig.key === 'cpu' ? 1 : 0.3,
-                            marginLeft: '4px !important',
-                          },
-                          '&.Mui-active': {
-                            color: 'inherit',
-                          },
-                          '&:hover': {
-                            color: 'primary.main',
-                          }
-                        }}
-                        IconComponent={props => (
-                          <ArrowDropDownIcon
-                            {...props}
-                            sx={{
-                              fontSize: '1.2rem',
-                              transform: sortConfig.key === 'cpu' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
-                              transition: 'transform 0.2s'
-                            }}
-                          />
-                        )}
-                      />
-                    </Box>
+                    <Tooltip 
+                      title={filters.cpu > 0 ? `Filtering: CPU > ${filters.cpu}%` : "Click to sort by CPU usage"}
+                      arrow
+                      placement="top"
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', userSelect: 'none' }}>
+                        <SpeedIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                        CPU
+                        <TableSortLabel
+                          active={sortConfig.key === 'cpu'}
+                          direction={sortConfig.key === 'cpu' ? sortConfig.direction : 'asc'}
+                          sx={{
+                            '& .MuiTableSortLabel-icon': {
+                              opacity: sortConfig.key === 'cpu' ? 1 : 0.3,
+                              marginLeft: '4px !important',
+                            },
+                            '&.Mui-active': {
+                              color: 'inherit',
+                            },
+                            '&:hover': {
+                              color: 'primary.main',
+                            }
+                          }}
+                          IconComponent={props => (
+                            <ArrowDropDownIcon
+                              {...props}
+                              sx={{
+                                fontSize: '1.2rem',
+                                transform: sortConfig.key === 'cpu' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                                transition: 'transform 0.2s'
+                              }}
+                            />
+                          )}
+                        />
+                      </Box>
+                    </Tooltip>
                   </TableCell>
                   
                   {/* Memory Column */}
@@ -2302,11 +2372,29 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       minHeight: '48px', 
                       position: 'relative',
                       cursor: 'pointer',
+                      userSelect: 'none',
                       borderBottom: theme => filters.memory > 0 ? 
                         `2px solid ${theme.palette.primary.main}` : undefined,
                       color: theme => filters.memory > 0 ? 'primary.main' : 'inherit',
+                      backgroundColor: theme => filters.memory > 0 ? 
+                        alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                      animation: recentlyChangedFilters.memory && filters.memory > 0 ? 
+                        'pulse 1s ease-in-out' : 'none',
+                      transition: 'all 0.2s ease',
+                      '&::after': filters.memory > 0 ? {
+                        content: '""',
+                        position: 'absolute',
+                        top: '4px',
+                        right: '8px',
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: 'primary.main',
+                      } : {},
                       '&:hover': {
-                        backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                        backgroundColor: theme => filters.memory > 0 
+                          ? alpha(theme.palette.primary.main, 0.12)
+                          : alpha(theme.palette.primary.main, 0.08)
                       },
                       '&:focus-visible': {
                         outline: '2px solid',
@@ -2316,36 +2404,42 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     }}
                     aria-sort={sortConfig.key === 'memory' ? sortConfig.direction : undefined}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <MemoryIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                      Memory
-                      <TableSortLabel
-                        active={sortConfig.key === 'memory'}
-                        direction={sortConfig.key === 'memory' ? sortConfig.direction : 'asc'}
-                        sx={{
-                          '& .MuiTableSortLabel-icon': {
-                            opacity: sortConfig.key === 'memory' ? 1 : 0.3,
-                            marginLeft: '4px !important',
-                          },
-                          '&.Mui-active': {
-                            color: 'inherit',
-                          },
-                          '&:hover': {
-                            color: 'primary.main',
-                          }
-                        }}
-                        IconComponent={props => (
-                          <ArrowDropDownIcon
-                            {...props}
-                            sx={{
-                              fontSize: '1.2rem',
-                              transform: sortConfig.key === 'memory' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
-                              transition: 'transform 0.2s'
-                            }}
-                          />
-                        )}
-                      />
-                    </Box>
+                    <Tooltip 
+                      title={filters.memory > 0 ? `Filtering: Memory > ${filters.memory}%` : "Click to sort by memory usage"}
+                      arrow
+                      placement="top"
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', userSelect: 'none' }}>
+                        <MemoryIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                        Memory
+                        <TableSortLabel
+                          active={sortConfig.key === 'memory'}
+                          direction={sortConfig.key === 'memory' ? sortConfig.direction : 'asc'}
+                          sx={{
+                            '& .MuiTableSortLabel-icon': {
+                              opacity: sortConfig.key === 'memory' ? 1 : 0.3,
+                              marginLeft: '4px !important',
+                            },
+                            '&.Mui-active': {
+                              color: 'inherit',
+                            },
+                            '&:hover': {
+                              color: 'primary.main',
+                            }
+                          }}
+                          IconComponent={props => (
+                            <ArrowDropDownIcon
+                              {...props}
+                              sx={{
+                                fontSize: '1.2rem',
+                                transform: sortConfig.key === 'memory' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                                transition: 'transform 0.2s'
+                              }}
+                            />
+                          )}
+                        />
+                      </Box>
+                    </Tooltip>
                   </TableCell>
                   
                   {/* Disk Column */}
@@ -2358,11 +2452,29 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       minHeight: '48px', 
                       position: 'relative',
                       cursor: 'pointer',
+                      userSelect: 'none',
                       borderBottom: theme => filters.disk > 0 ? 
                         `2px solid ${theme.palette.primary.main}` : undefined,
                       color: theme => filters.disk > 0 ? 'primary.main' : 'inherit',
+                      backgroundColor: theme => filters.disk > 0 ? 
+                        alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                      animation: recentlyChangedFilters.disk && filters.disk > 0 ? 
+                        'pulse 1s ease-in-out' : 'none',
+                      transition: 'all 0.2s ease',
+                      '&::after': filters.disk > 0 ? {
+                        content: '""',
+                        position: 'absolute',
+                        top: '4px',
+                        right: '8px',
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: 'primary.main',
+                      } : {},
                       '&:hover': {
-                        backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                        backgroundColor: theme => filters.disk > 0 
+                          ? alpha(theme.palette.primary.main, 0.12)
+                          : alpha(theme.palette.primary.main, 0.08)
                       },
                       '&:focus-visible': {
                         outline: '2px solid',
@@ -2372,36 +2484,42 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     }}
                     aria-sort={sortConfig.key === 'disk' ? sortConfig.direction : undefined}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <StorageIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                      Disk
-                      <TableSortLabel
-                        active={sortConfig.key === 'disk'}
-                        direction={sortConfig.key === 'disk' ? sortConfig.direction : 'asc'}
-                        sx={{
-                          '& .MuiTableSortLabel-icon': {
-                            opacity: sortConfig.key === 'disk' ? 1 : 0.3,
-                            marginLeft: '4px !important',
-                          },
-                          '&.Mui-active': {
-                            color: 'inherit',
-                          },
-                          '&:hover': {
-                            color: 'primary.main',
-                          }
-                        }}
-                        IconComponent={props => (
-                          <ArrowDropDownIcon
-                            {...props}
-                            sx={{
-                              fontSize: '1.2rem',
-                              transform: sortConfig.key === 'disk' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
-                              transition: 'transform 0.2s'
-                            }}
-                          />
-                        )}
-                      />
-                    </Box>
+                    <Tooltip 
+                      title={filters.disk > 0 ? `Filtering: Disk > ${filters.disk}%` : "Click to sort by disk usage"}
+                      arrow
+                      placement="top"
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', userSelect: 'none' }}>
+                        <StorageIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                        Disk
+                        <TableSortLabel
+                          active={sortConfig.key === 'disk'}
+                          direction={sortConfig.key === 'disk' ? sortConfig.direction : 'asc'}
+                          sx={{
+                            '& .MuiTableSortLabel-icon': {
+                              opacity: sortConfig.key === 'disk' ? 1 : 0.3,
+                              marginLeft: '4px !important',
+                            },
+                            '&.Mui-active': {
+                              color: 'inherit',
+                            },
+                            '&:hover': {
+                              color: 'primary.main',
+                            }
+                          }}
+                          IconComponent={props => (
+                            <ArrowDropDownIcon
+                              {...props}
+                              sx={{
+                                fontSize: '1.2rem',
+                                transform: sortConfig.key === 'disk' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                                transition: 'transform 0.2s'
+                              }}
+                            />
+                          )}
+                        />
+                      </Box>
+                    </Tooltip>
                   </TableCell>
                   
                   {/* Download Column */}
@@ -2414,11 +2532,29 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       minHeight: '48px', 
                       position: 'relative',
                       cursor: 'pointer',
+                      userSelect: 'none',
                       borderBottom: theme => filters.download > 0 ? 
                         `2px solid ${theme.palette.primary.main}` : undefined,
                       color: theme => filters.download > 0 ? 'primary.main' : 'inherit',
+                      backgroundColor: theme => filters.download > 0 ? 
+                        alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                      animation: recentlyChangedFilters.download && filters.download > 0 ? 
+                        'pulse 1s ease-in-out' : 'none',
+                      transition: 'all 0.2s ease',
+                      '&::after': filters.download > 0 ? {
+                        content: '""',
+                        position: 'absolute',
+                        top: '4px',
+                        right: '8px',
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: 'primary.main',
+                      } : {},
                       '&:hover': {
-                        backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                        backgroundColor: theme => filters.download > 0 
+                          ? alpha(theme.palette.primary.main, 0.12)
+                          : alpha(theme.palette.primary.main, 0.08)
                       },
                       '&:focus-visible': {
                         outline: '2px solid',
@@ -2428,36 +2564,42 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     }}
                     aria-sort={sortConfig.key === 'download' ? sortConfig.direction : undefined}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <DownloadIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                      Download
-                      <TableSortLabel
-                        active={sortConfig.key === 'download'}
-                        direction={sortConfig.key === 'download' ? sortConfig.direction : 'asc'}
-                        sx={{
-                          '& .MuiTableSortLabel-icon': {
-                            opacity: sortConfig.key === 'download' ? 1 : 0.3,
-                            marginLeft: '4px !important',
-                          },
-                          '&.Mui-active': {
-                            color: 'inherit',
-                          },
-                          '&:hover': {
-                            color: 'primary.main',
-                          }
-                        }}
-                        IconComponent={props => (
-                          <ArrowDropDownIcon
-                            {...props}
-                            sx={{
-                              fontSize: '1.2rem',
-                              transform: sortConfig.key === 'download' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
-                              transition: 'transform 0.2s'
-                            }}
-                          />
-                        )}
-                      />
-                    </Box>
+                    <Tooltip 
+                      title={filters.download > 0 ? `Filtering: Download > ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}` : "Click to sort by download rate"}
+                      arrow
+                      placement="top"
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', userSelect: 'none' }}>
+                        <DownloadIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                        Download
+                        <TableSortLabel
+                          active={sortConfig.key === 'download'}
+                          direction={sortConfig.key === 'download' ? sortConfig.direction : 'asc'}
+                          sx={{
+                            '& .MuiTableSortLabel-icon': {
+                              opacity: sortConfig.key === 'download' ? 1 : 0.3,
+                              marginLeft: '4px !important',
+                            },
+                            '&.Mui-active': {
+                              color: 'inherit',
+                            },
+                            '&:hover': {
+                              color: 'primary.main',
+                            }
+                          }}
+                          IconComponent={props => (
+                            <ArrowDropDownIcon
+                              {...props}
+                              sx={{
+                                fontSize: '1.2rem',
+                                transform: sortConfig.key === 'download' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                                transition: 'transform 0.2s'
+                              }}
+                            />
+                          )}
+                        />
+                      </Box>
+                    </Tooltip>
                   </TableCell>
                   
                   {/* Upload Column */}
@@ -2470,11 +2612,29 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       minHeight: '48px', 
                       position: 'relative',
                       cursor: 'pointer',
+                      userSelect: 'none',
                       borderBottom: theme => filters.upload > 0 ? 
                         `2px solid ${theme.palette.secondary.main}` : undefined,
                       color: theme => filters.upload > 0 ? 'secondary.main' : 'inherit',
+                      backgroundColor: theme => filters.upload > 0 ? 
+                        alpha(theme.palette.secondary.main, 0.08) : 'transparent',
+                      animation: recentlyChangedFilters.upload && filters.upload > 0 ? 
+                        'pulseSec 1s ease-in-out' : 'none',
+                      transition: 'all 0.2s ease',
+                      '&::after': filters.upload > 0 ? {
+                        content: '""',
+                        position: 'absolute',
+                        top: '4px',
+                        right: '8px',
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: 'secondary.main',
+                      } : {},
                       '&:hover': {
-                        backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                        backgroundColor: theme => filters.upload > 0 
+                          ? alpha(theme.palette.secondary.main, 0.12)
+                          : alpha(theme.palette.primary.main, 0.08)
                       },
                       '&:focus-visible': {
                         outline: '2px solid',
@@ -2484,36 +2644,42 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     }}
                     aria-sort={sortConfig.key === 'upload' ? sortConfig.direction : undefined}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <UploadIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                      Upload
-                      <TableSortLabel
-                        active={sortConfig.key === 'upload'}
-                        direction={sortConfig.key === 'upload' ? sortConfig.direction : 'asc'}
-                        sx={{
-                          '& .MuiTableSortLabel-icon': {
-                            opacity: sortConfig.key === 'upload' ? 1 : 0.3,
-                            marginLeft: '4px !important',
-                          },
-                          '&.Mui-active': {
-                            color: 'inherit',
-                          },
-                          '&:hover': {
-                            color: 'primary.main',
-                          }
-                        }}
-                        IconComponent={props => (
-                          <ArrowDropDownIcon
-                            {...props}
-                            sx={{
-                              fontSize: '1.2rem',
-                              transform: sortConfig.key === 'upload' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
-                              transition: 'transform 0.2s'
-                            }}
-                          />
-                        )}
-                      />
-                    </Box>
+                    <Tooltip 
+                      title={filters.upload > 0 ? `Filtering: Upload > ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}` : "Click to sort by upload rate"}
+                      arrow
+                      placement="top"
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', userSelect: 'none' }}>
+                        <UploadIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                        Upload
+                        <TableSortLabel
+                          active={sortConfig.key === 'upload'}
+                          direction={sortConfig.key === 'upload' ? sortConfig.direction : 'asc'}
+                          sx={{
+                            '& .MuiTableSortLabel-icon': {
+                              opacity: sortConfig.key === 'upload' ? 1 : 0.3,
+                              marginLeft: '4px !important',
+                            },
+                            '&.Mui-active': {
+                              color: 'inherit',
+                            },
+                            '&:hover': {
+                              color: 'primary.main',
+                            }
+                          }}
+                          IconComponent={props => (
+                            <ArrowDropDownIcon
+                              {...props}
+                              sx={{
+                                fontSize: '1.2rem',
+                                transform: sortConfig.key === 'upload' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                                transition: 'transform 0.2s'
+                              }}
+                            />
+                          )}
+                        />
+                      </Box>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -2551,75 +2717,95 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         ...(filters.cpu > 0 && cpuUsage > filters.cpu && (
                           guestTypeFilter === 'all' ? {
                             '& td:nth-of-type(3)': { 
-                              borderLeft: '2px solid',
-                              borderLeftColor: theme => alpha(theme.palette.primary.main, 0.4),
-                              pl: 1.5 // Add some padding to account for the border
+                              backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
+                              transition: 'background-color 0.2s ease',
+                              '&:hover': {
+                                backgroundColor: theme => alpha(theme.palette.primary.main, 0.1)
+                              }
                             }
                           } : {
                             '& td:nth-of-type(2)': { 
-                              borderLeft: '2px solid',
-                              borderLeftColor: theme => alpha(theme.palette.primary.main, 0.4),
-                              pl: 1.5 // Add some padding to account for the border
+                              backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
+                              transition: 'background-color 0.2s ease',
+                              '&:hover': {
+                                backgroundColor: theme => alpha(theme.palette.primary.main, 0.1)
+                              }
                             }
                           }
                         )),
                         ...(filters.memory > 0 && memoryUsage > filters.memory && (
                           guestTypeFilter === 'all' ? {
                             '& td:nth-of-type(4)': { 
-                              borderLeft: '2px solid',
-                              borderLeftColor: theme => alpha(theme.palette.primary.main, 0.4),
-                              pl: 1.5
+                              backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
+                              transition: 'background-color 0.2s ease',
+                              '&:hover': {
+                                backgroundColor: theme => alpha(theme.palette.primary.main, 0.1)
+                              }
                             }
                           } : {
                             '& td:nth-of-type(3)': { 
-                              borderLeft: '2px solid',
-                              borderLeftColor: theme => alpha(theme.palette.primary.main, 0.4),
-                              pl: 1.5
+                              backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
+                              transition: 'background-color 0.2s ease',
+                              '&:hover': {
+                                backgroundColor: theme => alpha(theme.palette.primary.main, 0.1)
+                              }
                             }
                           }
                         )),
                         ...(filters.disk > 0 && diskUsage > filters.disk && (
                           guestTypeFilter === 'all' ? {
                             '& td:nth-of-type(5)': { 
-                              borderLeft: '2px solid',
-                              borderLeftColor: theme => alpha(theme.palette.primary.main, 0.4),
-                              pl: 1.5
+                              backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
+                              transition: 'background-color 0.2s ease',
+                              '&:hover': {
+                                backgroundColor: theme => alpha(theme.palette.primary.main, 0.1)
+                              }
                             }
                           } : {
                             '& td:nth-of-type(4)': { 
-                              borderLeft: '2px solid',
-                              borderLeftColor: theme => alpha(theme.palette.primary.main, 0.4),
-                              pl: 1.5
+                              backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
+                              transition: 'background-color 0.2s ease',
+                              '&:hover': {
+                                backgroundColor: theme => alpha(theme.palette.primary.main, 0.1)
+                              }
                             }
                           }
                         )),
                         ...(filters.download > 0 && networkMetrics?.inRate >= sliderValueToNetworkRate(filters.download) && (
                           guestTypeFilter === 'all' ? {
                             '& td:nth-of-type(6)': { 
-                              borderLeft: '2px solid',
-                              borderLeftColor: theme => alpha(theme.palette.primary.main, 0.4),
-                              pl: 1.5
+                              backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
+                              transition: 'background-color 0.2s ease',
+                              '&:hover': {
+                                backgroundColor: theme => alpha(theme.palette.primary.main, 0.1)
+                              }
                             }
                           } : {
                             '& td:nth-of-type(5)': { 
-                              borderLeft: '2px solid',
-                              borderLeftColor: theme => alpha(theme.palette.primary.main, 0.4),
-                              pl: 1.5
+                              backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
+                              transition: 'background-color 0.2s ease',
+                              '&:hover': {
+                                backgroundColor: theme => alpha(theme.palette.primary.main, 0.1)
+                              }
                             }
                           }
                         )),
                         ...(filters.upload > 0 && networkMetrics?.outRate >= sliderValueToNetworkRate(filters.upload) && (
                           guestTypeFilter === 'all' ? {
                             '& td:nth-of-type(7)': { 
-                              borderLeft: '2px solid',
-                              borderLeftColor: theme => alpha(theme.palette.secondary.main, 0.4),
-                              pl: 1.5
+                              backgroundColor: theme => alpha(theme.palette.secondary.main, 0.06),
+                              transition: 'background-color 0.2s ease',
+                              '&:hover': {
+                                backgroundColor: theme => alpha(theme.palette.secondary.main, 0.1)
+                              }
                             }
                           } : {
                             '& td:nth-of-type(6)': { 
-                              borderLeft: '2px solid',
-                              borderLeftColor: theme => alpha(theme.palette.secondary.main, 0.4),
-                              pl: 1.5
+                              backgroundColor: theme => alpha(theme.palette.secondary.main, 0.06),
+                              transition: 'background-color 0.2s ease',
+                              '&:hover': {
+                                backgroundColor: theme => alpha(theme.palette.secondary.main, 0.1)
+                              }
                             }
                           }
                         ))
