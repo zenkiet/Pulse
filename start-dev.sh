@@ -6,7 +6,10 @@ chmod +x "$0"
 # Kill any existing servers
 echo "Killing any existing servers..."
 pkill -f "node dist/server.js" || true
-npx kill-port 7654
+npx kill-port 7654 3000
+
+# Set environment to development
+export NODE_ENV=development
 
 # Start the real backend server
 echo "Starting real backend server..."
@@ -25,7 +28,7 @@ fi
 
 # Start the frontend Vite dev server
 echo "Starting Pulse interface..."
-cd frontend && npm run dev -- --host "${HOST_IP}" --port 7654
+cd frontend && npm run dev -- --host "${HOST_IP}" --port 3000
 
 # When the frontend exits, also kill the backend server
 kill $BACKEND_PID

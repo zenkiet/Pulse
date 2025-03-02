@@ -21,8 +21,21 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Static files - look in both locations for flexibility
-app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
+// Static files - only in production mode
+if (config.nodeEnv === 'production') {
+  app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
+  
+  // Serve index.html for all other routes in production
+  app.get('*', (req, res) => {
+    const frontendDistPath = path.join(__dirname, '..', 'frontend', 'dist', 'index.html');
+    
+    if (require('fs').existsSync(frontendDistPath)) {
+      res.sendFile(frontendDistPath);
+    } else {
+      res.status(404).send('Frontend not found. Make sure to build the frontend with "cd frontend && npm run build"');
+    }
+  });
+}
 
 // API routes
 app.use('/api', apiRoutes);
@@ -32,18 +45,6 @@ if (config.enableDevTools) {
   app.use('/dev', devRoutes);
   logger.info('Development tools enabled');
 }
-
-// Serve index.html for all other routes
-app.get('*', (req, res) => {
-  const frontendDistPath = path.join(__dirname, '..', 'frontend', 'dist', 'index.html');
-  
-  // Serve from frontend/dist
-  if (require('fs').existsSync(frontendDistPath)) {
-    res.sendFile(frontendDistPath);
-  } else {
-    res.status(404).send('Frontend not found. Make sure to build the frontend with "cd frontend && npm run build"');
-  }
-});
 
 // Create HTTP server
 const server = http.createServer(app);
