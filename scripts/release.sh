@@ -1,6 +1,16 @@
 #!/bin/bash
 set -e
 
+# ⚠️ MAINTAINER ONLY SCRIPT ⚠️
+# This script is intended for repository maintainers only.
+# It requires:
+#  - Write access to the GitHub repository
+#  - Docker Hub authentication with push permissions
+#  - GitHub CLI authentication with release creation permissions
+#
+# Regular contributors should not attempt to run this script.
+# Instead, please follow the Contributing guidelines in the README.
+
 # Colors for output
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'

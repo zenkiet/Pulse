@@ -326,7 +326,14 @@ A release script is provided to automate the process of creating new releases. T
 - Docker image building and pushing
 - GitHub release creation
 
-To create a new release:
+> **⚠️ Note for Contributors**: This release script is intended for repository maintainers only. It requires:
+> - Write access to the GitHub repository
+> - Docker Hub authentication with push permissions
+> - GitHub CLI authentication with release creation permissions
+>
+> Regular contributors should not attempt to run this script. Instead, please follow the [Contributing](#contributing) guidelines for submitting changes.
+
+For repository maintainers, to create a new release:
 
 ```bash
 # Create a new patch release (1.0.x → 1.0.x+1)
