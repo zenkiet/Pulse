@@ -573,22 +573,14 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
   
   // Function to add a search term to active filters
   const addSearchTerm = (term) => {
-    if (!term.trim()) return; // Don't add empty terms
-    
-    const normalizedTerm = term.trim().toLowerCase();
-    
-    // Check if the term already exists (case-insensitive)
-    if (!activeSearchTerms.some(existingTerm => existingTerm.toLowerCase() === normalizedTerm)) {
-      setActiveSearchTerms(prev => [...prev, normalizedTerm]);
+    if (term.trim() && !activeSearchTerms.includes(term.trim())) {
+      setActiveSearchTerms(prev => [...prev, term.trim()]);
     }
   };
   
   // Function to remove a search term from filters
   const removeSearchTerm = (termToRemove) => {
-    const normalizedTermToRemove = termToRemove.toLowerCase();
-    setActiveSearchTerms(prev => 
-      prev.filter(term => term.toLowerCase() !== normalizedTermToRemove)
-    );
+    setActiveSearchTerms(prev => prev.filter(term => term !== termToRemove));
   };
   
   // Function to update a specific filter
@@ -656,42 +648,19 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     filteredData = filteredData.filter(guest => {
       const guestName = guest.name.toLowerCase();
       
-      // Search term filtering logic
-      // -------------------------
-      // 1. If we have active search terms but no current search term:
-      //    - Show items matching ANY active term (OR logic between terms)
-      // 2. If we have a current search term but no active terms:
-      //    - Show items matching the current term
-      // 3. If we have BOTH active terms AND a current search term:
-      //    - Show items matching ANY active term AND also matching the current term
-      
-      // Case 3: We have both active terms and current search term
-      if (activeSearchTerms.length > 0 && searchTerm.trim() !== '') {
-        // Must match at least one active term
-        const matchesAnyActiveTerm = activeSearchTerms.some(term => 
-          guestName.includes(term.toLowerCase())
-        );
-        
-        // AND must match the current search term
-        const matchesCurrentTerm = guestName.includes(searchTerm.trim().toLowerCase());
-        
-        if (!(matchesAnyActiveTerm && matchesCurrentTerm)) {
+      // If there's a current search term being typed, only filter by that term
+      if (searchTerm) {
+        if (!guestName.includes(searchTerm.toLowerCase())) {
           return false;
         }
       }
-      // Case 1: Only active terms, no current search term
+      // Otherwise, if there are active search terms, check if any match (OR logic)
       else if (activeSearchTerms.length > 0) {
-        const matchesAnyActiveTerm = activeSearchTerms.some(term => 
+        const matchesActiveTerms = activeSearchTerms.some(term => 
           guestName.includes(term.toLowerCase())
         );
         
-        if (!matchesAnyActiveTerm) {
-          return false;
-        }
-      }
-      // Case 2: Only current search term, no active terms
-      else if (searchTerm.trim() !== '') {
-        if (!guestName.includes(searchTerm.trim().toLowerCase())) {
+        if (!matchesActiveTerms) {
           return false;
         }
       }
@@ -909,7 +878,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                 placeholder="Search guests..."
                 value={searchTerm}
                 onChange={(e) => {
-                  // Update the search term as the user types
+                  // Set the search term directly to ensure immediate filtering
                   setSearchTerm(e.target.value);
                 }}
                 onKeyDown={(e) => {
@@ -917,9 +886,8 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     e.preventDefault();
                     // Add current search term to active filters
                     addSearchTerm(searchTerm.trim());
-                    // Clear the input field
+                    // Clear the search input after adding the term
                     setSearchTerm('');
-                    // Keep focus on the input field for the next term
                     e.target.focus();
                   } else if (e.key === 'Escape') {
                     // Let the global handler handle this completely
@@ -941,7 +909,6 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     }
                   } 
                 }}
-                aria-label="Search guests"
               />
               {searchTerm && (
                 <IconButton 
@@ -1099,16 +1066,17 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     mt: { xs: 1, md: 0 }
                   }}>
                     {/* Active search term chips */}
-                    {activeSearchTerms.map(term => (
-                      <Chip 
-                        key={term}
-                        label={`"${term}"`}
-                        onDelete={() => removeSearchTerm(term)}
-                        color="default"
-                        size="small"
-                        deleteIcon={<CancelIcon fontSize="small" />}
-                        sx={{ height: 24 }}
-                      />
+                    {activeSearchTerms.map((term, index) => (
+                      <React.Fragment key={term}>
+                        <Chip 
+                          label={`"${term}"`}
+                          onDelete={() => removeSearchTerm(term)}
+                          color="primary"
+                          size="small"
+                          deleteIcon={<CancelIcon fontSize="small" />}
+                          sx={{ height: 24, fontWeight: 600, mr: 0.5 }}
+                        />
+                      </React.Fragment>
                     ))}
                     
                     {/* Current search term chip (shown only if not empty and not yet in activeSearchTerms) */}
@@ -1116,10 +1084,10 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       <Chip 
                         label={`"${searchTerm}"`}
                         onDelete={() => setSearchTerm('')}
-                        color="default"
+                        color="secondary"
                         size="small"
                         deleteIcon={<CancelIcon fontSize="small" />}
-                        sx={{ height: 24 }}
+                        sx={{ height: 24, fontWeight: 600 }}
                       />
                     )}
                     
