@@ -1179,178 +1179,544 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
               />
             </Box>
             
-            {/* Guest Type Filter */}
-            <Box sx={{ display: 'flex', alignItems: 'center', ml: 2 }}>
-              {/* Removed TYPE: title to create more space */}
-              <Box sx={{ display: 'flex', borderRadius: 1, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
-                <Tooltip title="Show all guests">
-                  <Box
-                    onClick={() => setGuestTypeFilter('all')}
-                    sx={{
-                      px: 1,
-                      py: 0.5,
-                      fontSize: '0.75rem',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      bgcolor: guestTypeFilter === 'all' ? 'primary.main' : 'transparent',
-                      color: guestTypeFilter === 'all' ? 'primary.contrastText' : 'text.primary',
-                      '&:hover': {
-                        bgcolor: guestTypeFilter === 'all' ? 'primary.dark' : 'action.hover',
-                      }
+            {/* Simplified Control Row */}
+            <Box sx={{ 
+              display: 'flex', 
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              gap: 1.5,
+              mb: 2,
+              borderRadius: 1,
+              p: 1.5,
+              bgcolor: 'background.paper',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+              border: '1px solid',
+              borderColor: 'divider',
+            }}>
+              {/* Search Box - Kept simple but effective */}
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center',
+                flexGrow: 1,
+                position: 'relative',
+              }}>
+                <InputBase
+                  placeholder="Search by name, ID, type..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && searchTerm) {
+                      addSearchTerm(searchTerm);
+                      setSearchTerm('');
+                    }
+                  }}
+                  inputRef={searchInputRef}
+                  startAdornment={
+                    <SearchIcon sx={{ fontSize: '1rem', mr: 1, color: 'text.secondary' }} />
+                  }
+                  endAdornment={
+                    searchTerm && (
+                      <InputAdornment position="end">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => setSearchTerm('')}
+                          sx={{ p: 0.5 }}
+                        >
+                          <ClearIcon sx={{ fontSize: '0.9rem' }} />
+                        </IconButton>
+                      </InputAdornment>
+                    )
+                  }
+                  sx={{
+                    width: '100%',
+                    fontSize: '0.875rem',
+                    px: 1.5,
+                    py: 0.5,
+                    borderRadius: 1,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    bgcolor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      borderColor: 'primary.main',
+                    },
+                    '&.Mui-focused': {
+                      borderColor: 'primary.main',
+                      boxShadow: theme => `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`,
+                    },
+                    '& .MuiInputBase-input': {
+                      p: 0,
+                    }
+                  }}
+                  inputProps={{
+                    'aria-label': 'search systems',
+                  }}
+                />
+              </Box>
+              
+              {/* Consolidated Filter Controls */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {/* All-in-one Filter Button */}
+                <Tooltip title={(Object.values(filters).some(val => val > 0) || activeSearchTerms.length > 0) ? "Manage filters" : "Show filter options"}>
+                  <Button
+                    variant={(Object.values(filters).some(val => val > 0) || searchTerm || showFilters) ? "contained" : "outlined"}
+                    color="primary"
+                    size="small"
+                    onClick={handleFilterButtonClick}
+                    startIcon={<FilterAltIcon />}
+                    sx={{ 
+                      borderRadius: 1, 
+                      textTransform: 'none',
+                      height: 36,
+                      whiteSpace: 'nowrap',
                     }}
                   >
-                    All
-                  </Box>
+                    {activeFilterCount > 0 ? (
+                      <Badge badgeContent={activeFilterCount} color="error">
+                        Filters
+                      </Badge>
+                    ) : (
+                      "Filters"
+                    )}
+                  </Button>
                 </Tooltip>
-                <Tooltip title="Show only virtual machines">
-                  <Box
-                    onClick={() => setGuestTypeFilter('vm')}
-                    sx={{
-                      px: 1,
-                      py: 0.5,
-                      fontSize: '0.75rem',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      bgcolor: guestTypeFilter === 'vm' ? 'info.main' : 'transparent',
-                      color: guestTypeFilter === 'vm' ? 'info.contrastText' : 'text.primary',
-                      borderLeft: '1px solid',
-                      borderLeftColor: 'divider',
-                      '&:hover': {
-                        bgcolor: guestTypeFilter === 'vm' ? 'info.dark' : 'action.hover',
-                      }
+
+                {/* Status Toggle - Simplified to a single button that toggles */}
+                <Tooltip title={showStopped ? "Show only running systems" : "Show all systems including stopped ones"}>
+                  <Button
+                    variant={showStopped ? "contained" : "outlined"}
+                    color={showStopped ? "primary" : "inherit"}
+                    size="small"
+                    onClick={() => setShowStopped(!showStopped)}
+                    startIcon={showStopped ? <AllInclusiveIcon /> : <CircleIcon sx={{ color: 'success.main' }} />}
+                    sx={{ 
+                      borderRadius: 1, 
+                      textTransform: 'none',
+                      height: 36,
+                      minWidth: 0,
+                      px: 1.5,
                     }}
                   >
-                    <ComputerIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                    VM
-                  </Box>
+                    {showStopped ? "All" : "Running"}
+                  </Button>
                 </Tooltip>
-                <Tooltip title="Show only LXC containers">
-                  <Box
-                    onClick={() => setGuestTypeFilter('lxc')}
-                    sx={{
-                      px: 1,
-                      py: 0.5,
-                      fontSize: '0.75rem',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      bgcolor: guestTypeFilter === 'lxc' ? 'success.main' : 'transparent',
-                      color: guestTypeFilter === 'lxc' ? 'success.contrastText' : 'text.primary',
-                      borderLeft: '1px solid',
-                      borderLeftColor: 'divider',
-                      '&:hover': {
-                        bgcolor: guestTypeFilter === 'lxc' ? 'success.dark' : 'action.hover',
-                      }
+
+                {/* Type Toggle - Using a single button that cycles through options */}
+                <Tooltip title="Toggle guest type filter">
+                  <Button
+                    variant={guestTypeFilter !== 'all' ? "contained" : "outlined"}
+                    color={guestTypeFilter === 'vm' ? "info" : (guestTypeFilter === 'lxc' ? "success" : "inherit")}
+                    size="small"
+                    onClick={() => {
+                      // Cycle through: all -> vm -> lxc -> all
+                      const nextType = guestTypeFilter === 'all' ? 'vm' : 
+                                      (guestTypeFilter === 'vm' ? 'lxc' : 'all');
+                      setGuestTypeFilter(nextType);
+                    }}
+                    startIcon={
+                      guestTypeFilter === 'vm' ? <ComputerIcon /> : 
+                      (guestTypeFilter === 'lxc' ? <ViewInArIcon /> : null)
+                    }
+                    sx={{ 
+                      borderRadius: 1, 
+                      textTransform: 'none',
+                      height: 36,
+                      minWidth: 0,
+                      px: 1.5,
                     }}
                   >
-                    <ViewInArIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                    LXC
-                  </Box>
+                    {guestTypeFilter === 'all' ? "All Types" : 
+                     guestTypeFilter === 'vm' ? "VM" : "LXC"}
+                  </Button>
                 </Tooltip>
               </Box>
             </Box>
             
-            {/* Node indicator */}
-            {/* Removing the Node indicator as it's redundant with the node selection dropdown at the top right */}
-            
-            {/* Filter indicator */}
-            <Box sx={{ flexGrow: 1, minHeight: { xs: 8, md: 0 } }} />
-            
-            {/* Controls section */}
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: { xs: 1, sm: 1.5 },
-              ml: { xs: 0, md: 'auto' },
-              width: { xs: '100%', md: 'auto' },
-              justifyContent: { xs: 'space-between', md: 'flex-start' },
-              pr: { md: 5 }  // Add right padding to avoid overlap with dark mode toggle
-            }}>
-              {/* Filter controls - updated for better mobile experience */}
+            {/* Existing filter popover remains unchanged */}
+            <Popover
+              open={openFiltersPopover}
+              anchorEl={filterAnchorEl}
+              onClose={handleCloseFilterPopover}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'left',
+              }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'left',
+              }}
+              sx={{
+                '& .MuiPopover-paper': {
+                  mt: 1,
+                  boxShadow: 3,
+                  overflow: 'visible',
+                  '&:before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: '-6px',
+                    left: '16px',
+                    width: 12,
+                    height: 12,
+                    bgcolor: 'background.paper',
+                    transform: 'rotate(45deg)',
+                    boxShadow: '-3px -3px 5px rgba(0,0,0,0.04)',
+                    zIndex: 0,
+                  }
+                }
+              }}
+            >
               <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center',
-                flexGrow: { xs: 1, md: 0 },
-                justifyContent: { xs: 'center', md: 'flex-start' }
+                width: 320, 
+                maxHeight: 400, 
+                overflow: 'auto',
+                p: 2
               }}>
-                {/* Removed FILTERS: title to create more space and simplify UI */}
-                <Tooltip title={showFilters ? "Hide filters" : "Show filters"}>
-                  <Box 
-                    onClick={() => setShowFilters(!showFilters)}
-                    sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center',
-                      borderRadius: 1,
-                      border: '1px solid',
-                      borderColor: (Object.values(filters).some(val => val > 0) || searchTerm || showFilters) 
-                        ? 'primary.main' 
-                        : 'divider',
-                      px: 1.5,
-                      py: 0.5,
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      bgcolor: (Object.values(filters).some(val => val > 0) || searchTerm || showFilters) 
-                        ? 'primary.main' 
-                        : 'transparent',
-                      color: (Object.values(filters).some(val => val > 0) || searchTerm || showFilters) 
-                        ? 'primary.contrastText' 
-                        : 'text.primary',
-                      transition: 'all 0.2s ease',
-                      boxShadow: (Object.values(filters).some(val => val > 0) || searchTerm || showFilters)
-                        ? 1
-                        : 0,
-                      '&:hover': {
-                        bgcolor: (Object.values(filters).some(val => val > 0) || searchTerm || showFilters)
-                          ? 'primary.dark'
-                          : 'action.hover',
-                        borderColor: (Object.values(filters).some(val => val > 0) || searchTerm || showFilters)
-                          ? 'primary.dark'
-                          : 'primary.main',
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
-                    aria-expanded={showFilters}
-                    aria-controls="filter-panel"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setShowFilters(!showFilters);
-                      }
-                    }}
-                  >
-                    <FilterAltIcon 
-                      sx={{ 
-                        fontSize: '0.875rem', 
-                        mr: 0.75,
-                        transition: 'transform 0.2s ease',
-                        transform: showFilters ? 'rotate(180deg)' : 'rotate(0deg)'
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  mb: 2,
+                  pb: 1.5,
+                  borderBottom: '1px solid',
+                  borderColor: 'divider'
+                }}>
+                  <Typography variant="subtitle2">
+                    Active Filters ({activeFilterCount})
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Button 
+                      size="small" 
+                      variant="outlined" 
+                      startIcon={<FilterAltOffIcon />}
+                      title="Reset All Filters (Alt+R)" // Add tooltip with keyboard shortcut
+                      onClick={() => {
+                        resetFilters();
+                        handleCloseFilterPopover();
                       }}
-                    />
-                    
-                    {(Object.values(filters).some(val => val > 0) || searchTerm) ? (
-                      <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center',
-                        fontWeight: 600
-                      }}>
-                        {`${sortedAndFilteredData.length}/${guestData.length}`}
-                      </Box>
-                    ) : (
-                      <Box component="span" sx={{ display: { xs: 'none', sm: 'block' } }}>
-                        {showFilters ? "Hide" : "Show"}
-                      </Box>
-                    )}
+                    >
+                      Reset All
+                    </Button>
+                    <IconButton
+                      size="small"
+                      onClick={handleCloseFilterPopover}
+                      title="Close Panel (Esc)" // Add tooltip with keyboard shortcut
+                      sx={{ ml: 0.5 }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
                   </Box>
-                </Tooltip>
-
+                </Box>
+                
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  {/* Search filters */}
+                  {(activeSearchTerms.length > 0 || (searchTerm && !activeSearchTerms.includes(searchTerm))) && (
+                    <Box>
+                      <Typography variant="caption" fontWeight="bold" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                        Search Terms
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                        {activeSearchTerms.map((term) => (
+                          <Chip
+                            key={term}
+                            size="small"
+                            icon={<SearchIcon fontSize="small" />}
+                            label={`"${term}"`}
+                            color="primary"
+                            onDelete={() => removeSearchTerm(term)}
+                          />
+                        ))}
+                        {searchTerm && !activeSearchTerms.includes(searchTerm) && (
+                          <Chip
+                            size="small"
+                            icon={<SearchIcon fontSize="small" />}
+                            label={`"${searchTerm}"`}
+                            color="secondary"
+                            onDelete={() => setSearchTerm('')}
+                          />
+                        )}
+                      </Box>
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            </Popover>
+            
+            {/* Filter Panel that shows when filters are active */}
+            <Collapse in={showFilters} timeout="auto" sx={{
+              '& .MuiCollapse-wrapperInner': {
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              }
+            }}>
+              <Box 
+                sx={{ 
+                  mb: 2, 
+                  p: 2.5, 
+                  backgroundColor: theme => darkMode 
+                    ? alpha(theme.palette.primary.dark, 0.15)
+                    : alpha(theme.palette.primary.light, 0.05),
+                  borderRadius: 2,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  boxShadow: theme => darkMode 
+                    ? `0 4px 20px 0 ${alpha(theme.palette.common.black, 0.1)}`
+                    : `0 4px 20px 0 ${alpha(theme.palette.common.black, 0.05)}`,
+                  transition: 'all 0.3s ease',
+                  overflow: 'hidden'
+                }}
+                role="region"
+                aria-label="Filter controls"
+              >
+                <Typography 
+                  variant="subtitle2" 
+                  sx={{ 
+                    mb: 2.5, 
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: 'text.primary'
+                  }}
+                >
+                  <FilterAltIcon sx={{ fontSize: '1rem', mr: 1, opacity: 0.7 }} />
+                  Adjust minimum thresholds:
+                </Typography>
+                <Box sx={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr', lg: '1fr 1fr 1fr 1fr 1fr' },
+                  gap: 3
+                }}>
+                  {/* CPU Filter */}
+                  <Box sx={{ 
+                    backgroundColor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
+                    borderRadius: 1.5,
+                    p: 1.5,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      boxShadow: theme => `0 2px 8px 0 ${alpha(theme.palette.primary.main, 0.1)}`,
+                      borderColor: theme => alpha(theme.palette.primary.main, 0.3)
+                    }
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <SpeedIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem', color: 'primary.main' }} />
+                      <Typography 
+                        variant="body2" 
+                        sx={{ fontWeight: 600 }}
+                        id="cpu-filter-label"
+                      >
+                        CPU Usage
+                      </Typography>
+                    </Box>
+                    <Tooltip title={`CPU usage ≥ ${formatPercentage(filters.cpu)}`} arrow placement="top">
+                              <Slider
+                                value={filters.cpu}
+                        onChange={(_, newValue) => updateFilter('cpu', newValue)}
+                                onMouseDown={() => handleSliderDragStart('cpu')}
+                        onMouseUp={handleSliderDragEnd}
+                        aria-labelledby="cpu-filter-label"
+                        aria-valuetext={`${formatPercentage(filters.cpu)}`}
+                        valueLabelDisplay="auto"
+                        valueLabelFormat={value => `${formatPercentage(value)}`}
+                                sx={{ 
+                          color: theme => alpha(theme.palette.primary.main, filters.cpu > 0 ? 0.8 : 0.4),
+                                    height: 4,
+                                  '& .MuiSlider-thumb': { 
+                            height: 14,
+                            width: 14,
+                                    '&:hover, &.Mui-focusVisible': { 
+                              boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
+                                    }
+                                  },
+                                  '& .MuiSlider-valueLabel': {
+                            fontWeight: 'bold',
+                            lineHeight: 1.2
+                                  }
+                                }}
+                              />
+                    </Tooltip>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary">0%</Typography>
+                      <Typography variant="caption" color="text.secondary">100%</Typography>
+                            </Box>
+                  </Box>
+                  
+                  {/* Memory Filter */}
+                  <Box sx={{ 
+                    backgroundColor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
+                    borderRadius: 1.5,
+                    p: 1.5,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      boxShadow: theme => `0 2px 8px 0 ${alpha(theme.palette.primary.main, 0.1)}`,
+                      borderColor: theme => alpha(theme.palette.primary.main, 0.3)
+                    }
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <MemoryIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem', color: 'primary.main' }} />
+                      <Typography 
+                        variant="body2" 
+                        sx={{ fontWeight: 600 }}
+                        id="memory-filter-label"
+                      >
+                        Memory Usage
+                      </Typography>
+                    </Box>
+                    <Tooltip title={`Memory usage ≥ ${formatPercentage(filters.memory)}`} arrow placement="top">
+                              <Slider
+                                value={filters.memory}
+                        onChange={(_, newValue) => updateFilter('memory', newValue)}
+                                onMouseDown={() => handleSliderDragStart('memory')}
+                        onMouseUp={handleSliderDragEnd}
+                        aria-labelledby="memory-filter-label"
+                        aria-valuetext={`${formatPercentage(filters.memory)}`}
+                        valueLabelDisplay="auto"
+                        valueLabelFormat={value => `${formatPercentage(value)}`}
+                                sx={{ 
+                          color: theme => alpha(theme.palette.primary.main, filters.memory > 0 ? 0.8 : 0.4),
+                                    height: 4,
+                                  '& .MuiSlider-thumb': { 
+                            height: 14,
+                            width: 14,
+                                    '&:hover, &.Mui-focusVisible': { 
+                              boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
+                                    }
+                                  },
+                                  '& .MuiSlider-valueLabel': {
+                            fontWeight: 'bold',
+                            lineHeight: 1.2
+                                  }
+                                }}
+                              />
+                    </Tooltip>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary">0%</Typography>
+                      <Typography variant="caption" color="text.secondary">100%</Typography>
+                            </Box>
+                  </Box>
+                  
+                  {/* Disk Filter */}
+                  <Box sx={{ 
+                    backgroundColor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
+                    borderRadius: 1.5,
+                    p: 1.5,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      boxShadow: theme => `0 2px 8px 0 ${alpha(theme.palette.primary.main, 0.1)}`,
+                      borderColor: theme => alpha(theme.palette.primary.main, 0.3)
+                    }
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <StorageIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem', color: 'primary.main' }} />
+                      <Typography 
+                        variant="body2" 
+                        sx={{ fontWeight: 600 }}
+                        id="disk-filter-label"
+                      >
+                        Disk Usage
+                      </Typography>
+                    </Box>
+                    <Tooltip title={`Disk usage ≥ ${formatPercentage(filters.disk)}`} arrow placement="top">
+                      <Slider
+                                value={filters.disk} 
+                        onChange={(_, newValue) => updateFilter('disk', newValue)}
+                        onMouseDown={() => handleSliderDragStart('disk')}
+                        onMouseUp={handleSliderDragEnd}
+                        aria-labelledby="disk-filter-label"
+                        aria-valuetext={`${formatPercentage(filters.disk)}`}
+                        valueLabelDisplay="auto"
+                        valueLabelFormat={value => `${formatPercentage(value)}`}
+                                sx={{ 
+                          color: theme => alpha(theme.palette.primary.main, filters.disk > 0 ? 0.8 : 0.4),
+                                  height: 4,
+                          '& .MuiSlider-thumb': {
+                            height: 14,
+                            width: 14,
+                            '&:hover, &.Mui-focusVisible': {
+                              boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
+                            }
+                          },
+                          '& .MuiSlider-valueLabel': {
+                            fontWeight: 'bold',
+                            lineHeight: 1.2
+                                  }
+                                }} 
+                              />
+                    </Tooltip>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary">0%</Typography>
+                      <Typography variant="caption" color="text.secondary">100%</Typography>
+                    </Box>
+                  </Box>
+                  
+                  {/* Download Filter */}
+                  <Box sx={{ 
+                    backgroundColor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
+                    borderRadius: 1.5,
+                    p: 1.5,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      boxShadow: theme => `0 2px 8px 0 ${alpha(theme.palette.primary.main, 0.1)}`,
+                      borderColor: theme => alpha(theme.palette.primary.main, 0.3)
+                    }
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <ArrowDownwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem', color: 'primary.main' }} />
+                      <Typography 
+                        variant="body2" 
+                        sx={{ fontWeight: 600 }}
+                        id="download-filter-label"
+                      >
+                        Download Rate
+                      </Typography>
+                    </Box>
+                    <Tooltip title={`Download ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}`} arrow placement="top">
+                              <Slider
+                        value={filters.download}
+                        onChange={(_, newValue) => updateFilter('download', newValue)}
+                        onMouseDown={() => handleSliderDragStart('download')}
+                        onMouseUp={handleSliderDragEnd}
+                        aria-labelledby="download-filter-label"
+                        aria-valuetext={`${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}`}
+                        valueLabelDisplay="auto"
+                        valueLabelFormat={value => formatNetworkRateForFilter(sliderValueToNetworkRate(value))}
+                                sx={{ 
+                          color: theme => alpha(theme.palette.primary.main, filters.download > 0 ? 0.8 : 0.4),
+                                    height: 4,
+                                  '& .MuiSlider-thumb': { 
+                            height: 14,
+                            width: 14,
+                                    '&:hover, &.Mui-focusVisible': { 
+                              boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
+                                    }
+                                  },
+                                  '& .MuiSlider-valueLabel': {
+                            fontWeight: 'bold',
+                            lineHeight: 1.2
+                                  }
+                                }}
+                              />
+                    </Tooltip>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary">0 B/s</Typography>
+                      <Typography variant="caption" color="text.secondary">10 MB/s</Typography>
+                            </Box>
+                  </Box>
+                  
+                  {/* Upload Filter */}
+                  <Box sx={{ 
+                    backgroundColor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
+                    borderRadius: 1.5,
+                    p: 1.5,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
                 {/* Replace the filter chips with a compact button and popover */}
                 <Box sx={{ display: 'flex', alignItems: 'center', ml: 1.5 }}>
                   {activeFilterCount > 0 && (
@@ -2967,3 +3333,4 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
   );
 };
 export default NetworkDisplay;
+
