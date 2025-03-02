@@ -794,22 +794,6 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     return getSortedAndFilteredData(getNodeFilteredGuests(guestData));
   }, [getSortedAndFilteredData, getNodeFilteredGuests, guestData, sortConfig, filters, showStopped, searchTerm, activeSearchTerms, selectedNode]);
   
-  // Add keyboard shortcut handler for 'F' key to toggle filters
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // If 'F' is pressed and no input/textarea is focused, toggle filters
-      if (e.key.toLowerCase() === 'f' && 
-          !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) &&
-          !document.activeElement.isContentEditable) {
-        e.preventDefault();
-        setShowFilters(prev => !prev);
-      }
-    };
-    
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
-  
   // Function to generate and download PDF
   const generatePDF = useCallback(() => {
     try {
@@ -1190,9 +1174,6 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                 <Tooltip title={
                   <>
                     {showFilters ? "Hide filters" : "Show filters"}
-                    <Box sx={{ mt: 0.5, opacity: 0.7, fontSize: '0.7rem', display: 'flex', alignItems: 'center' }}>
-                      Press <Box component="span" sx={{ mx: 0.5, px: 0.4, border: '1px solid', borderColor: 'rgba(255,255,255,0.3)', borderRadius: 0.5 }}>F</Box> to toggle
-                    </Box>
                   </>
                 }>
                   <Box 
