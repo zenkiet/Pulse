@@ -48,7 +48,7 @@ ENV NODE_TLS_REJECT_UNAUTHORIZED=${NODE_TLS_REJECT_UNAUTHORIZED}
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/frontend/dist ./frontend/dist
-COPY --from=builder /app/start-pulse.sh ./
+COPY --from=builder /app/start-dev.sh ./
 
 # Create a symbolic link from /app/dist/public to /app/frontend/dist
 RUN mkdir -p /app/dist/public && rm -rf /app/dist/public && ln -s /app/frontend/dist /app/dist/public
@@ -57,7 +57,7 @@ RUN mkdir -p /app/dist/public && rm -rf /app/dist/public && ln -s /app/frontend/
 RUN npm ci --only=production
 
 # Make the startup script executable
-RUN chmod +x start-pulse.sh && chown -R pulse:pulse /app
+RUN chmod +x start-dev.sh && chown -R pulse:pulse /app
 
 # Switch to non-root user
 USER pulse
@@ -88,7 +88,7 @@ RUN cd frontend && npm ci
 COPY . .
 
 # Make the startup script executable
-RUN chmod +x start-pulse.sh
+RUN chmod +x start-dev.sh
 
 # Define build arguments with defaults
 ARG NODE_ENV=development
@@ -110,5 +110,5 @@ ENV NODE_TLS_REJECT_UNAUTHORIZED=${NODE_TLS_REJECT_UNAUTHORIZED}
 # Expose the backend and frontend ports
 EXPOSE ${PORT} ${VITE_PORT}
 
-# Start both the backend and frontend (using the start-pulse.sh script)
-CMD ["./start-pulse.sh"] 
+# Start both the backend and frontend (using the start-dev.sh script)
+CMD ["./start-dev.sh"] 
