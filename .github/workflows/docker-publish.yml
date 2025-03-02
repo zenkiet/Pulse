@@ -1,16 +1,21 @@
 name: Publish Docker image
 
 on:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ["Update Version"]
+    types:
+      - completed
 
 jobs:
   push_to_registry:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Check out the repo
         uses: actions/checkout@v3
+        with:
+          ref: main  # Ensure we get the latest version updates
       
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2

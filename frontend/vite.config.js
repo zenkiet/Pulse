@@ -6,12 +6,12 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: process.env.DOCKER_CONTAINER ? '0.0.0.0' : 'localhost',
-    port: 9513,
+    port: 7654,
     proxy: {
       // Proxy WebSocket connections to the real backend
       '/socket.io': {
         target: process.env.DOCKER_CONTAINER 
-          ? 'http://localhost:7655'  // In Docker, use the port exposed by the container
+          ? 'http://localhost:7654'  // In Docker, use the port exposed by the container
           : (process.env.VITE_API_URL || 'http://localhost:7654'),
         ws: true,
         changeOrigin: true,
@@ -60,7 +60,7 @@ export default defineConfig({
       // Proxy API requests to the real backend
       '/api': {
         target: process.env.DOCKER_CONTAINER
-          ? 'http://localhost:7655'  // In Docker, use the port exposed by the container
+          ? 'http://localhost:7654'  // In Docker, use the port exposed by the container
           : (process.env.VITE_API_URL || 'http://localhost:7654'),
         changeOrigin: true,
         configure: (proxy, _options) => {

@@ -49,29 +49,7 @@ The frontend can be configured using the following environment variables:
 
 ## Installation
 
-### Quick Start with Docker Hub
-
-The easiest way to get started with Pulse is to use the pre-built Docker image:
-
-1. Create a `.env` file with your ProxMox node details (see Configuration section)
-2. Run the container:
-   ```bash
-   docker run -d -p 7654:7654 --env-file .env --name pulse-app rcourtman/pulse:latest
-   ```
-3. Access the application at http://localhost:7654
-
-#### Using Docker Compose with Docker Hub
-
-For a more robust setup with Docker Compose:
-
-1. Create a `.env` file with your ProxMox node details
-2. Run using Docker Compose:
-   ```bash
-   docker-compose up -d pulse
-   ```
-3. Access the application at http://localhost:7654
-
-### Standard Installation
+### Development Setup
 
 1. Clone the repository
 2. Install dependencies:
@@ -83,15 +61,13 @@ For a more robust setup with Docker Compose:
    cd frontend && npm install
    ```
 4. Create a `.env` file based on the `.env.example` file
-5. Run the application:
+5. Start the development server:
    ```
-   npm run pulse
+   ./start-pulse.sh
    ```
 6. Access the application at http://localhost:9513
 
-## Docker Deployment
-
-### Using Docker Compose (Recommended)
+### Production Setup with Docker
 
 1. Clone the repository
 2. Copy the example environment file and configure it:
@@ -99,48 +75,36 @@ For a more robust setup with Docker Compose:
    cp .env.example .env
    ```
 3. Edit the `.env` file with your ProxMox node details
-4. Start the application using the pre-built Docker Hub image (default):
+4. Start the application:
    ```
    docker-compose up -d pulse
    ```
-   
-   Or build from source (uncomment the pulse-build service in docker-compose.yml first):
-   ```
-   # First uncomment the pulse-build service in docker-compose.yml
-   docker-compose up -d pulse-build
-   ```
-   
-   Or run in development mode with live reloading:
-   ```
-   docker-compose up -d pulse-dev
-   ```
 5. Access the application at http://localhost:7654
 
-### Using Docker Directly
+### Quick Start with Docker Hub
 
-1. Build and run the container:
-   ```
-   # Using pre-built image
+The easiest way to get started with Pulse is to use the pre-built Docker image:
+
+1. Create a `.env` file with your ProxMox node details (see Configuration section)
+2. Run the container:
+   ```bash
    docker run -d -p 7654:7654 --env-file .env --name pulse-app rcourtman/pulse:latest
-   
-   # Building from source (production)
-   docker build --target production -t proxmox-pulse:prod .
-   docker run -d -p 7654:7654 --env-file .env --name proxmox-pulse proxmox-pulse:prod
-   
-   # Building from source (development with live reloading)
-   docker build --target development -t proxmox-pulse:dev .
-   docker run -d -p 7654:7654 -p 9513:9513 --env-file .env --name proxmox-pulse-dev proxmox-pulse:dev
    ```
-2. Access the application at http://localhost:7654
+3. Access the application at http://localhost:7654
 
-### Docker Image Details
+## Docker Details
 
-The Docker setup uses a multi-stage build approach with two main targets:
+The Docker setup uses a production-optimized build that:
+- Runs the compiled application with minimal dependencies
+- Runs as a non-root user for better security
+- Serves both frontend and backend on port 7654
+- Exits if startup checks fail (e.g., if it can't connect to your ProxMox nodes)
 
-- **Production**: A lightweight image that runs the compiled application with minimal dependencies and runs as a non-root user for better security.
-- **Development**: A more feature-rich image that includes all development dependencies and tools.
-
-In production mode, the application will exit if startup checks fail (e.g., if it can't connect to your ProxMox nodes). In development mode, it will continue running with warnings, allowing you to troubleshoot connection issues.
+For development, use `./start-pulse.sh` instead of Docker, as it provides:
+- Hot-reloading of both frontend and backend
+- Source maps for better debugging
+- Development tools and detailed logging
+- Immediate reflection of code changes
 
 ## Configuration
 
