@@ -7,119 +7,93 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-# Function to print colored messages
-print_message() {
-  echo -e "${GREEN}[RELEASE] $1${NC}"
+# Print usage information
+function print_usage {
+  echo -e "${YELLOW}Usage:${NC} $0 <new_version>"
+  echo -e "Example: $0 1.0.13"
+  echo ""
+  echo -e "${YELLOW}Note:${NC} This script is intended for repository owners with proper Git and Docker Hub authentication."
 }
 
-print_warning() {
-  echo -e "${YELLOW}[WARNING] $1${NC}"
-}
-
-print_error() {
-  echo -e "${RED}[ERROR] $1${NC}"
-}
-
-# Check if version is provided
-if [ -z "$1" ]; then
-  print_error "No version specified. Usage: ./release.sh <version> [skip-docker]"
-  echo "Example: ./release.sh 1.0.13"
+# Check if version argument is provided
+if [ $# -ne 1 ]; then
+  echo -e "${RED}Error: Version number is required${NC}"
+  print_usage
   exit 1
 fi
 
-VERSION=$1
-SKIP_DOCKER=${2:-false}
+NEW_VERSION=$1
 
-# Check if the version format is valid (e.g., 1.0.13)
-if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  print_error "Invalid version format. Please use semantic versioning (e.g., 1.0.13)"
+# Validate version format (simple check)
+if ! [[ $NEW_VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo -e "${RED}Error: Version must be in format X.Y.Z (e.g., 1.0.13)${NC}"
   exit 1
 fi
 
-# Check if git is clean
+echo -e "${YELLOW}Starting release process for version ${NEW_VERSION}...${NC}"
+
+# Check for uncommitted changes
 if [ -n "$(git status --porcelain)" ]; then
-  print_warning "Working directory is not clean. Uncommitted changes will be included in the release."
-  read -p "Continue? (y/n) " -n 1 -r
-  echo
-  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    print_message "Release aborted."
-    exit 1
-  fi
+  echo -e "${RED}Error: You have uncommitted changes. Please commit or stash them before releasing.${NC}"
+  git status
+  exit 1
 fi
 
-# Check if we're on the main branch
-CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-if [ "$CURRENT_BRANCH" != "main" ]; then
-  print_warning "You are not on the main branch. Current branch: $CURRENT_BRANCH"
-  read -p "Continue? (y/n) " -n 1 -r
-  echo
-  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    print_message "Release aborted."
-    exit 1
-  fi
-fi
+# Pull latest changes
+echo -e "${YELLOW}Pulling latest changes from main branch...${NC}"
+git pull origin main
 
-print_message "Starting release process for version $VERSION"
+# Update version in files
+echo -e "${YELLOW}Updating version to ${NEW_VERSION} in files...${NC}"
 
-# 1. Update version in files
-print_message "Updating version in files..."
-
-# Update version.js
+# Update frontend/src/utils/version.js
 cat > frontend/src/utils/version.js << EOF
 // This file contains the version information for the application
 // It is automatically updated when a new release is created
 
-export const VERSION = '$VERSION'; // Updated by release script
+export const VERSION = '${NEW_VERSION}'; // Updated by GitHub Actions
 EOF
 
 # Update package.json
-sed -i '' "s/\"version\": \"[0-9]*\.[0-9]*\.[0-9]*\"/\"version\": \"$VERSION\"/" package.json
-sed -i '' "s/\"version\": \"[0-9]*\.[0-9]*\.[0-9]*\"/\"version\": \"$VERSION\"/" frontend/package.json
+npm version $NEW_VERSION --no-git-tag-version
 
-# Update Dockerfile labels
-sed -i '' "s/LABEL org.opencontainers.image.version=\"[0-9]*\.[0-9]*\.[0-9]*\"/LABEL org.opencontainers.image.version=\"$VERSION\"/" Dockerfile
+# Update frontend/package.json
+cd frontend && npm version $NEW_VERSION --no-git-tag-version && cd ..
 
-# 2. Commit version changes
-print_message "Committing version changes..."
+# Update Dockerfile label
+sed -i '' "s/LABEL org.opencontainers.image.version=\".*\"/LABEL org.opencontainers.image.version=\"${NEW_VERSION}\"/" Dockerfile
+
+# Commit version changes
+echo -e "${YELLOW}Committing version changes...${NC}"
 git add frontend/src/utils/version.js package.json frontend/package.json Dockerfile
-git commit -m "Bump version to $VERSION"
+git commit -m "Bump version to ${NEW_VERSION}"
 
-# 3. Push changes to main
-print_message "Pushing changes to main..."
+# Push changes to main
+echo -e "${YELLOW}Pushing changes to main branch...${NC}"
 git push origin main
 
-# 4. Create and push tag
-print_message "Creating and pushing tag v$VERSION..."
-git tag -a "v$VERSION" -m "Release v$VERSION"
-git push origin "v$VERSION"
+# Create and push tag
+echo -e "${YELLOW}Creating and pushing tag v${NEW_VERSION}...${NC}"
+git tag -a "v${NEW_VERSION}" -m "Release v${NEW_VERSION}"
+git push origin "v${NEW_VERSION}"
 
-# 5. Create GitHub release
-print_message "Creating GitHub release..."
-RELEASE_NOTES="Release v$VERSION"
-gh release create "v$VERSION" --title "Release v$VERSION" --notes "$RELEASE_NOTES"
+# Build Docker image (production stage)
+echo -e "${YELLOW}Building Docker image for version ${NEW_VERSION}...${NC}"
+docker build --target production -t "rcourtman/pulse:${NEW_VERSION}" -t rcourtman/pulse:latest .
 
-# 6. Build and push Docker image if not skipped
-if [ "$SKIP_DOCKER" != "true" ] && [ "$SKIP_DOCKER" != "skip-docker" ]; then
-  print_message "Building Docker image..."
-  docker build --target production -t "rcourtman/pulse:$VERSION" -t rcourtman/pulse:latest .
-  
-  print_message "Pushing Docker image to Docker Hub..."
-  docker push "rcourtman/pulse:$VERSION"
-  docker push rcourtman/pulse:latest
-  
-  print_message "Verifying Docker image labels..."
-  docker inspect --format='{{json .Config.Labels}}' "rcourtman/pulse:$VERSION"
-else
-  print_message "Skipping Docker build and push as requested."
-fi
+# Push Docker images
+echo -e "${YELLOW}Pushing Docker images to Docker Hub...${NC}"
+docker push "rcourtman/pulse:${NEW_VERSION}"
+docker push rcourtman/pulse:latest
 
-print_message "Release v$VERSION completed successfully!"
-print_message "GitHub release: https://github.com/rcourtman/pulse/releases/tag/v$VERSION"
-if [ "$SKIP_DOCKER" != "true" ] && [ "$SKIP_DOCKER" != "skip-docker" ]; then
-  print_message "Docker image: rcourtman/pulse:$VERSION"
-fi
+# Create GitHub release
+echo -e "${YELLOW}Creating GitHub release...${NC}"
+gh release create "v${NEW_VERSION}" \
+  --title "Release v${NEW_VERSION}" \
+  --notes "Release v${NEW_VERSION}. See commit history for details."
 
-# Wait for GitHub Actions workflows to start
-print_message "Waiting for GitHub Actions workflows to start..."
-sleep 10
-gh run list --limit 5
+echo -e "${GREEN}Release v${NEW_VERSION} completed successfully!${NC}"
+echo -e "${YELLOW}Note: GitHub Actions workflows should now be running to update version files.${NC}"
+echo -e "${YELLOW}You can check their status with: gh run list --limit 5${NC}"
+
+exit 0
