@@ -31,4 +31,4 @@ reports/
 Thumbs.db
 
 # Test coverage
-coverage/ 
+coverage/ .cursor/
