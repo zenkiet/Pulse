@@ -1,20 +1,20 @@
 {
   "name": "pulse",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "main": "dist/server.js",
   "scripts": {
     "start": "node dist/server.js",
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "dev:server": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "lint": "eslint . --ext .ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "test:startup": "ts-node src/scripts/startup-check.ts",
     "test:api": "ts-node src/scripts/proxmox-api-test.ts",
-    "kill:backend": "npx kill-port 7654 7655",
-    "kill:frontend": "npx kill-port 9513",
-    "kill:all": "npm run kill:backend && npm run kill:frontend",
+    "dev:kill:backend": "npx kill-port 7654 7655",
+    "dev:kill:frontend": "npx kill-port 9513",
+    "dev:kill:all": "npm run dev:kill:backend && npm run dev:kill:frontend",
     "dev:frontend": "cd frontend && npm run dev",
-    "pulse": "./start-pulse.sh"
+    "dev:start": "./start-dev.sh"
   },
   "keywords": [
     "proxmox",
