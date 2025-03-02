@@ -1181,9 +1181,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
             
             {/* Guest Type Filter */}
             <Box sx={{ display: 'flex', alignItems: 'center', ml: 2 }}>
-              <Typography variant="caption" sx={{ color: 'text.secondary', mr: 1, fontSize: '0.7rem', fontWeight: 500 }}>
-                TYPE:
-              </Typography>
+              {/* Removed TYPE: title to create more space */}
               <Box sx={{ display: 'flex', borderRadius: 1, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
                 <Tooltip title="Show all guests">
                   <Box
@@ -1572,9 +1570,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
               
               {/* Display controls */}
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Typography variant="caption" sx={{ color: 'text.secondary', mr: 1, fontSize: '0.7rem', fontWeight: 500 }}>
-                  STATUS:
-                </Typography>
+                {/* Removed STATUS: title to create more space */}
                 <Box sx={{ 
                   display: 'flex', 
                   borderRadius: 1, 
