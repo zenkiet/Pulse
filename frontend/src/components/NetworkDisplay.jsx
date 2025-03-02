@@ -573,14 +573,22 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
   
   // Function to add a search term to active filters
   const addSearchTerm = (term) => {
-    if (term.trim() && !activeSearchTerms.includes(term.trim())) {
-      setActiveSearchTerms(prev => [...prev, term.trim()]);
+    if (!term.trim()) return; // Don't add empty terms
+    
+    const normalizedTerm = term.trim().toLowerCase();
+    
+    // Check if the term already exists (case-insensitive)
+    if (!activeSearchTerms.some(existingTerm => existingTerm.toLowerCase() === normalizedTerm)) {
+      setActiveSearchTerms(prev => [...prev, normalizedTerm]);
     }
   };
   
   // Function to remove a search term from filters
   const removeSearchTerm = (termToRemove) => {
-    setActiveSearchTerms(prev => prev.filter(term => term !== termToRemove));
+    const normalizedTermToRemove = termToRemove.toLowerCase();
+    setActiveSearchTerms(prev => 
+      prev.filter(term => term.toLowerCase() !== normalizedTermToRemove)
+    );
   };
   
   // Function to update a specific filter
@@ -646,23 +654,44 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     
     // Then filter the data based on search terms and filters
     filteredData = filteredData.filter(guest => {
-      // Check if name matches either active search terms OR current search term
-      if (activeSearchTerms.length > 0 || searchTerm) {
-        const guestName = guest.name.toLowerCase();
+      const guestName = guest.name.toLowerCase();
+      
+      // Search term filtering logic
+      // -------------------------
+      // 1. If we have active search terms but no current search term:
+      //    - Show items matching ANY active term (OR logic between terms)
+      // 2. If we have a current search term but no active terms:
+      //    - Show items matching the current term
+      // 3. If we have BOTH active terms AND a current search term:
+      //    - Show items matching ANY active term AND also matching the current term
+      
+      // Case 3: We have both active terms and current search term
+      if (activeSearchTerms.length > 0 && searchTerm.trim() !== '') {
+        // Must match at least one active term
+        const matchesAnyActiveTerm = activeSearchTerms.some(term => 
+          guestName.includes(term.toLowerCase())
+        );
         
-        // Check against active search terms
-        if (activeSearchTerms.length > 0) {
-          const matchesActiveTerms = activeSearchTerms.some(term => 
-            guestName.includes(term.toLowerCase())
-          );
-          
-          if (!matchesActiveTerms) {
-            return false;
-          }
+        // AND must match the current search term
+        const matchesCurrentTerm = guestName.includes(searchTerm.trim().toLowerCase());
+        
+        if (!(matchesAnyActiveTerm && matchesCurrentTerm)) {
+          return false;
         }
+      }
+      // Case 1: Only active terms, no current search term
+      else if (activeSearchTerms.length > 0) {
+        const matchesAnyActiveTerm = activeSearchTerms.some(term => 
+          guestName.includes(term.toLowerCase())
+        );
         
-        // Check against current search term
-        if (searchTerm && !guestName.includes(searchTerm.toLowerCase())) {
+        if (!matchesAnyActiveTerm) {
+          return false;
+        }
+      }
+      // Case 2: Only current search term, no active terms
+      else if (searchTerm.trim() !== '') {
+        if (!guestName.includes(searchTerm.trim().toLowerCase())) {
           return false;
         }
       }
@@ -879,7 +908,10 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
               <InputBase
                 placeholder="Search guests..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  // Update the search term as the user types
+                  setSearchTerm(e.target.value);
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && searchTerm.trim()) {
                     e.preventDefault();
@@ -909,6 +941,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     }
                   } 
                 }}
+                aria-label="Search guests"
               />
               {searchTerm && (
                 <IconButton 
