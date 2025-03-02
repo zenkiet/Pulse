@@ -729,3 +729,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Thanks to the ProxMox team for their excellent virtualization platform
 - All contributors who have helped improve this project
+
+## Release Process
+
+For information on creating new releases, please see [RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md).
