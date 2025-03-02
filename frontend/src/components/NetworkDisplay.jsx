@@ -1286,24 +1286,20 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
             {/* Controls section */}
             <Box sx={{ 
               display: 'flex', 
-              alignItems: 'flex-start',
+              alignItems: 'center',
               flexWrap: 'wrap',
               gap: { xs: 1, sm: 1.5 },
               ml: { xs: 0, md: 'auto' },
               width: { xs: '100%', md: 'auto' },
-              justifyContent: { xs: 'flex-start', md: 'flex-end' },
-              pr: { md: 5 },  // Add right padding to avoid overlap with dark mode toggle
-              position: 'relative',
-              minHeight: 32
+              justifyContent: { xs: 'space-between', md: 'flex-start' },
+              pr: { md: 5 }  // Add right padding to avoid overlap with dark mode toggle
             }}>
               {/* Filter controls - updated for better mobile experience */}
               <Box sx={{ 
                 display: 'flex', 
                 alignItems: 'center',
-                flexGrow: { xs: 0, md: 0 },
-                justifyContent: { xs: 'flex-start', md: 'flex-start' },
-                order: { xs: 1, md: 1 },
-                flexShrink: 0
+                flexGrow: { xs: 1, md: 0 },
+                justifyContent: { xs: 'center', md: 'flex-start' }
               }}>
                 <Typography variant="caption" sx={{ color: 'text.secondary', mr: 1, fontSize: '0.7rem', fontWeight: 500 }}>
                   FILTERS:
@@ -1387,11 +1383,8 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     alignItems: 'center',
                     gap: 0.75,
                     ml: 1.5,
-                    maxWidth: { xs: '100%', md: 'calc(100% - 340px)' },
-                    mt: { xs: 1, md: 0 },
-                    order: { xs: 3, md: 2 },
-                    position: 'relative',
-                    zIndex: 1
+                    maxWidth: { xs: '100%', md: '400px' },
+                    mt: { xs: 1, md: 0 }
                   }}>
                     {/* Active search term chips */}
                     {activeSearchTerms.map((term, index) => (
@@ -1403,23 +1396,18 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                             bgcolor: 'primary.main',
                             color: 'primary.contrastText',
                             borderRadius: 1,
-                            px: 0.75,
-                            py: 0.25,
-                            fontSize: '0.7rem',
+                            px: 1,
+                            py: 0.5,
+                            fontSize: '0.75rem',
                             fontWeight: 600,
                             boxShadow: 1,
                             transition: 'all 0.2s ease',
                             '&:hover': {
                               bgcolor: 'primary.dark',
-                            },
-                            height: 24,
-                            maxWidth: 160,
-                            overflow: 'hidden',
-                            whiteSpace: 'nowrap',
-                            textOverflow: 'ellipsis'
+                            }
                           }}
                         >
-                          <SearchIcon sx={{ fontSize: '0.7rem', mr: 0.5 }} />
+                          <SearchIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
                           {`"${term}"`}
                           <Box 
                             component="span" 
@@ -1436,7 +1424,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                               }
                             }}
                           >
-                            <CancelIcon sx={{ fontSize: '0.7rem' }} />
+                            <CancelIcon sx={{ fontSize: '0.875rem' }} />
                           </Box>
                         </Box>
                       </React.Fragment>
@@ -1451,23 +1439,18 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                           bgcolor: 'secondary.main',
                           color: 'secondary.contrastText',
                           borderRadius: 1,
-                          px: 0.75,
-                          py: 0.25,
-                          fontSize: '0.7rem',
+                          px: 1,
+                          py: 0.5,
+                          fontSize: '0.75rem',
                           fontWeight: 600,
                           boxShadow: 1,
                           transition: 'all 0.2s ease',
                           '&:hover': {
                             bgcolor: 'secondary.dark',
-                          },
-                          height: 24,
-                          maxWidth: 160,
-                          overflow: 'hidden',
-                          whiteSpace: 'nowrap',
-                          textOverflow: 'ellipsis'
+                          }
                         }}
                       >
-                        <SearchIcon sx={{ fontSize: '0.7rem', mr: 0.5 }} />
+                        <SearchIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
                         {`"${searchTerm}"`}
                         <Box 
                           component="span" 
@@ -1484,7 +1467,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                             }
                           }}
                         >
-                          <CancelIcon sx={{ fontSize: '0.7rem' }} />
+                          <CancelIcon sx={{ fontSize: '0.875rem' }} />
                         </Box>
                       </Box>
                     )}
@@ -1498,19 +1481,18 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                           bgcolor: 'primary.main',
                           color: 'primary.contrastText',
                           borderRadius: 1,
-                          px: 0.75,
-                          py: 0.25,
-                          fontSize: '0.7rem',
+                          px: 1,
+                          py: 0.5,
+                          fontSize: '0.75rem',
                           fontWeight: 600,
                           boxShadow: 1,
                           transition: 'all 0.2s ease',
                           '&:hover': {
                             bgcolor: 'primary.dark',
-                          },
-                          height: 24
+                          }
                         }}
                       >
-                        <SpeedIcon sx={{ fontSize: '0.7rem', mr: 0.5 }} />
+                        <SpeedIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
                         {`CPU ≥ ${formatPercentage(filters.cpu)}`}
                         <Box 
                           component="span" 
@@ -1527,7 +1509,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                             }
                           }}
                         >
-                          <CancelIcon sx={{ fontSize: '0.7rem' }} />
+                          <CancelIcon sx={{ fontSize: '0.875rem' }} />
                         </Box>
                       </Box>
                     )}
@@ -1541,19 +1523,18 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                           bgcolor: 'primary.main',
                           color: 'primary.contrastText',
                           borderRadius: 1,
-                          px: 0.75,
-                          py: 0.25,
-                          fontSize: '0.7rem',
+                          px: 1,
+                          py: 0.5,
+                          fontSize: '0.75rem',
                           fontWeight: 600,
                           boxShadow: 1,
                           transition: 'all 0.2s ease',
                           '&:hover': {
                             bgcolor: 'primary.dark',
-                          },
-                          height: 24
+                          }
                         }}
                       >
-                        <MemoryIcon sx={{ fontSize: '0.7rem', mr: 0.5 }} />
+                        <MemoryIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
                         {`MEM ≥ ${formatPercentage(filters.memory)}`}
                         <Box 
                           component="span" 
@@ -1570,7 +1551,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                             }
                           }}
                         >
-                          <CancelIcon sx={{ fontSize: '0.7rem' }} />
+                          <CancelIcon sx={{ fontSize: '0.875rem' }} />
                         </Box>
                       </Box>
                     )}
@@ -1584,19 +1565,18 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                           bgcolor: 'primary.main',
                           color: 'primary.contrastText',
                           borderRadius: 1,
-                          px: 0.75,
-                          py: 0.25,
-                          fontSize: '0.7rem',
+                          px: 1,
+                          py: 0.5,
+                          fontSize: '0.75rem',
                           fontWeight: 600,
                           boxShadow: 1,
                           transition: 'all 0.2s ease',
                           '&:hover': {
                             bgcolor: 'primary.dark',
-                          },
-                          height: 24
+                          }
                         }}
                       >
-                        <StorageIcon sx={{ fontSize: '0.7rem', mr: 0.5 }} />
+                        <StorageIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
                         {`DISK ≥ ${formatPercentage(filters.disk)}`}
                         <Box 
                           component="span" 
@@ -1613,7 +1593,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                             }
                           }}
                         >
-                          <CancelIcon sx={{ fontSize: '0.7rem' }} />
+                          <CancelIcon sx={{ fontSize: '0.875rem' }} />
                         </Box>
                       </Box>
                     )}
@@ -1627,19 +1607,18 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                           bgcolor: 'primary.main',
                           color: 'primary.contrastText',
                           borderRadius: 1,
-                          px: 0.75,
-                          py: 0.25,
-                          fontSize: '0.7rem',
+                          px: 1,
+                          py: 0.5,
+                          fontSize: '0.75rem',
                           fontWeight: 600,
                           boxShadow: 1,
                           transition: 'all 0.2s ease',
                           '&:hover': {
                             bgcolor: 'primary.dark',
-                          },
-                          height: 24
+                          }
                         }}
                       >
-                        <ArrowDownwardIcon sx={{ fontSize: '0.7rem', mr: 0.5 }} />
+                        <ArrowDownwardIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
                         {`DL ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}`}
                         <Box 
                           component="span" 
@@ -1656,7 +1635,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                             }
                           }}
                         >
-                          <CancelIcon sx={{ fontSize: '0.7rem' }} />
+                          <CancelIcon sx={{ fontSize: '0.875rem' }} />
                         </Box>
                       </Box>
                     )}
@@ -1670,19 +1649,18 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                           bgcolor: 'secondary.main',
                           color: 'secondary.contrastText',
                           borderRadius: 1,
-                          px: 0.75,
-                          py: 0.25,
-                          fontSize: '0.7rem',
+                          px: 1,
+                          py: 0.5,
+                          fontSize: '0.75rem',
                           fontWeight: 600,
                           boxShadow: 1,
                           transition: 'all 0.2s ease',
                           '&:hover': {
                             bgcolor: 'secondary.dark',
-                          },
-                          height: 24
+                          }
                         }}
                       >
-                        <ArrowUpwardIcon sx={{ fontSize: '0.7rem', mr: 0.5 }} />
+                        <ArrowUpwardIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
                         {`UL ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}`}
                         <Box 
                           component="span" 
@@ -1699,49 +1677,37 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                             }
                           }}
                         >
-                          <CancelIcon sx={{ fontSize: '0.7rem' }} />
+                          <CancelIcon sx={{ fontSize: '0.875rem' }} />
                         </Box>
                       </Box>
                     )}
                     
-                    {/* Clear all filters button */}
-                    {(Object.values(filters).some(val => val > 0) || activeSearchTerms.length > 0 || searchTerm) && (
-                      <Box 
-                        onClick={() => {
-                          // Clear all filters
-                          setFilters({
-                            cpu: 0,
-                            memory: 0, 
-                            disk: 0,
-                            download: 0,
-                            upload: 0
-                          });
-                          setActiveSearchTerms([]);
-                          setSearchTerm('');
-                        }}
-                        sx={{ 
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          bgcolor: 'error.main',
-                          color: 'error.contrastText',
-                          borderRadius: 1,
-                          px: 0.75,
-                          py: 0.25,
-                          fontSize: '0.7rem',
-                          fontWeight: 600,
-                          boxShadow: 1,
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            bgcolor: 'error.dark',
-                          },
-                          height: 24
-                        }}
-                      >
-                        <ClearIcon sx={{ fontSize: '0.7rem', mr: 0.5 }} />
-                        Clear All
-                      </Box>
-                    )}
+                    {/* Reset all filters button */}
+                    <Box 
+                      onClick={resetFilters}
+                      sx={{ 
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        bgcolor: 'transparent',
+                        color: 'primary.main',
+                        border: '1px solid',
+                        borderColor: 'primary.main',
+                        borderRadius: 1,
+                        px: 1,
+                        py: 0.5,
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          bgcolor: 'action.hover',
+                          boxShadow: 1
+                        }
+                      }}
+                    >
+                      <RestartAltIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
+                      Reset
+                    </Box>
                   </Box>
                 )}
               </Box>
