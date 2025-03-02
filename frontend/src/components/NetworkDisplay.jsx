@@ -612,6 +612,12 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
         return;
       }
       
+      // If there are active filters, clear them
+      if (activeFilterCount > 0) {
+        resetFilters();
+        return;
+      }
+      
       // Focus search box on Escape if not in input already
       if (document.activeElement !== searchInputRef.current) {
         searchInputRef.current?.focus();
@@ -1252,56 +1258,9 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
             </Box>
             
             {/* Node indicator */}
-            {selectedNode !== 'all' && (
-              <Box sx={{ display: 'flex', alignItems: 'center', ml: 2 }}>
-                <Typography variant="caption" sx={{ color: 'text.secondary', mr: 1, fontSize: '0.7rem', fontWeight: 500 }}>
-                  NODE:
-                </Typography>
-                <Tooltip title={(() => {
-                  // Find the actual node name from nodeData
-                  if (nodeData && nodeData.length > 0) {
-                    // Convert selectedNode format (e.g., "node1") to API format (e.g., "node-1")
-                    const nodeIdForApi = selectedNode.replace(/^node(\d+)$/, "node-$1");
-                    const node = nodeData.find(n => n.id === nodeIdForApi);
-                    if (node) {
-                      return `Filtering by Node: ${node.name}`;
-                    }
-                  }
-                  // Fallback to the node ID if we can't find the name
-                  return `Filtering by Node: ${selectedNode}`;
-                })()}>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      bgcolor: 'primary.main',
-                      color: 'primary.contrastText',
-                      borderRadius: 1,
-                      px: 1,
-                      py: 0.5,
-                      fontSize: '0.75rem',
-                      fontWeight: 500,
-                    }}
-                  >
-                    <DnsIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                    {(() => {
-                      // Find the actual node name from nodeData
-                      if (nodeData && nodeData.length > 0) {
-                        // Convert selectedNode format (e.g., "node1") to API format (e.g., "node-1")
-                        const nodeIdForApi = selectedNode.replace(/^node(\d+)$/, "node-$1");
-                        const node = nodeData.find(n => n.id === nodeIdForApi);
-                        if (node) {
-                          return node.name;
-                        }
-                      }
-                      // Fallback to the node ID if we can't find the name
-                      return selectedNode;
-                    })()}
-                  </Box>
-                </Tooltip>
-              </Box>
-            )}
-
+            {/* Removing the Node indicator as it's redundant with the node selection dropdown at the top right */}
+            
+            {/* Filter indicator */}
             <Box sx={{ flexGrow: 1, minHeight: { xs: 8, md: 0 } }} />
             
             {/* Controls section */}
