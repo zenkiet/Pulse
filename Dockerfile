@@ -21,6 +21,11 @@ RUN cd frontend && npm run build
 # Production stage
 FROM node:18-slim
 
+# Add version labels
+LABEL version="1.1.0"
+LABEL description="ProxMox Pulse - A lightweight monitoring application for ProxMox"
+LABEL maintainer="Richard Courtman"
+
 # Create a non-root user
 RUN apt-get update && apt-get install -y --no-install-recommends dumb-init \
     && apt-get clean \
