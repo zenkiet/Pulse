@@ -34,6 +34,19 @@ docker run -d \
 open http://localhost:7654  # or visit in your browser
 ```
 
+### 🐳 Docker Compose
+```bash
+# 1. Create your .env file with ProxMox configuration
+cp .env.example .env
+nano .env  # or use your preferred editor
+
+# 2. Run with Docker Compose
+docker-compose up -d
+
+# 3. Access the application
+open http://localhost:7654  # or visit in your browser
+```
+
 The Docker image is optimized for production use:
 - Minimal image size with multi-stage builds
 - Runs as non-root user for security
@@ -62,6 +75,19 @@ docker run -d -p 7654:7654 --env-file .env --name pulse-app --restart unless-sto
 
 # Use a specific version
 docker run -d -p 7654:7654 --env-file .env --name pulse-app --restart unless-stopped rcourtman/pulse:1.0.15
+```
+
+#### Docker Compose Tips
+```bash
+# View logs
+docker-compose logs
+
+# Restart the application
+docker-compose restart
+
+# Update to latest version
+docker-compose pull
+docker-compose up -d
 ```
 
 ## Features
