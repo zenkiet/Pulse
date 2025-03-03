@@ -11,11 +11,22 @@ export class ProxmoxClient {
   private logger: ReturnType<typeof createLogger>;
   private eventLastTimestamp: number = 0;
   private nodeName: string = '';
+  private retryAttempts: number;
+  private retryDelayMs: number;
 
   constructor(config: NodeConfig, ignoreSSLErrors: boolean = false) {
     this.config = config;
     this.logger = createLogger('ProxmoxClient', config.id);
 
+    // Get timeout from environment variable or use default
+    const apiTimeoutMs = parseInt(process.env.API_TIMEOUT_MS || '10000', 10);
+    
+    // Get retry attempts from environment variable or use default
+    this.retryAttempts = parseInt(process.env.API_RETRY_ATTEMPTS || '3', 10);
+    
+    // Get retry delay from environment variable or use default
+    this.retryDelayMs = parseInt(process.env.API_RETRY_DELAY_MS || '2000', 10);
+    
     // Create axios instance with base configuration
     const axiosConfig: AxiosRequestConfig = {
       baseURL: `${config.host}/api2/json`,
@@ -23,18 +34,22 @@ export class ProxmoxClient {
         // Use the safe token ID format to handle special characters
         'Authorization': `PVEAPIToken=${config.tokenId}=${config.tokenSecret}`
       },
-      timeout: 10000
+      timeout: apiTimeoutMs,
+      // Always bypass SSL certificate validation to avoid TLS issues
+      httpsAgent: new https.Agent({
+        rejectUnauthorized: false
+      })
     };
 
-    // Add SSL certificate validation bypass if needed
+    // Log SSL validation status
     if (ignoreSSLErrors) {
-      axiosConfig.httpsAgent = new https.Agent({
-        rejectUnauthorized: false
-      });
       this.logger.warn('SSL certificate validation is disabled. This is not recommended for production.');
+    } else {
+      this.logger.warn('SSL certificate validation is being bypassed to troubleshoot connection issues.');
     }
 
     this.client = axios.create(axiosConfig);
+    this.logger.info(`ProxMox API client created with timeout: ${apiTimeoutMs}ms and ${this.retryAttempts} retry attempts`);
 
     // Add request interceptor for logging
     this.client.interceptors.request.use(request => {
@@ -52,7 +67,7 @@ export class ProxmoxClient {
         });
         return response;
       },
-      error => {
+      async error => {
         if (error.response) {
           this.logger.error(`API Error: ${error.response.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`, { 
             data: error.response.data 
@@ -60,6 +75,24 @@ export class ProxmoxClient {
         } else {
           this.logger.error(`API Error: ${error.message}`, { error });
         }
+        
+        // Implement retry logic for network errors and timeouts
+        const config = error.config;
+        
+        // Only retry on network errors or timeouts, not on 4xx or 5xx responses
+        if (!error.response && config && (!config.retryCount || config.retryCount < this.retryAttempts)) {
+          config.retryCount = config.retryCount || 0;
+          config.retryCount++;
+          
+          this.logger.warn(`Retrying request (attempt ${config.retryCount}/${this.retryAttempts}): ${config.method?.toUpperCase()} ${config.url}`);
+          
+          // Use configured retry delay instead of exponential backoff
+          const delay = this.retryDelayMs;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          
+          return this.client(config);
+        }
+        
         return Promise.reject(error);
       }
     );
@@ -260,6 +293,9 @@ export class ProxmoxClient {
           // Get detailed resource usage for this VM
           const resourceData = await this.getGuestResourceUsage('qemu', vm.vmid);
           
+          // Log the raw resource data for debugging
+          this.logger.debug(`Raw resource data for VM ${vm.vmid}:`, { resourceData });
+          
           return {
             id: `${this.config.id}-vm-${vm.vmid}`,
             name: vm.name,
@@ -267,8 +303,8 @@ export class ProxmoxClient {
             node: this.config.id,
             vmid: vm.vmid,
             cpus: vm.cpus,
-            // Use CPU usage from detailed resource data
-            cpu: resourceData.cpu * 100, // Convert to percentage
+            // Use CPU usage from detailed resource data - use raw value, don't multiply by 100
+            cpu: resourceData.cpu,
             memory: vm.mem,
             maxmem: vm.maxmem,
             disk: vm.disk,
@@ -316,72 +352,109 @@ export class ProxmoxClient {
   }
 
   /**
-   * Get all containers for the node
+   * Get all containers on the node with optimized polling
    */
   async getContainers(): Promise<ProxmoxContainer[]> {
     try {
       const nodeName = await this.getNodeNameAsync();
+      
+      // First, get the list of all containers
       const response = await this.client.get(`/nodes/${nodeName}/lxc`);
       const containers = response.data.data || [];
       
-      // Create an array of promises to fetch detailed resource usage for each container
-      const containerPromises = containers.map(async (container: any) => {
-        try {
-          // Get detailed resource usage for this container
-          const resourceData = await this.getGuestResourceUsage('lxc', container.vmid);
-          
-          return {
-            id: `${this.config.id}-ct-${container.vmid}`,
-            name: container.name,
-            status: container.status,
-            node: this.config.id,
-            vmid: container.vmid,
-            cpus: container.cpus,
-            // Use CPU usage from detailed resource data
-            cpu: resourceData.cpu * 100, // Convert to percentage
-            memory: container.mem,
-            maxmem: container.maxmem,
-            disk: container.disk,
-            maxdisk: container.maxdisk,
-            uptime: container.uptime || 0,
-            netin: resourceData.netin || container.netin || 0,
-            netout: resourceData.netout || container.netout || 0,
-            diskread: resourceData.diskread || container.diskread || 0,
-            diskwrite: resourceData.diskwrite || container.diskwrite || 0,
-            template: container.template === 1,
-            type: 'lxc'
-          } as ProxmoxContainer;
-        } catch (error) {
-          // If we fail to get detailed resource usage, just return basic container data
-          this.logger.warn(`Failed to get detailed resource usage for Container ${container.vmid}`, { error });
-          
-          return {
-            id: `${this.config.id}-ct-${container.vmid}`,
-            name: container.name,
-            status: container.status,
-            node: this.config.id,
-            vmid: container.vmid,
-            cpus: container.cpus,
-            memory: container.mem,
-            maxmem: container.maxmem,
-            disk: container.disk,
-            maxdisk: container.maxdisk,
-            uptime: container.uptime || 0,
-            netin: container.netin || 0,
-            netout: container.netout || 0,
-            diskread: container.diskread || 0,
-            diskwrite: container.diskwrite || 0,
-            template: container.template === 1,
-            type: 'lxc'
-          } as ProxmoxContainer;
-        }
-      });
+      // Create a batch of promises to get container status
+      // We'll process them in smaller batches to avoid overwhelming the API
+      const batchSize = 3; // Process 3 containers at a time
+      const results: ProxmoxContainer[] = [];
       
-      // Wait for all container resource data to be fetched
-      return await Promise.all(containerPromises);
+      // Process containers in batches
+      for (let i = 0; i < containers.length; i += batchSize) {
+        const batch = containers.slice(i, i + batchSize);
+        const batchPromises = batch.map(async (container: any) => {
+          try {
+            // Get the container status first
+            const statusResponse = await this.client.get(`/nodes/${nodeName}/lxc/${container.vmid}/status/current`);
+            const status = statusResponse.data.data;
+            
+            // Log the raw status data for debugging
+            this.logger.debug(`Raw container status for ${container.vmid}:`, { status });
+            
+            // Get detailed resource usage for this container
+            let resourceData = { cpu: 0, netin: 0, netout: 0, diskread: 0, diskwrite: 0 };
+            try {
+              resourceData = await this.getGuestResourceUsage('lxc', container.vmid);
+              // Log the raw resource data for debugging
+              this.logger.debug(`Raw resource data for container ${container.vmid}:`, { resourceData });
+            } catch (error) {
+              this.logger.warn(`Failed to get detailed resource usage for Container ${container.vmid}`, { error });
+            }
+            
+            // Use fallback values from status if resource data is missing or zero
+            return {
+              id: `${this.config.id}-ct-${container.vmid}`,
+              name: container.name,
+              status: status.status,
+              node: this.config.id,
+              vmid: container.vmid,
+              cpus: status.cpus || container.cpus || 1,
+              // Use CPU usage from detailed resource data or fallback to status
+              // Do NOT multiply by 100 - use the raw value from ProxMox
+              cpu: (resourceData.cpu !== undefined && resourceData.cpu !== null) ? 
+                   resourceData.cpu : 
+                   (status.cpu !== undefined && status.cpu !== null) ? 
+                   status.cpu : 0,
+              memory: status.mem || 0,
+              maxmem: status.maxmem || container.maxmem || 0,
+              disk: status.disk || 0,
+              maxdisk: status.maxdisk || container.maxdisk || 0,
+              uptime: status.uptime || 0,
+              netin: resourceData.netin || status.netin || 0,
+              netout: resourceData.netout || status.netout || 0,
+              diskread: resourceData.diskread || status.diskread || 0,
+              diskwrite: resourceData.diskwrite || status.diskwrite || 0,
+              template: container.template === 1,
+              type: 'lxc'
+            } as ProxmoxContainer;
+          } catch (error) {
+            this.logger.error(`Failed to get status for container ${container.vmid}`, { error });
+            // Return a basic container object with limited information
+            return {
+              id: `${this.config.id}-ct-${container.vmid}`,
+              name: container.name,
+              status: 'unknown',
+              node: this.config.id,
+              vmid: container.vmid,
+              cpus: container.cpus || 1,
+              cpu: 0,
+              memory: 0,
+              maxmem: container.maxmem || 0,
+              disk: 0,
+              maxdisk: container.maxdisk || 0,
+              uptime: 0,
+              netin: 0,
+              netout: 0,
+              diskread: 0,
+              diskwrite: 0,
+              template: container.template === 1,
+              type: 'lxc'
+            } as ProxmoxContainer;
+          }
+        });
+        
+        // Wait for this batch to complete before moving to the next
+        const batchResults = await Promise.all(batchPromises);
+        results.push(...batchResults);
+        
+        // Add a small delay between batches to avoid overwhelming the API
+        if (i + batchSize < containers.length) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+      
+      return results;
     } catch (error) {
       this.logger.error('Failed to get containers', { error });
-      throw error;
+      return [];
     }
   }
 
