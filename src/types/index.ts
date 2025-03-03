@@ -67,7 +67,7 @@ export interface ProxmoxVM {
 export interface ProxmoxContainer {
   id: string;
   name: string;
-  status: 'running' | 'stopped' | 'paused';
+  status: 'running' | 'stopped' | 'paused' | 'unknown';
   node: string;
   vmid: number;
   cpus: number;
