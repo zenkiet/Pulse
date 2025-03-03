@@ -11,8 +11,12 @@ export class MetricsService extends EventEmitter {
   private historyMaxLength: number;
   // Add a map to store recent network rate values for smoothing
   private recentNetworkRates: Map<string, { inRates: number[], outRates: number[] }> = new Map();
-  // Number of samples to use for the moving average
+  // Number of samples to use for the moving average - keeping it small for responsiveness
   private readonly movingAverageSamples: number = 3;
+  // Maximum allowed deviation for spike detection (as a multiplier)
+  private readonly maxRateDeviation: number = 2.0;
+  // Bias factor for increasing speeds (makes the app more responsive to speed increases)
+  private readonly speedIncreaseBias: number = 0.7;
 
   constructor() {
     super();
@@ -180,9 +184,47 @@ export class MetricsService extends EventEmitter {
     
     const rates = this.recentNetworkRates.get(guestId)!;
     
+    // Detect and handle spikes in the input rate
+    let filteredInRate = inRate;
+    let filteredOutRate = outRate;
+    
+    if (rates.inRates.length > 0) {
+      const lastInRate = rates.inRates[rates.inRates.length - 1];
+      
+      // If the new rate is significantly higher than the last one, it might be a spike
+      if (inRate > lastInRate * this.maxRateDeviation) {
+        // Use a weighted average instead of the raw value to dampen the spike
+        filteredInRate = (lastInRate + inRate) / 2;
+        this.logger.debug(`Detected download rate spike for ${guestId}: ${inRate.toFixed(2)} -> ${filteredInRate.toFixed(2)}`);
+      } 
+      // If speed is increasing but not dramatically (normal acceleration), be more responsive
+      else if (inRate > lastInRate) {
+        // Apply less smoothing for increasing speeds to be more responsive
+        filteredInRate = lastInRate + (inRate - lastInRate) * this.speedIncreaseBias;
+        this.logger.debug(`Speed increasing for ${guestId}: ${inRate.toFixed(2)} -> ${filteredInRate.toFixed(2)}`);
+      }
+    }
+    
+    if (rates.outRates.length > 0) {
+      const lastOutRate = rates.outRates[rates.outRates.length - 1];
+      
+      // If the new rate is significantly higher than the last one, it might be a spike
+      if (outRate > lastOutRate * this.maxRateDeviation) {
+        // Use a weighted average instead of the raw value to dampen the spike
+        filteredOutRate = (lastOutRate + outRate) / 2;
+        this.logger.debug(`Detected upload rate spike for ${guestId}: ${outRate.toFixed(2)} -> ${filteredOutRate.toFixed(2)}`);
+      }
+      // If speed is increasing but not dramatically (normal acceleration), be more responsive
+      else if (outRate > lastOutRate) {
+        // Apply less smoothing for increasing speeds to be more responsive
+        filteredOutRate = lastOutRate + (outRate - lastOutRate) * this.speedIncreaseBias;
+        this.logger.debug(`Speed increasing for ${guestId}: ${outRate.toFixed(2)} -> ${filteredOutRate.toFixed(2)}`);
+      }
+    }
+    
     // Add new rates to the arrays
-    rates.inRates.push(inRate);
-    rates.outRates.push(outRate);
+    rates.inRates.push(filteredInRate);
+    rates.outRates.push(filteredOutRate);
     
     // Trim arrays to keep only the most recent samples
     if (rates.inRates.length > this.movingAverageSamples) {
@@ -192,14 +234,26 @@ export class MetricsService extends EventEmitter {
       rates.outRates.shift();
     }
     
-    // Calculate averages
-    const smoothedInRate = rates.inRates.reduce((sum, rate) => sum + rate, 0) / rates.inRates.length;
-    const smoothedOutRate = rates.outRates.reduce((sum, rate) => sum + rate, 0) / rates.outRates.length;
+    // Calculate weighted average - giving more weight to recent values for better responsiveness
+    let smoothedInRate = 0;
+    let smoothedOutRate = 0;
+    let totalWeight = 0;
+    
+    for (let i = 0; i < rates.inRates.length; i++) {
+      // Weight increases with index (more recent values have higher weight)
+      const weight = i + 1;
+      smoothedInRate += rates.inRates[i] * weight;
+      smoothedOutRate += rates.outRates[i] * weight;
+      totalWeight += weight;
+    }
+    
+    smoothedInRate = smoothedInRate / totalWeight;
+    smoothedOutRate = smoothedOutRate / totalWeight;
     
     // Update the stored rates
     this.recentNetworkRates.set(guestId, rates);
     
-    this.logger.debug(`Network rates for ${guestId}: Raw in=${inRate.toFixed(2)}, Smoothed in=${smoothedInRate.toFixed(2)}, Raw out=${outRate.toFixed(2)}, Smoothed out=${smoothedOutRate.toFixed(2)}`);
+    this.logger.debug(`Network rates for ${guestId}: Raw in=${inRate.toFixed(2)}, Filtered in=${filteredInRate.toFixed(2)}, Smoothed in=${smoothedInRate.toFixed(2)}, Raw out=${outRate.toFixed(2)}, Filtered out=${filteredOutRate.toFixed(2)}, Smoothed out=${smoothedOutRate.toFixed(2)}`);
     
     return { inRate: smoothedInRate, outRate: smoothedOutRate };
   }
