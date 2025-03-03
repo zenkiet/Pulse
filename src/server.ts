@@ -66,12 +66,12 @@ const startServer = async () => {
     logger.info('Run "npm run test:connection" for more detailed diagnostics.');
   }
   
-  server.listen(config.port, () => {
+  server.listen(config.port, '0.0.0.0', () => {
     logger.info(`Server started on port ${config.port} in ${config.nodeEnv} mode`);
-    logger.info(`Access the application at http://localhost:${config.port}`);
+    logger.info(`Access the application at http://[your-server-ip]:${config.port}`);
     
     if (config.enableDevTools) {
-      logger.info(`Development tools available at http://localhost:${config.port}/dev`);
+      logger.info(`Development tools available at http://[your-server-ip]:${config.port}/dev`);
     }
   });
 };

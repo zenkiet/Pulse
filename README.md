@@ -27,6 +27,7 @@ docker run -d \
 
 # 4. Access the application
 # Open http://localhost:7654 in your browser
+# If running on a remote server, use http://server-ip:7654
 ```
 
 ### Option 2: Docker Compose
@@ -45,6 +46,7 @@ docker-compose up -d
 
 # 4. Access the application
 # Open http://localhost:7654 in your browser
+# If running on a remote server, use http://server-ip:7654
 ```
 
 ## 🔧 Configuration
