@@ -102,12 +102,15 @@ function parseNodeConfigs(): NodeConfig[] {
 
 // Create an Axios client for a node
 function createApiClient(nodeConfig: NodeConfig): AxiosInstance {
+  // Get timeout from environment variable or use default
+  const apiTimeoutMs = parseInt(process.env.API_TIMEOUT_MS || '10000', 10);
+  
   const axiosConfig: AxiosRequestConfig = {
     baseURL: `${nodeConfig.host}/api2/json`,
     headers: {
       'Authorization': `PVEAPIToken=${nodeConfig.tokenId}=${nodeConfig.tokenSecret}`
     },
-    timeout: 10000,
+    timeout: apiTimeoutMs,
     httpsAgent: new https.Agent({
       rejectUnauthorized: false
     })
