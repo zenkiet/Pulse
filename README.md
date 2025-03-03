@@ -77,7 +77,7 @@ Your ProxMox API token needs these permissions:
 You can run this command either by SSH'ing into your ProxMox server or by using the Shell console in the ProxMox web UI (Datacenter → Shell):
 
 ```bash
-# Replace 'pulse' with your preferred token name if desired
+# This creates a token named 'pulse' to match the example in the .env file
 pveum user token add root@pam pulse --privsep=0 && \
 pveum acl modify / -user root@pam -role PVEAuditor && \
 pveum user token list root@pam
@@ -103,7 +103,7 @@ pveum user token list root@pam
    - Go to Datacenter → Permissions → API Tokens
    - Click "Add"
    - Select your user (e.g., "pulse-monitor@pam" or "root@pam")
-   - Enter a token ID (e.g., "monitoring")
+   - Enter a token ID (e.g., "pulse")
    - Leave "Privilege Separation" checked for better security (this restricts the token to only use permissions explicitly granted to it)
    - Click "Add"
    - **Important:** Save the displayed token value securely - it will only be shown once!
@@ -117,7 +117,12 @@ pveum user token list root@pam
 
 5. **Update your .env file**
    ```
-   PROXMOX_NODE_1_TOKEN_ID=pulse-monitor@pam!monitoring
+   # If using root user (matching the quick command example)
+   PROXMOX_NODE_1_TOKEN_ID=root@pam!pulse
+   PROXMOX_NODE_1_TOKEN_SECRET=your-saved-token-value
+   
+   # OR if using a dedicated user (recommended for better security)
+   PROXMOX_NODE_1_TOKEN_ID=pulse-monitor@pam!pulse
    PROXMOX_NODE_1_TOKEN_SECRET=your-saved-token-value
    ```
 
