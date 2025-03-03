@@ -35,3 +35,6 @@ coverage/ .cursor/
 
 # Maintainer-only scripts
 scripts/release.sh
+
+# Release process
+.release-prompt.md
