@@ -148,16 +148,6 @@ docker run -d -p 7654:7654 --env-file .env --name pulse-app --restart unless-sto
 - Responsive design that works on desktop and mobile
 - WebSocket connection for live updates
 
-## 📱 More Screenshots
-
-### Resource Details
-![Resources](docs/images/resources.png)
-*Detailed resource monitoring with real-time graphs*
-
-### Mobile View
-![Mobile](docs/images/mobile.png)
-*Responsive mobile interface*
-
 ## ❓ Troubleshooting
 
 1. **Connection Issues**: Verify your ProxMox node details in `.env`

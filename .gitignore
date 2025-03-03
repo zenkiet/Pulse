@@ -16,6 +16,7 @@ build/
 # Logs
 logs/
 *.log
+socket-debug.log
 
 # Reports
 reports/
@@ -39,3 +40,6 @@ scripts/release.sh
 # Release process
 .release-prompt.md
 .commit-prompt.md
+
+# Development tools
+/tmp/pulse-*.log
