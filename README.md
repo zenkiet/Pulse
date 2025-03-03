@@ -104,7 +104,7 @@ pveum user token list root@pam
    - Click "Add"
    - Select your user (e.g., "pulse-monitor@pam" or "root@pam")
    - Enter a token ID (e.g., "monitoring")
-   - Uncheck "Privilege Separation" only if necessary
+   - Leave "Privilege Separation" checked for better security (this restricts the token to only use permissions explicitly granted to it)
    - Click "Add"
    - **Important:** Save the displayed token value securely - it will only be shown once!
 
