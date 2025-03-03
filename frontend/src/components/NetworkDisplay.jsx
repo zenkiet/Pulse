@@ -791,17 +791,18 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     // Then filter the data based on search terms and filters
     filteredData = filteredData.filter(guest => {
       const guestName = guest.name.toLowerCase();
+      const guestId = guest.id.toLowerCase();
       
-      // If there's a current search term being typed, only filter by that term
+      // If there's a current search term being typed, filter by name or ID
       if (searchTerm) {
-        if (!guestName.includes(searchTerm.toLowerCase())) {
+        if (!guestName.includes(searchTerm.toLowerCase()) && !guestId.includes(searchTerm.toLowerCase())) {
           return false;
         }
       }
-      // Otherwise, if there are active search terms, check if any match (OR logic)
+      // Otherwise, if there are active search terms, check if any match name or ID (OR logic)
       else if (activeSearchTerms.length > 0) {
         const matchesActiveTerms = activeSearchTerms.some(term => 
-          guestName.includes(term.toLowerCase())
+          guestName.includes(term.toLowerCase()) || guestId.includes(term.toLowerCase())
         );
         
         if (!matchesActiveTerms) {
@@ -867,11 +868,6 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
           return sortConfig.direction === 'asc' 
             ? a.status.localeCompare(b.status)
             : b.status.localeCompare(a.status);
-        
-        case 'type':
-          return sortConfig.direction === 'asc' 
-            ? a.type.localeCompare(b.type)
-            : b.type.localeCompare(a.type);
         
         case 'cpu':
           const cpuA = getMetricsForGuest(a.id)?.metrics?.cpu || 0;
@@ -2153,57 +2149,6 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     </Box>
                   </TableCell>
                   
-                  {/* Type Column - Hide when filtered to a specific type */}
-                  {guestTypeFilter === 'all' && (
-                    <TableCell 
-                      width="8%" 
-                      onClick={() => requestSort('type')}
-                      sx={{ 
-                        fontWeight: 'bold',
-                        cursor: 'pointer',
-                        '&:hover': {
-                          backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
-                        },
-                        '&:focus-visible': {
-                          outline: '2px solid',
-                          outlineColor: 'primary.main',
-                          outlineOffset: -2,
-                        }
-                      }}
-                      aria-sort={sortConfig.key === 'type' ? sortConfig.direction : undefined}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        Type
-                        <TableSortLabel
-                          active={sortConfig.key === 'type'}
-                          direction={sortConfig.key === 'type' ? sortConfig.direction : 'asc'}
-                          sx={{
-                            '& .MuiTableSortLabel-icon': {
-                              opacity: sortConfig.key === 'type' ? 1 : 0.3,
-                              marginLeft: '4px !important',
-                            },
-                            '&.Mui-active': {
-                              color: 'inherit',
-                            },
-                            '&:hover': {
-                              color: 'primary.main',
-                            }
-                          }}
-                          IconComponent={props => (
-                            <ArrowDropDownIcon
-                              {...props}
-                              sx={{
-                                fontSize: '1.2rem',
-                                transform: sortConfig.key === 'type' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
-                                transition: 'transform 0.2s'
-                              }}
-                            />
-                          )}
-                        />
-                      </Box>
-                    </TableCell>
-                  )}
-                  
                   {/* CPU Column */}
                   <TableCell 
                     width="19%" 
@@ -2678,17 +2623,53 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         ))
                       }}>
                         <TableCell>
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              fontWeight: 500,
-                              fontFamily: 'monospace',
-                              color: theme => darkMode ? 'text.secondary' : 'text.primary'
-                            }}
-                            title={guest.id} // Show full ID on hover
-                          >
-                            {extractNumericId(guest.id)}
-                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
+                            {/* Type indicator */}
+                            {guest.type === 'qemu' ? (
+                              <Tooltip title="Virtual Machine">
+                                <Box
+                                  sx={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: 'info.main',
+                                    fontSize: '0.7rem',
+                                    opacity: 0.8,
+                                    minWidth: '20px'
+                                  }}
+                                >
+                                  <ComputerIcon sx={{ fontSize: '0.8rem' }} />
+                                </Box>
+                              </Tooltip>
+                            ) : (
+                              <Tooltip title="LXC Container">
+                                <Box
+                                  sx={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: 'success.main',
+                                    fontSize: '0.7rem',
+                                    opacity: 0.8,
+                                    minWidth: '20px'
+                                  }}
+                                >
+                                  <ViewInArIcon sx={{ fontSize: '0.8rem' }} />
+                                </Box>
+                              </Tooltip>
+                            )}
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                fontWeight: 500,
+                                fontFamily: 'monospace',
+                                color: theme => darkMode ? 'text.secondary' : 'text.primary'
+                              }}
+                              title={guest.id} // Show full ID on hover
+                            >
+                              {extractNumericId(guest.id)}
+                            </Typography>
+                          </Box>
                         </TableCell>
                         
                         <TableCell>
@@ -2705,45 +2686,6 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                             </Typography>
                           </Box>
                         </TableCell>
-                        
-                        {/* Type Column - Hide when filtered to a specific type */}
-                        {guestTypeFilter === 'all' && (
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
-                              {guest.type === 'qemu' ? (
-                                <Tooltip title="Virtual Machine">
-                                  <Box
-                                    sx={{
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      color: 'info.main',
-                                      fontSize: '0.7rem',
-                                      opacity: 0.8
-                                    }}
-                                  >
-                                    <ComputerIcon sx={{ fontSize: '0.8rem', mr: 0.3 }} />
-                                    <Box component="span" sx={{ fontSize: '0.65rem', fontWeight: 500, letterSpacing: '0.02em' }}>VM</Box>
-                                  </Box>
-                                </Tooltip>
-                              ) : (
-                                <Tooltip title="LXC Container">
-                                  <Box
-                                    sx={{
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      color: 'success.main',
-                                      fontSize: '0.7rem',
-                                      opacity: 0.8
-                                    }}
-                                  >
-                                    <ViewInArIcon sx={{ fontSize: '0.8rem', mr: 0.3 }} />
-                                    <Box component="span" sx={{ fontSize: '0.65rem', fontWeight: 500, letterSpacing: '0.02em' }}>LXC</Box>
-                                  </Box>
-                                </Tooltip>
-                              )}
-                            </Box>
-                          </TableCell>
-                        )}
                         
                         <TableCell>
                           <ProgressWithLabel 
@@ -2804,7 +2746,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={guestTypeFilter === 'all' ? 8 : 7} align="center" sx={{ py: 8 }}>
+                    <TableCell colSpan={guestTypeFilter === 'all' ? 7 : 7} align="center" sx={{ py: 8 }}>
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 2 }}>
                         <NetworkCheckIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2, opacity: 0.6 }} />
                         <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -2819,7 +2761,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                 )}
                 {guestData.length > 0 && sortedAndFilteredData.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={guestTypeFilter === 'all' ? 8 : 7} align="center" sx={{ py: 6 }}>
+                    <TableCell colSpan={guestTypeFilter === 'all' ? 7 : 7} align="center" sx={{ py: 6 }}>
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 2 }}>
                         <FilterAltIcon sx={{ fontSize: 40, color: 'primary.light', mb: 2, opacity: 0.7 }} />
                         <Typography variant="h6" color="text.secondary" gutterBottom>
