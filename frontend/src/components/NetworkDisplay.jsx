@@ -1293,9 +1293,26 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     textTransform: 'none',
                     fontSize: '0.8rem',
                     fontWeight: 600,
-                    borderRadius: '4px',
+                    borderRadius: '8px',
                     transition: 'all 0.2s ease',
                     boxShadow: (showFilters || activeFilterCount > 0) ? 1 : 0,
+                    px: 1.5,
+                    background: (showFilters || activeFilterCount > 0) ? 
+                      (theme => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`) : 
+                      'transparent',
+                    border: (showFilters || activeFilterCount > 0) ? 'none' : '1px solid',
+                    borderColor: 'primary.light',
+                    '&:hover': {
+                      background: (showFilters || activeFilterCount > 0) ? 
+                        (theme => `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`) : 
+                        (theme => alpha(theme.palette.primary.light, 0.1)),
+                      boxShadow: 2,
+                      transform: 'translateY(-1px)'
+                    },
+                    '&:active': {
+                      transform: 'translateY(0px)',
+                      boxShadow: 1
+                    },
                     '&:focus-visible': {
                       outline: '2px solid',
                       outlineColor: 'primary.main',
@@ -1312,13 +1329,14 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                           alignItems: 'center',
                           justifyContent: 'center',
                           ml: 1,
-                          bgcolor: 'error.main',
-                          color: 'error.contrastText',
-                          borderRadius: '50%',
-                          width: 18,
-                          height: 18,
-                          fontSize: '0.65rem',
+                          bgcolor: (showFilters || activeFilterCount > 0) ? 'rgba(255, 255, 255, 0.25)' : 'error.main',
+                          color: (showFilters || activeFilterCount > 0) ? 'white' : 'error.contrastText',
+                          borderRadius: '12px',
+                          width: 20,
+                          height: 20,
+                          fontSize: '0.7rem',
                           fontWeight: 'bold',
+                          boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.2)'
                         }}
                       >
                         {activeFilterCount}
@@ -1435,11 +1453,13 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       valueLabelDisplay="auto"
                       valueLabelFormat={value => `${formatPercentage(value)}`}
                               sx={{ 
-                        color: theme => alpha(theme.palette.primary.main, filters.cpu > 0 ? 0.8 : 0.4),
+                        color: theme => filters.cpu > 0 ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.4),
                                   height: 4,
                                 '& .MuiSlider-thumb': { 
                           height: 14,
                           width: 14,
+                          opacity: 1,
+                          backgroundColor: theme.palette.primary.main,
                                   '&:hover, &.Mui-focusVisible': { 
                             boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
                                   }
@@ -1491,11 +1511,13 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       valueLabelDisplay="auto"
                       valueLabelFormat={value => `${formatPercentage(value)}`}
                               sx={{ 
-                        color: theme => alpha(theme.palette.primary.main, filters.memory > 0 ? 0.8 : 0.4),
+                        color: theme => filters.memory > 0 ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.4),
                                   height: 4,
                                 '& .MuiSlider-thumb': { 
                           height: 14,
                           width: 14,
+                          opacity: 1,
+                          backgroundColor: theme.palette.primary.main,
                                   '&:hover, &.Mui-focusVisible': { 
                             boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
                                   }
@@ -1547,11 +1569,13 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       valueLabelDisplay="auto"
                       valueLabelFormat={value => `${formatPercentage(value)}`}
                               sx={{ 
-                        color: theme => alpha(theme.palette.primary.main, filters.disk > 0 ? 0.8 : 0.4),
+                        color: theme => filters.disk > 0 ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.4),
                                 height: 4,
                         '& .MuiSlider-thumb': {
                           height: 14,
                           width: 14,
+                          opacity: 1,
+                          backgroundColor: theme.palette.primary.main,
                           '&:hover, &.Mui-focusVisible': {
                             boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
                           }
@@ -1603,11 +1627,13 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       valueLabelDisplay="auto"
                       valueLabelFormat={value => formatNetworkRateForFilter(sliderValueToNetworkRate(value))}
                               sx={{ 
-                        color: theme => alpha(theme.palette.primary.main, filters.download > 0 ? 0.8 : 0.4),
+                        color: theme => filters.download > 0 ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.4),
                                   height: 4,
                                 '& .MuiSlider-thumb': { 
                           height: 14,
                           width: 14,
+                          opacity: 1,
+                          backgroundColor: theme.palette.primary.main,
                                   '&:hover, &.Mui-focusVisible': { 
                             boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
                                   }
@@ -1659,11 +1685,13 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       valueLabelDisplay="auto"
                       valueLabelFormat={value => formatNetworkRateForFilter(sliderValueToNetworkRate(value))}
                       sx={{
-                        color: theme => alpha(theme.palette.secondary.main, filters.upload > 0 ? 0.8 : 0.4),
+                        color: theme => filters.upload > 0 ? theme.palette.secondary.main : alpha(theme.palette.secondary.main, 0.4),
                         height: 4,
                         '& .MuiSlider-thumb': {
                           height: 14,
                           width: 14,
+                          opacity: 1,
+                          backgroundColor: theme.palette.secondary.main,
                           '&:hover, &.Mui-focusVisible': {
                             boxShadow: `0px 0px 0px 8px ${alpha('#9c27b0', 0.16)}`
                           }
@@ -1958,7 +1986,25 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       transition: 'all 0.2s ease',
                       fontWeight: Object.values(filters).some(val => val > 0) ? 600 : 400,
                       textTransform: 'none',
+                      borderRadius: '8px',
+                      px: 1.5,
+                      background: Object.values(filters).some(val => val > 0) ? 
+                        (theme => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`) : 
+                        'transparent',
+                      border: Object.values(filters).some(val => val > 0) ? 'none' : '1px solid',
+                      borderColor: 'primary.light',
                       boxShadow: Object.values(filters).some(val => val > 0) ? 1 : 0,
+                      '&:hover': {
+                        background: Object.values(filters).some(val => val > 0) ? 
+                          (theme => `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`) : 
+                          (theme => alpha(theme.palette.primary.light, 0.1)),
+                        boxShadow: 2,
+                        transform: 'translateY(-1px)'
+                      },
+                      '&:active': {
+                        transform: 'translateY(0px)',
+                        boxShadow: 1
+                      },
                       '&:focus-visible': {
                         outline: '2px solid',
                         outlineColor: 'primary.main',
