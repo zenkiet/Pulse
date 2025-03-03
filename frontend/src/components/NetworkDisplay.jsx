@@ -618,15 +618,6 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
       return;
     }
     
-    // Toggle filters panel with Alt+F
-    if (e.key === 'f' && e.altKey) {
-      if (activeFilterCount > 0) {
-        handleFilterButtonClick(e);
-      }
-      e.preventDefault();
-      return;
-    }
-    
     // Reset all filters with Alt+R
     if (e.key === 'r' && e.altKey) {
       resetFilters();
@@ -1303,7 +1294,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                   color="primary"
                   onClick={handleFilterButtonClick}
                   startIcon={<FilterAltIcon fontSize="small" />}
-                  title="Toggle Filters Panel (Alt+F)" // Add tooltip with keyboard shortcut
+                  title="Toggle Filters Panel" // Removed Alt+F keyboard shortcut from tooltip
                   sx={{ 
                     height: 32, 
                     textTransform: 'none',
