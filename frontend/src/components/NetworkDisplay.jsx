@@ -28,7 +28,8 @@ import {
   alpha,
   useTheme,
   Button,
-  Stack
+  Stack,
+  ClickAwayListener,
 } from '@mui/material';
 import NetworkCheckIcon from '@mui/icons-material/NetworkCheck';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
@@ -68,6 +69,9 @@ import TextField from '@mui/material/TextField';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Divider from '@mui/material/Divider';
 
 // Define pulse animation
 const pulseAnimation = keyframes`
@@ -482,6 +486,9 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
   const [escRecentlyPressed, setEscRecentlyPressed] = useState(false);
   const [sliderDragging, setSliderDragging] = useState(null);
   
+  // Add a ref for the filter button
+  const filterButtonRef = useRef(null);
+  
   // Filter popover handlers
   const handleFilterButtonClick = (event) => {
     // Instead of opening a popover, toggle the filter section
@@ -492,6 +499,14 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     // This function is no longer needed for closing a popover
     // but we'll keep it for compatibility with existing code
     setFilterAnchorEl(null);
+  };
+  
+  // Handler for clicking outside the filter box
+  const handleClickAway = (event) => {
+    // Don't close if clicking on the filter button or if dragging a slider
+    if (showFilters && !sliderDragging && !filterButtonRef.current?.contains(event.target)) {
+      setShowFilters(false);
+    }
   };
   
   // Count active filters
@@ -1282,6 +1297,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
               }}>
                 {/* Unified filter button that toggles the filter section */}
                 <Button
+                  ref={filterButtonRef}
                   size="small"
                   variant={showFilters || activeFilterCount > 0 ? "contained" : "outlined"}
                   color="primary"
@@ -1358,780 +1374,782 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
           </Box>
           
           {/* Filter Panel that shows when filters are active - now includes active filter chips */}
-          <Collapse in={showFilters} timeout="auto" sx={{
-            '& .MuiCollapse-wrapperInner': {
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-            }
-          }}>
-            <Box 
-              sx={{ 
-                mb: 2, 
-                p: 2.5, 
-                backgroundColor: theme => darkMode 
-                  ? alpha(theme.palette.primary.dark, 0.15)
-                  : alpha(theme.palette.primary.light, 0.05),
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: 'divider',
-                boxShadow: theme => darkMode 
-                  ? `0 4px 20px 0 ${alpha(theme.palette.common.black, 0.1)}`
-                  : `0 4px 20px 0 ${alpha(theme.palette.common.black, 0.05)}`,
-                transition: 'all 0.3s ease',
-                overflow: 'hidden'
-              }}
-              role="region"
-              aria-label="Filter controls"
-            >
-              {/* Add active filters section at the top */}
-              {activeFilterCount > 0 && (
-                <Box sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  mb: 2,
-                  pb: 1.5,
-                  borderBottom: '1px solid',
-                  borderColor: 'divider'
-                }}>
-                  <Typography variant="subtitle2">
-                    Active Filters ({activeFilterCount})
-                  </Typography>
-                </Box>
-              )}
-              
-              <Typography 
-                variant="subtitle2" 
+          <ClickAwayListener onClickAway={handleClickAway}>
+            <Collapse in={showFilters} timeout="auto" sx={{
+              '& .MuiCollapse-wrapperInner': {
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              }
+            }}>
+              <Box 
                 sx={{ 
-                  mb: 2.5, 
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: 'text.primary'
+                  mb: 2, 
+                  p: 2.5, 
+                  backgroundColor: theme => darkMode 
+                    ? alpha(theme.palette.primary.dark, 0.15)
+                    : alpha(theme.palette.primary.light, 0.05),
+                  borderRadius: 2,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  boxShadow: theme => darkMode 
+                    ? `0 4px 20px 0 ${alpha(theme.palette.common.black, 0.1)}`
+                    : `0 4px 20px 0 ${alpha(theme.palette.common.black, 0.05)}`,
+                  transition: 'all 0.3s ease',
+                  overflow: 'hidden'
                 }}
+                role="region"
+                aria-label="Filter controls"
               >
-                <FilterAltIcon sx={{ fontSize: '1rem', mr: 1, opacity: 0.7 }} />
-                Adjust minimum thresholds:
-              </Typography>
-              
-              {/* CPU Filter */}
-              <Box sx={{ 
-                display: 'grid', 
-                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr', lg: '1fr 1fr 1fr 1fr 1fr' },
-                gap: 3,
-                mb: 3
-              }}>
-                <Box sx={{ 
-                  backgroundColor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
-                  borderRadius: 1.5,
-                  p: 1.5,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    boxShadow: theme => `0 2px 8px 0 ${alpha(theme.palette.primary.main, 0.1)}`,
-                    borderColor: theme => alpha(theme.palette.primary.main, 0.3)
-                  }
-                }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <SpeedIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem', color: 'primary.main' }} />
-                    <Typography 
-                      variant="body2" 
-                      sx={{ fontWeight: 600 }}
-                      id="cpu-filter-label"
-                    >
-                      CPU Usage
-                    </Typography>
-                  </Box>
-                  <Slider
-                    value={filters.cpu}
-                    onChange={(_, newValue) => updateFilter('cpu', newValue)}
-                    onMouseDown={() => handleSliderDragStart('cpu')}
-                    onMouseUp={handleSliderDragEnd}
-                    aria-labelledby="cpu-filter-label"
-                    aria-valuetext={`${formatPercentage(filters.cpu)}`}
-                    valueLabelDisplay="auto"
-                    valueLabelFormat={value => `${formatPercentage(value)}`}
-                    sx={{ 
-                      color: theme => filters.cpu > 0 ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.4),
-                      height: 4,
-                      '& .MuiSlider-thumb': { 
-                        height: 14,
-                        width: 14,
-                        opacity: 1,
-                        backgroundColor: theme.palette.primary.main,
-                        '&:hover, &.Mui-focusVisible': { 
-                          boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
-                        }
-                      },
-                      '& .MuiSlider-valueLabel': {
-                        fontWeight: 'bold',
-                        lineHeight: 1.2
-                      }
-                    }}
-                  />
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
-                    <Typography variant="caption" color="text.secondary">0%</Typography>
-                    <Typography variant="caption" color="text.secondary">100%</Typography>
-                          </Box>
-                </Box>
-                
-                {/* Memory Filter */}
-                <Box sx={{ 
-                  backgroundColor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
-                  borderRadius: 1.5,
-                  p: 1.5,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    boxShadow: theme => `0 2px 8px 0 ${alpha(theme.palette.primary.main, 0.1)}`,
-                    borderColor: theme => alpha(theme.palette.primary.main, 0.3)
-                  }
-                }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <MemoryIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem', color: 'primary.main' }} />
-                    <Typography 
-                      variant="body2" 
-                      sx={{ fontWeight: 600 }}
-                      id="memory-filter-label"
-                    >
-                      Memory Usage
-                    </Typography>
-                  </Box>
-                  <Slider
-                    value={filters.memory}
-                    onChange={(_, newValue) => updateFilter('memory', newValue)}
-                    onMouseDown={() => handleSliderDragStart('memory')}
-                    onMouseUp={handleSliderDragEnd}
-                    aria-labelledby="memory-filter-label"
-                    aria-valuetext={`${formatPercentage(filters.memory)}`}
-                    valueLabelDisplay="auto"
-                    valueLabelFormat={value => `${formatPercentage(value)}`}
-                    sx={{ 
-                      color: theme => filters.memory > 0 ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.4),
-                      height: 4,
-                      '& .MuiSlider-thumb': { 
-                        height: 14,
-                        width: 14,
-                        opacity: 1,
-                        backgroundColor: theme.palette.primary.main,
-                        '&:hover, &.Mui-focusVisible': { 
-                          boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
-                        }
-                      },
-                      '& .MuiSlider-valueLabel': {
-                        fontWeight: 'bold',
-                        lineHeight: 1.2
-                      }
-                    }}
-                  />
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
-                    <Typography variant="caption" color="text.secondary">0%</Typography>
-                    <Typography variant="caption" color="text.secondary">100%</Typography>
-                          </Box>
-                </Box>
-                
-                {/* Disk Filter */}
-                <Box sx={{ 
-                  backgroundColor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
-                  borderRadius: 1.5,
-                  p: 1.5,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    boxShadow: theme => `0 2px 8px 0 ${alpha(theme.palette.primary.main, 0.1)}`,
-                    borderColor: theme => alpha(theme.palette.primary.main, 0.3)
-                  }
-                }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <StorageIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem', color: 'primary.main' }} />
-                    <Typography 
-                      variant="body2" 
-                      sx={{ fontWeight: 600 }}
-                      id="disk-filter-label"
-                    >
-                      Disk Usage
-                    </Typography>
-                  </Box>
-                  <Slider
-                    value={filters.disk} 
-                    onChange={(_, newValue) => updateFilter('disk', newValue)}
-                    onMouseDown={() => handleSliderDragStart('disk')}
-                    onMouseUp={handleSliderDragEnd}
-                    aria-labelledby="disk-filter-label"
-                    aria-valuetext={`${formatPercentage(filters.disk)}`}
-                    valueLabelDisplay="auto"
-                    valueLabelFormat={value => `${formatPercentage(value)}`}
-                    sx={{ 
-                      color: theme => filters.disk > 0 ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.4),
-                      height: 4,
-                      '& .MuiSlider-thumb': {
-                        height: 14,
-                        width: 14,
-                        opacity: 1,
-                        backgroundColor: theme.palette.primary.main,
-                        '&:hover, &.Mui-focusVisible': {
-                          boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
-                        }
-                      },
-                      '& .MuiSlider-valueLabel': {
-                        fontWeight: 'bold',
-                        lineHeight: 1.2
-                      }
-                    }} 
-                  />
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
-                    <Typography variant="caption" color="text.secondary">0%</Typography>
-                    <Typography variant="caption" color="text.secondary">100%</Typography>
-                  </Box>
-                </Box>
-                
-                {/* Download Filter */}
-                <Box sx={{ 
-                  backgroundColor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
-                  borderRadius: 1.5,
-                  p: 1.5,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    boxShadow: theme => `0 2px 8px 0 ${alpha(theme.palette.primary.main, 0.1)}`,
-                    borderColor: theme => alpha(theme.palette.primary.main, 0.3)
-                  }
-                }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <ArrowDownwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem', color: 'secondary.main' }} />
-                    <Typography 
-                      variant="body2" 
-                      sx={{ fontWeight: 600 }}
-                      id="download-filter-label"
-                    >
-                      Download Rate
-                    </Typography>
-                  </Box>
-                  <Slider
-                    value={filters.download}
-                    onChange={(_, newValue) => updateFilter('download', newValue)}
-                    onMouseDown={() => handleSliderDragStart('download')}
-                    onMouseUp={handleSliderDragEnd}
-                    aria-labelledby="download-filter-label"
-                    aria-valuetext={`${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}`}
-                    valueLabelDisplay="auto"
-                    valueLabelFormat={value => formatNetworkRateForFilter(sliderValueToNetworkRate(value))}
-                    sx={{
-                      color: theme => filters.download > 0 ? theme.palette.secondary.main : alpha(theme.palette.secondary.main, 0.4),
-                      height: 4,
-                      '& .MuiSlider-thumb': {
-                        height: 14,
-                        width: 14,
-                        opacity: 1,
-                        backgroundColor: theme.palette.secondary.main,
-                        '&:hover, &.Mui-focusVisible': {
-                          boxShadow: `0px 0px 0px 8px ${alpha('#9c27b0', 0.16)}`
-                        }
-                      },
-                      '& .MuiSlider-valueLabel': {
-                        fontWeight: 'bold',
-                        lineHeight: 1.2
-                      }
-                    }}
-                  />
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
-                    <Typography variant="caption" color="text.secondary">0 B/s</Typography>
-                    <Typography variant="caption" color="text.secondary">10 MB/s</Typography>
-                          </Box>
-                </Box>
-                
-                {/* Upload Filter */}
-                <Box sx={{ 
-                  backgroundColor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
-                  borderRadius: 1.5,
-                  p: 1.5,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    boxShadow: theme => `0 2px 8px 0 ${alpha(theme.palette.secondary.main, 0.1)}`,
-                    borderColor: theme => alpha(theme.palette.secondary.main, 0.3)
-                  }
-                }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <ArrowUpwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem', color: 'secondary.main' }} />
-                    <Typography 
-                      variant="body2" 
-                      sx={{ fontWeight: 600 }}
-                      id="upload-filter-label"
-                    >
-                      Upload Rate
-                    </Typography>
-                  </Box>
-                  <Slider
-                    value={filters.upload}
-                    onChange={(_, newValue) => updateFilter('upload', newValue)}
-                    onMouseDown={() => handleSliderDragStart('upload')}
-                    onMouseUp={handleSliderDragEnd}
-                    aria-labelledby="upload-filter-label"
-                    aria-valuetext={`${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}`}
-                    valueLabelDisplay="auto"
-                    valueLabelFormat={value => formatNetworkRateForFilter(sliderValueToNetworkRate(value))}
-                    sx={{
-                      color: theme => filters.upload > 0 ? theme.palette.secondary.main : alpha(theme.palette.secondary.main, 0.4),
-                      height: 4,
-                      '& .MuiSlider-thumb': {
-                        height: 14,
-                        width: 14,
-                        opacity: 1,
-                        backgroundColor: theme.palette.secondary.main,
-                        '&:hover, &.Mui-focusVisible': {
-                          boxShadow: `0px 0px 0px 8px ${alpha('#9c27b0', 0.16)}`
-                        }
-                      },
-                      '& .MuiSlider-valueLabel': {
-                        fontWeight: 'bold',
-                        lineHeight: 1.2
-                      }
-                    }}
-                  />
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
-                    <Typography variant="caption" color="text.secondary">0 B/s</Typography>
-                    <Typography variant="caption" color="text.secondary">10 MB/s</Typography>
-                        </Box>
-                      </Box>
-                    </Box>
-              
-              {/* Add search term chips if any exist - moved below slider cards */}
-              {(activeSearchTerms.length > 0 || (searchTerm && !activeSearchTerms.includes(searchTerm))) && (
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="caption" fontWeight="bold" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                    Search Terms
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                    {activeSearchTerms.map((term) => (
-                      <Chip
-                        key={term}
-                        size="small"
-                        icon={<SearchIcon fontSize="small" />}
-                        label={`"${term}"`}
-                        color="primary"
-                        onDelete={() => removeSearchTerm(term)}
-                      />
-                    ))}
-                    {searchTerm && !activeSearchTerms.includes(searchTerm) && (
-                      <Chip
-                        size="small"
-                        icon={<SearchIcon fontSize="small" />}
-                        label={`"${searchTerm}"`}
-                        color="secondary"
-                        onDelete={() => setSearchTerm('')}
-                      />
-                    )}
-                  </Box>
-                </Box>
-              )}
-              
-              {/* Resource filter chips if any exist - moved below slider cards */}
-              {Object.entries(filters).some(([key, value]) => value > 0) && (
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="caption" fontWeight="bold" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                    Resource Filters
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                    {Object.entries(filters).map(([key, value]) => {
-                      if (value <= 0) return null;
-                      
-                      let label = '';
-                      let icon = null;
-                      
-                      switch(key) {
-                        case 'cpu':
-                          label = `CPU > ${value}%`;
-                          icon = <SpeedIcon fontSize="small" />;
-                          break;
-                        case 'memory':
-                          label = `Memory > ${value}%`;
-                          icon = <MemoryIcon fontSize="small" />;
-                          break;
-                        case 'disk':
-                          label = `Disk > ${value}%`;
-                          icon = <StorageIcon fontSize="small" />;
-                          break;
-                        case 'download':
-                          label = `Download > ${formatNetworkRateForFilter(sliderValueToNetworkRate(value))}`;
-                          icon = <DownloadIcon fontSize="small" />;
-                          break;
-                        case 'upload':
-                          label = `Upload > ${formatNetworkRateForFilter(sliderValueToNetworkRate(value))}`;
-                          icon = <UploadIcon fontSize="small" />;
-                          break;
-                        default:
-                          return null;
-                      }
-                      
-                      return (
-                        <Chip
-                          key={key}
-                          size="small"
-                          icon={icon}
-                          label={label}
-                          color="primary"
-                          variant="outlined"
-                          onDelete={() => clearFilter(key)}
-                        />
-                      );
-                    })}
-                  </Box>
-                </Box>
-              )}
-              
-              {/* Completely restructure the filter info section */}
-              <Box sx={{ 
-                display: 'flex', 
-                flexDirection: 'column',
-                width: '100%',
-                mt: 2,
-                mb: 1,
-                pt: 2,
-                borderTop: '1px solid',
-                borderTopColor: 'divider'
-              }}>
-                {/* Guest Type and Status Filters */}
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center',
-                  flexWrap: { xs: 'wrap', sm: 'nowrap' }, 
-                  gap: { xs: 2, sm: 3 },
-                  mb: 2,
-                  pb: 2,
-                  borderBottom: '1px solid',
-                  borderBottomColor: 'divider'
-                }}>
-                  {/* Guest Type Filter */}
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <FilterListIcon sx={{ fontSize: '0.875rem', mr: 0.5, opacity: 0.7, color: 'primary.main' }} />
-                    <Typography variant="caption" sx={{ mr: 1, fontWeight: 600 }}>Guest Type:</Typography>
-                    <Box sx={{ display: 'flex', borderRadius: 1, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
-                      <Tooltip title="Show all guests">
-                        <Box
-                          onClick={() => setGuestTypeFilter('all')}
-                          sx={{
-                            px: 1,
-                            py: 0.5,
-                            fontSize: '0.75rem',
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            bgcolor: guestTypeFilter === 'all' ? 'primary.main' : 'transparent',
-                            color: guestTypeFilter === 'all' ? 'primary.contrastText' : 'text.primary',
-                            '&:hover': {
-                              bgcolor: guestTypeFilter === 'all' ? 'primary.dark' : 'action.hover',
-                            }
-                          }}
-                        >
-                          All
-                        </Box>
-                      </Tooltip>
-                      <Tooltip title="Show only virtual machines">
-                        <Box
-                          onClick={() => setGuestTypeFilter('vm')}
-                          sx={{
-                            px: 1,
-                            py: 0.5,
-                            fontSize: '0.75rem',
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            bgcolor: guestTypeFilter === 'vm' ? 'info.main' : 'transparent',
-                            color: guestTypeFilter === 'vm' ? 'info.contrastText' : 'text.primary',
-                            borderLeft: '1px solid',
-                            borderLeftColor: 'divider',
-                            '&:hover': {
-                              bgcolor: guestTypeFilter === 'vm' ? 'info.dark' : 'action.hover',
-                            }
-                          }}
-                        >
-                          <ComputerIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                          VM
-                        </Box>
-                      </Tooltip>
-                      <Tooltip title="Show only LXC containers">
-                        <Box
-                          onClick={() => setGuestTypeFilter('lxc')}
-                          sx={{
-                            px: 1,
-                            py: 0.5,
-                            fontSize: '0.75rem',
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            bgcolor: guestTypeFilter === 'lxc' ? 'success.main' : 'transparent',
-                            color: guestTypeFilter === 'lxc' ? 'success.contrastText' : 'text.primary',
-                            borderLeft: '1px solid',
-                            borderLeftColor: 'divider',
-                            '&:hover': {
-                              bgcolor: guestTypeFilter === 'lxc' ? 'success.dark' : 'action.hover',
-                            }
-                          }}
-                        >
-                          <ViewInArIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                          LXC
-                        </Box>
-                      </Tooltip>
-                    </Box>
-                  </Box>
-                  
-                  {/* Status Filter */}
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <PlayCircleOutlineIcon sx={{ fontSize: '0.875rem', mr: 0.5, opacity: 0.7, color: 'primary.main' }} />
-                    <Typography variant="caption" sx={{ mr: 1, fontWeight: 600 }}>Status:</Typography>
-                    <Box sx={{ 
-                      display: 'flex', 
-                      borderRadius: 1, 
-                      border: '1px solid', 
-                      borderColor: 'divider', 
-                      overflow: 'hidden'
-                    }}>
-                      <Tooltip title="Show only running systems">
-                        <Box
-                          onClick={() => setShowStopped(false)}
-                          sx={{
-                            px: 1.5,
-                            py: 0.5,
-                            fontSize: '0.75rem',
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            bgcolor: !showStopped ? 'success.main' : 'transparent',
-                            color: !showStopped ? 'success.contrastText' : 'text.primary',
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                              bgcolor: !showStopped ? 'success.dark' : 'action.hover',
-                            }
-                          }}
-                        >
-                          <PlayArrowIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                          Running
-                        </Box>
-                      </Tooltip>
-                      <Tooltip title="Show all systems including stopped ones">
-                        <Box
-                          onClick={() => setShowStopped(true)}
-                          sx={{
-                            px: 1.5,
-                            py: 0.5,
-                            fontSize: '0.75rem',
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            bgcolor: showStopped ? 'primary.main' : 'transparent',
-                            color: showStopped ? 'primary.contrastText' : 'text.primary',
-                            borderLeft: '1px solid',
-                            borderLeftColor: 'divider',
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                              bgcolor: showStopped ? 'primary.dark' : 'action.hover',
-                            }
-                          }}
-                        >
-                          <AllInclusiveIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                          All
-                        </Box>
-                      </Tooltip>
-                    </Box>
-                  </Box>
-                  
-                  {/* Export Options */}
-                  {guestData.length > 0 && sortedAndFilteredData.length > 0 && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', ml: 'auto' }}>
-                      <Typography variant="caption" sx={{ mr: 1, fontWeight: 600 }}>Export:</Typography>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Tooltip title="Export as PDF">
-                          <IconButton
-                            size="small"
-                            onClick={generatePDF}
-                            sx={{
-                              padding: 0.5,
-                              '&:hover': {
-                                backgroundColor: alpha(theme.palette.primary.main, 0.1)
-                              }
-                            }}
-                          >
-                            <PictureAsPdfIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        
-                        <Tooltip title="Export as CSV">
-                          <IconButton
-                            size="small"
-                            onClick={() => {
-                              try {
-                                console.log('CSV export started');
-                                
-                                // Create CSV content
-                                const headers = ['Name', 'Status', 'CPU Usage', 'Memory Usage', 'Disk Usage', 'Download', 'Upload'];
-                                const csvRows = [headers];
-                                
-                                // Helper function to escape CSV values properly
-                                const escapeCSV = (value) => {
-                                  if (value === null || value === undefined) return '';
-                                  const str = String(value);
-                                  // If the value contains commas, quotes, or newlines, wrap it in quotes
-                                  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-                                    // Double up any quotes
-                                    return `"${str.replace(/"/g, '""')}"`;
-                                  }
-                                  return str;
-                                };
-                                
-                                // Add data rows
-                                sortedAndFilteredData.forEach(guest => {
-                                  try {
-                                    const metrics = getMetricsForGuest(guest.id);
-                                    const networkMetrics = metrics?.metrics?.network;
-                                    
-                                    // Get resource metrics
-                                    const cpuUsage = metrics?.metrics?.cpu || 0;
-                                    
-                                    const memoryData = metrics?.metrics?.memory || {};
-                                    const memoryUsage = memoryData.percentUsed || 
-                                      (memoryData.total && memoryData.used ? 
-                                        (memoryData.used / memoryData.total) * 100 : 0);
-                                    
-                                    const diskData = metrics?.metrics?.disk || {};
-                                    const diskUsage = diskData.percentUsed || 
-                                      (diskData.total && diskData.used ? 
-                                        (diskData.used / diskData.total) * 100 : 0);
-                                    
-                                    csvRows.push([
-                                      escapeCSV(guest.name || 'Unknown'),
-                                      escapeCSV(guest.status || 'Unknown'),
-                                      escapeCSV(formatPercentage(cpuUsage)),
-                                      escapeCSV(formatPercentage(memoryUsage)),
-                                      escapeCSV(formatPercentage(diskUsage)),
-                                      escapeCSV(guest.status === 'running' && networkMetrics ? 
-                                        formatNetworkRate(networkMetrics.inRate || 0) : '-'),
-                                      escapeCSV(guest.status === 'running' && networkMetrics ? 
-                                        formatNetworkRate(networkMetrics.outRate || 0) : '-')
-                                    ]);
-                                  } catch (rowError) {
-                                    console.error('Error processing CSV row for guest:', guest?.name, rowError);
-                                    // Add a fallback row with error information
-                                    csvRows.push([
-                                      escapeCSV(guest?.name || 'Unknown'),
-                                      escapeCSV(guest?.status || 'Unknown'),
-                                      'Error', 'Error', 'Error', 'Error', 'Error'
-                                    ]);
-                                  }
-                                });
-                                
-                                // Convert to CSV string
-                                const csvContent = csvRows.map(row => row.join(',')).join('\n');
-                                console.log('CSV content generated');
-                                
-                                // Create and download the file
-                                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                                const url = URL.createObjectURL(blob);
-                                const link = document.createElement('a');
-                                link.setAttribute('href', url);
-                                link.setAttribute('download', `container-status-${new Date().toISOString().split('T')[0]}.csv`);
-                                link.style.visibility = 'hidden';
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                                URL.revokeObjectURL(url);
-                                console.log('CSV downloaded successfully');
-                              } catch (error) {
-                                console.error('Error exporting CSV:', error);
-                                if (error.message) {
-                                  alert(`Failed to export CSV: ${error.message}`);
-                                } else {
-                                  alert('Failed to export CSV. Please check the console for details.');
-                                }
-                              }
-                            }}
-                            sx={{
-                              padding: 0.5,
-                              '&:hover': {
-                                backgroundColor: alpha(theme.palette.primary.main, 0.1)
-                              }
-                            }}
-                          >
-                            <FileDownloadIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </Box>
-                  )}
-                </Box>
-                
-                {/* Filter summary text in its own dedicated row */}
-                {(Object.values(filters).some(val => val > 0) || selectedNode !== 'all') && (
+                {/* Add active filters section at the top */}
+                {activeFilterCount > 0 && (
                   <Box sx={{ 
                     display: 'flex', 
-                    alignItems: 'center', 
-                    width: '100%',
-                    mb: 2
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    mb: 2,
+                    pb: 1.5,
+                    borderBottom: '1px solid',
+                    borderColor: 'divider'
                   }}>
-                    <Typography 
-                      variant="caption" 
-                      color="primary.main"
-                      sx={{ 
-                        fontWeight: 500,
-                        display: 'flex',
-                        alignItems: 'center'
-                      }}
-                      aria-live="polite"
-                    >
-                      <InfoOutlinedIcon sx={{ fontSize: '0.875rem', mr: 0.5, opacity: 0.7 }} />
-                      {`Showing ${sortedAndFilteredData.length} of ${getNodeFilteredGuests(guestData).length} systems${selectedNode !== 'all' ? ` on ${selectedNode === 'node1' ? 'Production' : selectedNode === 'node2' ? 'Development' : 'Testing'}` : ''}`}
+                    <Typography variant="subtitle2">
+                      Active Filters ({activeFilterCount})
                     </Typography>
                   </Box>
                 )}
                 
-                {/* Reset button in its own row */}
+                <Typography 
+                  variant="subtitle2" 
+                  sx={{ 
+                    mb: 2.5, 
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: 'text.primary'
+                  }}
+                >
+                  <FilterAltIcon sx={{ fontSize: '1rem', mr: 1, opacity: 0.7 }} />
+                  Adjust minimum thresholds:
+                </Typography>
+                
+                {/* CPU Filter */}
+                <Box sx={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr', lg: '1fr 1fr 1fr 1fr 1fr' },
+                  gap: 3,
+                  mb: 3
+                }}>
+                  <Box sx={{ 
+                    backgroundColor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
+                    borderRadius: 1.5,
+                    p: 1.5,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      boxShadow: theme => `0 2px 8px 0 ${alpha(theme.palette.primary.main, 0.1)}`,
+                      borderColor: theme => alpha(theme.palette.primary.main, 0.3)
+                    }
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <SpeedIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem', color: 'primary.main' }} />
+                      <Typography 
+                        variant="body2" 
+                        sx={{ fontWeight: 600 }}
+                        id="cpu-filter-label"
+                      >
+                        CPU Usage
+                      </Typography>
+                    </Box>
+                    <Slider
+                      value={filters.cpu}
+                      onChange={(_, newValue) => updateFilter('cpu', newValue)}
+                      onMouseDown={() => handleSliderDragStart('cpu')}
+                      onMouseUp={handleSliderDragEnd}
+                      aria-labelledby="cpu-filter-label"
+                      aria-valuetext={`${formatPercentage(filters.cpu)}`}
+                      valueLabelDisplay="auto"
+                      valueLabelFormat={value => `${formatPercentage(value)}`}
+                      sx={{ 
+                        color: theme => filters.cpu > 0 ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.4),
+                        height: 4,
+                        '& .MuiSlider-thumb': { 
+                          height: 14,
+                          width: 14,
+                          opacity: 1,
+                          backgroundColor: theme.palette.primary.main,
+                          '&:hover, &.Mui-focusVisible': { 
+                            boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
+                          }
+                        },
+                        '& .MuiSlider-valueLabel': {
+                          fontWeight: 'bold',
+                          lineHeight: 1.2
+                        }
+                      }}
+                    />
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary">0%</Typography>
+                      <Typography variant="caption" color="text.secondary">100%</Typography>
+                            </Box>
+                  </Box>
+                  
+                  {/* Memory Filter */}
+                  <Box sx={{ 
+                    backgroundColor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
+                    borderRadius: 1.5,
+                    p: 1.5,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      boxShadow: theme => `0 2px 8px 0 ${alpha(theme.palette.primary.main, 0.1)}`,
+                      borderColor: theme => alpha(theme.palette.primary.main, 0.3)
+                    }
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <MemoryIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem', color: 'primary.main' }} />
+                      <Typography 
+                        variant="body2" 
+                        sx={{ fontWeight: 600 }}
+                        id="memory-filter-label"
+                      >
+                        Memory Usage
+                      </Typography>
+                    </Box>
+                    <Slider
+                      value={filters.memory}
+                      onChange={(_, newValue) => updateFilter('memory', newValue)}
+                      onMouseDown={() => handleSliderDragStart('memory')}
+                      onMouseUp={handleSliderDragEnd}
+                      aria-labelledby="memory-filter-label"
+                      aria-valuetext={`${formatPercentage(filters.memory)}`}
+                      valueLabelDisplay="auto"
+                      valueLabelFormat={value => `${formatPercentage(value)}`}
+                      sx={{ 
+                        color: theme => filters.memory > 0 ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.4),
+                        height: 4,
+                        '& .MuiSlider-thumb': { 
+                          height: 14,
+                          width: 14,
+                          opacity: 1,
+                          backgroundColor: theme.palette.primary.main,
+                          '&:hover, &.Mui-focusVisible': { 
+                            boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
+                          }
+                        },
+                        '& .MuiSlider-valueLabel': {
+                          fontWeight: 'bold',
+                          lineHeight: 1.2
+                        }
+                      }}
+                    />
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary">0%</Typography>
+                      <Typography variant="caption" color="text.secondary">100%</Typography>
+                            </Box>
+                  </Box>
+                  
+                  {/* Disk Filter */}
+                  <Box sx={{ 
+                    backgroundColor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
+                    borderRadius: 1.5,
+                    p: 1.5,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      boxShadow: theme => `0 2px 8px 0 ${alpha(theme.palette.primary.main, 0.1)}`,
+                      borderColor: theme => alpha(theme.palette.primary.main, 0.3)
+                    }
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <StorageIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem', color: 'primary.main' }} />
+                      <Typography 
+                        variant="body2" 
+                        sx={{ fontWeight: 600 }}
+                        id="disk-filter-label"
+                      >
+                        Disk Usage
+                      </Typography>
+                    </Box>
+                    <Slider
+                      value={filters.disk} 
+                      onChange={(_, newValue) => updateFilter('disk', newValue)}
+                      onMouseDown={() => handleSliderDragStart('disk')}
+                      onMouseUp={handleSliderDragEnd}
+                      aria-labelledby="disk-filter-label"
+                      aria-valuetext={`${formatPercentage(filters.disk)}`}
+                      valueLabelDisplay="auto"
+                      valueLabelFormat={value => `${formatPercentage(value)}`}
+                      sx={{ 
+                        color: theme => filters.disk > 0 ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.4),
+                        height: 4,
+                        '& .MuiSlider-thumb': {
+                          height: 14,
+                          width: 14,
+                          opacity: 1,
+                          backgroundColor: theme.palette.primary.main,
+                          '&:hover, &.Mui-focusVisible': {
+                            boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
+                          }
+                        },
+                        '& .MuiSlider-valueLabel': {
+                          fontWeight: 'bold',
+                          lineHeight: 1.2
+                        }
+                      }} 
+                    />
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary">0%</Typography>
+                      <Typography variant="caption" color="text.secondary">100%</Typography>
+                    </Box>
+                  </Box>
+                  
+                  {/* Download Filter */}
+                  <Box sx={{ 
+                    backgroundColor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
+                    borderRadius: 1.5,
+                    p: 1.5,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      boxShadow: theme => `0 2px 8px 0 ${alpha(theme.palette.primary.main, 0.1)}`,
+                      borderColor: theme => alpha(theme.palette.primary.main, 0.3)
+                    }
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <ArrowDownwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem', color: 'secondary.main' }} />
+                      <Typography 
+                        variant="body2" 
+                        sx={{ fontWeight: 600 }}
+                        id="download-filter-label"
+                      >
+                        Download Rate
+                      </Typography>
+                    </Box>
+                    <Slider
+                      value={filters.download}
+                      onChange={(_, newValue) => updateFilter('download', newValue)}
+                      onMouseDown={() => handleSliderDragStart('download')}
+                      onMouseUp={handleSliderDragEnd}
+                      aria-labelledby="download-filter-label"
+                      aria-valuetext={`${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}`}
+                      valueLabelDisplay="auto"
+                      valueLabelFormat={value => formatNetworkRateForFilter(sliderValueToNetworkRate(value))}
+                      sx={{
+                        color: theme => filters.download > 0 ? theme.palette.secondary.main : alpha(theme.palette.secondary.main, 0.4),
+                        height: 4,
+                        '& .MuiSlider-thumb': {
+                          height: 14,
+                          width: 14,
+                          opacity: 1,
+                          backgroundColor: theme.palette.secondary.main,
+                          '&:hover, &.Mui-focusVisible': {
+                            boxShadow: `0px 0px 0px 8px ${alpha('#9c27b0', 0.16)}`
+                          }
+                        },
+                        '& .MuiSlider-valueLabel': {
+                          fontWeight: 'bold',
+                          lineHeight: 1.2
+                        }
+                      }}
+                    />
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary">0 B/s</Typography>
+                      <Typography variant="caption" color="text.secondary">10 MB/s</Typography>
+                            </Box>
+                  </Box>
+                  
+                  {/* Upload Filter */}
+                  <Box sx={{ 
+                    backgroundColor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
+                    borderRadius: 1.5,
+                    p: 1.5,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      boxShadow: theme => `0 2px 8px 0 ${alpha(theme.palette.secondary.main, 0.1)}`,
+                      borderColor: theme => alpha(theme.palette.secondary.main, 0.3)
+                    }
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <ArrowUpwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem', color: 'secondary.main' }} />
+                      <Typography 
+                        variant="body2" 
+                        sx={{ fontWeight: 600 }}
+                        id="upload-filter-label"
+                      >
+                        Upload Rate
+                      </Typography>
+                    </Box>
+                    <Slider
+                      value={filters.upload}
+                      onChange={(_, newValue) => updateFilter('upload', newValue)}
+                      onMouseDown={() => handleSliderDragStart('upload')}
+                      onMouseUp={handleSliderDragEnd}
+                      aria-labelledby="upload-filter-label"
+                      aria-valuetext={`${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}`}
+                      valueLabelDisplay="auto"
+                      valueLabelFormat={value => formatNetworkRateForFilter(sliderValueToNetworkRate(value))}
+                      sx={{
+                        color: theme => filters.upload > 0 ? theme.palette.secondary.main : alpha(theme.palette.secondary.main, 0.4),
+                        height: 4,
+                        '& .MuiSlider-thumb': {
+                          height: 14,
+                          width: 14,
+                          opacity: 1,
+                          backgroundColor: theme.palette.secondary.main,
+                          '&:hover, &.Mui-focusVisible': {
+                            boxShadow: `0px 0px 0px 8px ${alpha('#9c27b0', 0.16)}`
+                          }
+                        },
+                        '& .MuiSlider-valueLabel': {
+                          fontWeight: 'bold',
+                          lineHeight: 1.2
+                        }
+                      }}
+                    />
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary">0 B/s</Typography>
+                      <Typography variant="caption" color="text.secondary">10 MB/s</Typography>
+                          </Box>
+                    </Box>
+                  </Box>
+              
+                {/* Add search term chips if any exist - moved below slider cards */}
+                {(activeSearchTerms.length > 0 || (searchTerm && !activeSearchTerms.includes(searchTerm))) && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="caption" fontWeight="bold" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                      Search Terms
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                      {activeSearchTerms.map((term) => (
+                        <Chip
+                          key={term}
+                          size="small"
+                          icon={<SearchIcon fontSize="small" />}
+                          label={`"${term}"`}
+                          color="primary"
+                          onDelete={() => removeSearchTerm(term)}
+                        />
+                      ))}
+                      {searchTerm && !activeSearchTerms.includes(searchTerm) && (
+                        <Chip
+                          size="small"
+                          icon={<SearchIcon fontSize="small" />}
+                          label={`"${searchTerm}"`}
+                          color="secondary"
+                          onDelete={() => setSearchTerm('')}
+                        />
+                      )}
+                    </Box>
+                  </Box>
+                )}
+                
+                {/* Resource filter chips if any exist - moved below slider cards */}
+                {Object.entries(filters).some(([key, value]) => value > 0) && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="caption" fontWeight="bold" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                      Resource Filters
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                      {Object.entries(filters).map(([key, value]) => {
+                        if (value <= 0) return null;
+                        
+                        let label = '';
+                        let icon = null;
+                        
+                        switch(key) {
+                          case 'cpu':
+                            label = `CPU > ${value}%`;
+                            icon = <SpeedIcon fontSize="small" />;
+                            break;
+                          case 'memory':
+                            label = `Memory > ${value}%`;
+                            icon = <MemoryIcon fontSize="small" />;
+                            break;
+                          case 'disk':
+                            label = `Disk > ${value}%`;
+                            icon = <StorageIcon fontSize="small" />;
+                            break;
+                          case 'download':
+                            label = `Download > ${formatNetworkRateForFilter(sliderValueToNetworkRate(value))}`;
+                            icon = <DownloadIcon fontSize="small" />;
+                            break;
+                          case 'upload':
+                            label = `Upload > ${formatNetworkRateForFilter(sliderValueToNetworkRate(value))}`;
+                            icon = <UploadIcon fontSize="small" />;
+                            break;
+                          default:
+                            return null;
+                        }
+                        
+                        return (
+                          <Chip
+                            key={key}
+                            size="small"
+                            icon={icon}
+                            label={label}
+                            color="primary"
+                            variant="outlined"
+                            onDelete={() => clearFilter(key)}
+                          />
+                        );
+                      })}
+                    </Box>
+                  </Box>
+                )}
+                
+                {/* Completely restructure the filter info section */}
                 <Box sx={{ 
                   display: 'flex', 
-                  justifyContent: 'flex-end', 
-                  width: '100%'
+                  flexDirection: 'column',
+                  width: '100%',
+                  mt: 2,
+                  mb: 1,
+                  pt: 2,
+                  borderTop: '1px solid',
+                  borderTopColor: 'divider'
                 }}>
-                  <Button 
-                    variant={Object.values(filters).some(val => val > 0) ? "contained" : "outlined"}
-                    size="small"
-                    color="primary"
-                    onClick={resetFilters}
-                    startIcon={<RestartAltIcon />}
-                    title="Reset All Filters (Alt+R)" // Add tooltip with keyboard shortcut
-                    sx={{ 
-                      height: 32,
-                      transition: 'all 0.2s ease',
-                      fontWeight: Object.values(filters).some(val => val > 0) ? 600 : 400,
-                      textTransform: 'none',
-                      borderRadius: '8px',
-                      px: 1.5,
-                      background: Object.values(filters).some(val => val > 0) ? 
-                        (theme => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`) : 
-                        'transparent',
-                      border: Object.values(filters).some(val => val > 0) ? 'none' : '1px solid',
-                      borderColor: 'primary.light',
-                      boxShadow: Object.values(filters).some(val => val > 0) ? 1 : 0,
-                      '&:hover': {
+                  {/* Guest Type and Status Filters */}
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center',
+                    flexWrap: { xs: 'wrap', sm: 'nowrap' }, 
+                    gap: { xs: 2, sm: 3 },
+                    mb: 2,
+                    pb: 2,
+                    borderBottom: '1px solid',
+                    borderBottomColor: 'divider'
+                  }}>
+                    {/* Guest Type Filter */}
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <FilterListIcon sx={{ fontSize: '0.875rem', mr: 0.5, opacity: 0.7, color: 'primary.main' }} />
+                      <Typography variant="caption" sx={{ mr: 1, fontWeight: 600 }}>Guest Type:</Typography>
+                      <Box sx={{ display: 'flex', borderRadius: 1, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+                        <Tooltip title="Show all guests">
+                          <Box
+                            onClick={() => setGuestTypeFilter('all')}
+                            sx={{
+                              px: 1,
+                              py: 0.5,
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              bgcolor: guestTypeFilter === 'all' ? 'primary.main' : 'transparent',
+                              color: guestTypeFilter === 'all' ? 'primary.contrastText' : 'text.primary',
+                              '&:hover': {
+                                bgcolor: guestTypeFilter === 'all' ? 'primary.dark' : 'action.hover',
+                              }
+                            }}
+                          >
+                            All
+                          </Box>
+                        </Tooltip>
+                        <Tooltip title="Show only virtual machines">
+                          <Box
+                            onClick={() => setGuestTypeFilter('vm')}
+                            sx={{
+                              px: 1,
+                              py: 0.5,
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              bgcolor: guestTypeFilter === 'vm' ? 'info.main' : 'transparent',
+                              color: guestTypeFilter === 'vm' ? 'info.contrastText' : 'text.primary',
+                              borderLeft: '1px solid',
+                              borderLeftColor: 'divider',
+                              '&:hover': {
+                                bgcolor: guestTypeFilter === 'vm' ? 'info.dark' : 'action.hover',
+                              }
+                            }}
+                          >
+                            <ComputerIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
+                            VM
+                          </Box>
+                        </Tooltip>
+                        <Tooltip title="Show only LXC containers">
+                          <Box
+                            onClick={() => setGuestTypeFilter('lxc')}
+                            sx={{
+                              px: 1,
+                              py: 0.5,
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              bgcolor: guestTypeFilter === 'lxc' ? 'success.main' : 'transparent',
+                              color: guestTypeFilter === 'lxc' ? 'success.contrastText' : 'text.primary',
+                              borderLeft: '1px solid',
+                              borderLeftColor: 'divider',
+                              '&:hover': {
+                                bgcolor: guestTypeFilter === 'lxc' ? 'success.dark' : 'action.hover',
+                              }
+                            }}
+                          >
+                            <ViewInArIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
+                            LXC
+                          </Box>
+                        </Tooltip>
+                      </Box>
+                    </Box>
+                    
+                    {/* Status Filter */}
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <PlayCircleOutlineIcon sx={{ fontSize: '0.875rem', mr: 0.5, opacity: 0.7, color: 'primary.main' }} />
+                      <Typography variant="caption" sx={{ mr: 1, fontWeight: 600 }}>Status:</Typography>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        borderRadius: 1, 
+                        border: '1px solid', 
+                        borderColor: 'divider', 
+                        overflow: 'hidden'
+                      }}>
+                        <Tooltip title="Show only running systems">
+                          <Box
+                            onClick={() => setShowStopped(false)}
+                            sx={{
+                              px: 1.5,
+                              py: 0.5,
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              bgcolor: !showStopped ? 'success.main' : 'transparent',
+                              color: !showStopped ? 'success.contrastText' : 'text.primary',
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                bgcolor: !showStopped ? 'success.dark' : 'action.hover',
+                              }
+                            }}
+                          >
+                            <PlayArrowIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
+                            Running
+                          </Box>
+                        </Tooltip>
+                        <Tooltip title="Show all systems including stopped ones">
+                          <Box
+                            onClick={() => setShowStopped(true)}
+                            sx={{
+                              px: 1.5,
+                              py: 0.5,
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              bgcolor: showStopped ? 'primary.main' : 'transparent',
+                              color: showStopped ? 'primary.contrastText' : 'text.primary',
+                              borderLeft: '1px solid',
+                              borderLeftColor: 'divider',
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                bgcolor: showStopped ? 'primary.dark' : 'action.hover',
+                              }
+                            }}
+                          >
+                            <AllInclusiveIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
+                            All
+                          </Box>
+                        </Tooltip>
+                      </Box>
+                    </Box>
+                    
+                    {/* Export Options */}
+                    {guestData.length > 0 && sortedAndFilteredData.length > 0 && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', ml: 'auto' }}>
+                        <Typography variant="caption" sx={{ mr: 1, fontWeight: 600 }}>Export:</Typography>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Tooltip title="Export as PDF">
+                            <IconButton
+                              size="small"
+                              onClick={generatePDF}
+                              sx={{
+                                padding: 0.5,
+                                '&:hover': {
+                                  backgroundColor: alpha(theme.palette.primary.main, 0.1)
+                                }
+                              }}
+                            >
+                              <PictureAsPdfIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          
+                          <Tooltip title="Export as CSV">
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                try {
+                                  console.log('CSV export started');
+                                  
+                                  // Create CSV content
+                                  const headers = ['Name', 'Status', 'CPU Usage', 'Memory Usage', 'Disk Usage', 'Download', 'Upload'];
+                                  const csvRows = [headers];
+                                  
+                                  // Helper function to escape CSV values properly
+                                  const escapeCSV = (value) => {
+                                    if (value === null || value === undefined) return '';
+                                    const str = String(value);
+                                    // If the value contains commas, quotes, or newlines, wrap it in quotes
+                                    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                                      // Double up any quotes
+                                      return `"${str.replace(/"/g, '""')}"`;
+                                    }
+                                    return str;
+                                  };
+                                  
+                                  // Add data rows
+                                  sortedAndFilteredData.forEach(guest => {
+                                    try {
+                                      const metrics = getMetricsForGuest(guest.id);
+                                      const networkMetrics = metrics?.metrics?.network;
+                                      
+                                      // Get resource metrics
+                                      const cpuUsage = metrics?.metrics?.cpu || 0;
+                                      
+                                      const memoryData = metrics?.metrics?.memory || {};
+                                      const memoryUsage = memoryData.percentUsed || 
+                                        (memoryData.total && memoryData.used ? 
+                                          (memoryData.used / memoryData.total) * 100 : 0);
+                                      
+                                      const diskData = metrics?.metrics?.disk || {};
+                                      const diskUsage = diskData.percentUsed || 
+                                        (diskData.total && diskData.used ? 
+                                          (diskData.used / diskData.total) * 100 : 0);
+                                      
+                                      csvRows.push([
+                                        escapeCSV(guest.name || 'Unknown'),
+                                        escapeCSV(guest.status || 'Unknown'),
+                                        escapeCSV(formatPercentage(cpuUsage)),
+                                        escapeCSV(formatPercentage(memoryUsage)),
+                                        escapeCSV(formatPercentage(diskUsage)),
+                                        escapeCSV(guest.status === 'running' && networkMetrics ? 
+                                          formatNetworkRate(networkMetrics.inRate || 0) : '-'),
+                                        escapeCSV(guest.status === 'running' && networkMetrics ? 
+                                          formatNetworkRate(networkMetrics.outRate || 0) : '-')
+                                      ]);
+                                    } catch (rowError) {
+                                      console.error('Error processing CSV row for guest:', guest?.name, rowError);
+                                      // Add a fallback row with error information
+                                      csvRows.push([
+                                        escapeCSV(guest?.name || 'Unknown'),
+                                        escapeCSV(guest?.status || 'Unknown'),
+                                        'Error', 'Error', 'Error', 'Error', 'Error'
+                                      ]);
+                                    }
+                                  });
+                                  
+                                  // Convert to CSV string
+                                  const csvContent = csvRows.map(row => row.join(',')).join('\n');
+                                  console.log('CSV content generated');
+                                  
+                                  // Create and download the file
+                                  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                                  const url = URL.createObjectURL(blob);
+                                  const link = document.createElement('a');
+                                  link.setAttribute('href', url);
+                                  link.setAttribute('download', `container-status-${new Date().toISOString().split('T')[0]}.csv`);
+                                  link.style.visibility = 'hidden';
+                                  document.body.appendChild(link);
+                                  link.click();
+                                  document.body.removeChild(link);
+                                  URL.revokeObjectURL(url);
+                                  console.log('CSV downloaded successfully');
+                                } catch (error) {
+                                  console.error('Error exporting CSV:', error);
+                                  if (error.message) {
+                                    alert(`Failed to export CSV: ${error.message}`);
+                                  } else {
+                                    alert('Failed to export CSV. Please check the console for details.');
+                                  }
+                                }
+                              }}
+                              sx={{
+                                padding: 0.5,
+                                '&:hover': {
+                                  backgroundColor: alpha(theme.palette.primary.main, 0.1)
+                                }
+                              }}
+                            >
+                              <FileDownloadIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </Box>
+                    )}
+                  </Box>
+                  
+                  {/* Filter summary text in its own dedicated row */}
+                  {(Object.values(filters).some(val => val > 0) || selectedNode !== 'all') && (
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      width: '100%',
+                      mb: 2
+                    }}>
+                      <Typography 
+                        variant="caption" 
+                        color="primary.main"
+                        sx={{ 
+                          fontWeight: 500,
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                        aria-live="polite"
+                      >
+                        <InfoOutlinedIcon sx={{ fontSize: '0.875rem', mr: 0.5, opacity: 0.7 }} />
+                        {`Showing ${sortedAndFilteredData.length} of ${getNodeFilteredGuests(guestData).length} systems${selectedNode !== 'all' ? ` on ${selectedNode === 'node1' ? 'Production' : selectedNode === 'node2' ? 'Development' : 'Testing'}` : ''}`}
+                      </Typography>
+                    </Box>
+                  )}
+                  
+                  {/* Reset button in its own row */}
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'flex-end', 
+                    width: '100%'
+                  }}>
+                    <Button 
+                      variant={Object.values(filters).some(val => val > 0) ? "contained" : "outlined"}
+                      size="small"
+                      color="primary"
+                      onClick={resetFilters}
+                      startIcon={<RestartAltIcon />}
+                      title="Reset All Filters (Alt+R)" // Add tooltip with keyboard shortcut
+                      sx={{ 
+                        height: 32,
+                        transition: 'all 0.2s ease',
+                        fontWeight: Object.values(filters).some(val => val > 0) ? 600 : 400,
+                        textTransform: 'none',
+                        borderRadius: '8px',
+                        px: 1.5,
                         background: Object.values(filters).some(val => val > 0) ? 
-                          (theme => `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`) : 
-                          (theme => alpha(theme.palette.primary.light, 0.1)),
-                      }
-                    }}
-                  >
-                    Reset Filters
-                  </Button>
+                          (theme => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`) : 
+                          'transparent',
+                        border: Object.values(filters).some(val => val > 0) ? 'none' : '1px solid',
+                        borderColor: 'primary.light',
+                        boxShadow: Object.values(filters).some(val => val > 0) ? 1 : 0,
+                        '&:hover': {
+                          background: Object.values(filters).some(val => val > 0) ? 
+                            (theme => `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`) : 
+                            (theme => alpha(theme.palette.primary.light, 0.1)),
+                        }
+                      }}
+                    >
+                      Reset Filters
+                    </Button>
+                  </Box>
                 </Box>
               </Box>
-            </Box>
-          </Collapse>
+            </Collapse>
+          </ClickAwayListener>
           
           <TableContainer 
             component={Paper} 
