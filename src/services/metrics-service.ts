@@ -9,6 +9,10 @@ export class MetricsService extends EventEmitter {
   private metricsHistory: Map<string, MetricsData[]> = new Map();
   private lastMetrics: Map<string, MetricsData> = new Map();
   private historyMaxLength: number;
+  // Add a map to store recent network rate values for smoothing
+  private recentNetworkRates: Map<string, { inRates: number[], outRates: number[] }> = new Map();
+  // Number of samples to use for the moving average
+  private readonly movingAverageSamples: number = 3;
 
   constructor() {
     super();
@@ -106,6 +110,9 @@ export class MetricsService extends EventEmitter {
       this.calculateRate(guest.netout, previousMetrics.metrics.network?.out || 0, timestamp, previousMetrics.timestamp) : 
       0;
     
+    // Apply moving average to smooth network rates
+    const smoothedNetworkRates = this.applyMovingAverage(guestId, networkInRate, networkOutRate);
+    
     // Calculate disk rates
     const diskReadRate = previousMetrics ? 
       this.calculateRate(guest.diskread, previousMetrics.metrics.disk?.readRate || 0, timestamp, previousMetrics.timestamp) : 
@@ -133,8 +140,8 @@ export class MetricsService extends EventEmitter {
         network: {
           in: guest.netin,
           out: guest.netout,
-          inRate: networkInRate,
-          outRate: networkOutRate
+          inRate: smoothedNetworkRates.inRate,
+          outRate: smoothedNetworkRates.outRate
         },
         disk: {
           total: guest.maxdisk,
@@ -156,6 +163,45 @@ export class MetricsService extends EventEmitter {
     
     // Emit metrics update event
     this.emit('metricsUpdated', metrics);
+  }
+
+  /**
+   * Apply moving average to network rates to smooth out fluctuations
+   */
+  private applyMovingAverage(guestId: string, inRate: number, outRate: number): { inRate: number, outRate: number } {
+    // Get or initialize the recent rates array for this guest
+    if (!this.recentNetworkRates.has(guestId)) {
+      this.recentNetworkRates.set(guestId, { 
+        inRates: [inRate], 
+        outRates: [outRate] 
+      });
+      return { inRate, outRate };
+    }
+    
+    const rates = this.recentNetworkRates.get(guestId)!;
+    
+    // Add new rates to the arrays
+    rates.inRates.push(inRate);
+    rates.outRates.push(outRate);
+    
+    // Trim arrays to keep only the most recent samples
+    if (rates.inRates.length > this.movingAverageSamples) {
+      rates.inRates.shift();
+    }
+    if (rates.outRates.length > this.movingAverageSamples) {
+      rates.outRates.shift();
+    }
+    
+    // Calculate averages
+    const smoothedInRate = rates.inRates.reduce((sum, rate) => sum + rate, 0) / rates.inRates.length;
+    const smoothedOutRate = rates.outRates.reduce((sum, rate) => sum + rate, 0) / rates.outRates.length;
+    
+    // Update the stored rates
+    this.recentNetworkRates.set(guestId, rates);
+    
+    this.logger.debug(`Network rates for ${guestId}: Raw in=${inRate.toFixed(2)}, Smoothed in=${smoothedInRate.toFixed(2)}, Raw out=${outRate.toFixed(2)}, Smoothed out=${smoothedOutRate.toFixed(2)}`);
+    
+    return { inRate: smoothedInRate, outRate: smoothedOutRate };
   }
 
   /**
@@ -230,6 +276,7 @@ export class MetricsService extends EventEmitter {
    */
   clearHistory(): void {
     this.metricsHistory.clear();
+    this.recentNetworkRates.clear();
     this.logger.info('Metrics history cleared');
   }
 }
