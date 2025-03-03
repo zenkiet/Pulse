@@ -84,16 +84,16 @@ function validateConfig(config: AppConfig): void {
   }
 }
 
-// Parse and create the configuration object
+// Default configuration
 const config: AppConfig = {
-  port: parseInt(process.env.PORT || '3000', 10),
+  port: parseInt(process.env.PORT || '7654', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   logLevel: process.env.LOG_LEVEL || 'info',
   enableDevTools: process.env.ENABLE_DEV_TOOLS === 'true',
   metricsHistoryMinutes: parseInt(process.env.METRICS_HISTORY_MINUTES || '60', 10),
   ignoreSSLErrors: process.env.IGNORE_SSL_ERRORS === 'true',
   // More responsive polling intervals - reduced for maximum responsiveness
-  nodePollingIntervalMs: parseInt(process.env.NODE_POLLING_INTERVAL_MS || '2000', 10),
+  nodePollingIntervalMs: parseInt(process.env.NODE_POLLING_INTERVAL_MS || '1000', 10),
   eventPollingIntervalMs: parseInt(process.env.EVENT_POLLING_INTERVAL_MS || '1000', 10),
   nodes: parseNodeConfigs()
 };
