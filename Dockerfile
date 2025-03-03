@@ -40,6 +40,9 @@ RUN mkdir -p /app/dist/public && rm -rf /app/dist/public && ln -s /app/frontend/
 # Install only production dependencies
 RUN npm ci --only=production
 
+# Create logs directory with proper permissions
+RUN mkdir -p /app/logs && chown -R pulse:pulse /app/logs
+
 # Set production environment
 ENV NODE_ENV=production \
     PORT=7654
