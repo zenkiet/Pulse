@@ -183,6 +183,27 @@ NODE_POLLING_INTERVAL_MS=1000
 EVENT_POLLING_INTERVAL_MS=1000
 ```
 
+## 🧑‍💻 Development
+
+If you're developing Pulse, you can use the development server:
+
+```bash
+# Clone the repository
+git clone https://github.com/rcourtman/pulse.git
+cd pulse
+
+# Install dependencies
+npm install
+cd frontend && npm install && cd ..
+
+# Start the development server
+./start-dev.sh
+```
+
+The development server will be accessible at:
+- http://localhost:3000 - from the local machine
+- http://your-ip-address:3000 - from other devices on your network
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
