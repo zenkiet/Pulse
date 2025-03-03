@@ -1,0 +1,23 @@
+services:
+  pulse-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pulse-app
+    ports:
+      - "7654:7654"
+    env_file:
+      - .env
+    environment:
+      - LOG_LEVEL=debug
+      - NODE_ENV=production
+      - NODE_OPTIONS=--no-warnings
+      - DEBUG=false
+      - NODE_DEBUG=false
+      - SUPPRESS_NO_CONFIG_WARNING=true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+    restart: unless-stopped 
