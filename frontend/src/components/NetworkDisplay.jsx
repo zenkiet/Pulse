@@ -1784,186 +1784,198 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                 </Box>
               )}
               
+              {/* Completely restructure the filter info section */}
               <Box sx={{ 
                 display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center', 
-                mt: 3,
+                flexDirection: 'column',
+                width: '100%',
+                mt: 2,
+                mb: 1,
                 pt: 2,
                 borderTop: '1px solid',
                 borderTopColor: 'divider'
               }}>
-                {/* Guest Type Filter - Moved to its own section above the filter info */}
+                {/* Guest Type and Status Filters */}
                 <Box sx={{ 
                   display: 'flex', 
-                  alignItems: 'center', 
-                  mb: 2, 
-                  width: '100%',
+                  alignItems: 'center',
+                  flexWrap: { xs: 'wrap', sm: 'nowrap' }, 
+                  gap: { xs: 2, sm: 3 },
+                  mb: 2,
                   pb: 2,
                   borderBottom: '1px solid',
                   borderBottomColor: 'divider'
                 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: { xs: 'wrap', sm: 'nowrap' }, gap: { xs: 2, sm: 3 } }}>
-                    {/* Guest Type Filter */}
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <FilterListIcon sx={{ fontSize: '0.875rem', mr: 0.5, opacity: 0.7, color: 'primary.main' }} />
-                      <Typography variant="caption" sx={{ mr: 1, fontWeight: 600 }}>Guest Type:</Typography>
-                      <Box sx={{ display: 'flex', borderRadius: 1, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
-                        <Tooltip title="Show all guests">
-                          <Box
-                            onClick={() => setGuestTypeFilter('all')}
-                            sx={{
-                              px: 1,
-                              py: 0.5,
-                              fontSize: '0.75rem',
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              bgcolor: guestTypeFilter === 'all' ? 'primary.main' : 'transparent',
-                              color: guestTypeFilter === 'all' ? 'primary.contrastText' : 'text.primary',
-                              '&:hover': {
-                                bgcolor: guestTypeFilter === 'all' ? 'primary.dark' : 'action.hover',
-                              }
-                            }}
-                          >
-                            All
-                          </Box>
-                        </Tooltip>
-                        <Tooltip title="Show only virtual machines">
-                          <Box
-                            onClick={() => setGuestTypeFilter('vm')}
-                            sx={{
-                              px: 1,
-                              py: 0.5,
-                              fontSize: '0.75rem',
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              bgcolor: guestTypeFilter === 'vm' ? 'info.main' : 'transparent',
-                              color: guestTypeFilter === 'vm' ? 'info.contrastText' : 'text.primary',
-                              borderLeft: '1px solid',
-                              borderLeftColor: 'divider',
-                              '&:hover': {
-                                bgcolor: guestTypeFilter === 'vm' ? 'info.dark' : 'action.hover',
-                              }
-                            }}
-                          >
-                            <ComputerIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                            VM
-                          </Box>
-                        </Tooltip>
-                        <Tooltip title="Show only LXC containers">
-                          <Box
-                            onClick={() => setGuestTypeFilter('lxc')}
-                            sx={{
-                              px: 1,
-                              py: 0.5,
-                              fontSize: '0.75rem',
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              bgcolor: guestTypeFilter === 'lxc' ? 'success.main' : 'transparent',
-                              color: guestTypeFilter === 'lxc' ? 'success.contrastText' : 'text.primary',
-                              borderLeft: '1px solid',
-                              borderLeftColor: 'divider',
-                              '&:hover': {
-                                bgcolor: guestTypeFilter === 'lxc' ? 'success.dark' : 'action.hover',
-                              }
-                            }}
-                          >
-                            <ViewInArIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                            LXC
-                          </Box>
-                        </Tooltip>
-                      </Box>
+                  {/* Guest Type Filter */}
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <FilterListIcon sx={{ fontSize: '0.875rem', mr: 0.5, opacity: 0.7, color: 'primary.main' }} />
+                    <Typography variant="caption" sx={{ mr: 1, fontWeight: 600 }}>Guest Type:</Typography>
+                    <Box sx={{ display: 'flex', borderRadius: 1, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+                      <Tooltip title="Show all guests">
+                        <Box
+                          onClick={() => setGuestTypeFilter('all')}
+                          sx={{
+                            px: 1,
+                            py: 0.5,
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            bgcolor: guestTypeFilter === 'all' ? 'primary.main' : 'transparent',
+                            color: guestTypeFilter === 'all' ? 'primary.contrastText' : 'text.primary',
+                            '&:hover': {
+                              bgcolor: guestTypeFilter === 'all' ? 'primary.dark' : 'action.hover',
+                            }
+                          }}
+                        >
+                          All
+                        </Box>
+                      </Tooltip>
+                      <Tooltip title="Show only virtual machines">
+                        <Box
+                          onClick={() => setGuestTypeFilter('vm')}
+                          sx={{
+                            px: 1,
+                            py: 0.5,
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            bgcolor: guestTypeFilter === 'vm' ? 'info.main' : 'transparent',
+                            color: guestTypeFilter === 'vm' ? 'info.contrastText' : 'text.primary',
+                            borderLeft: '1px solid',
+                            borderLeftColor: 'divider',
+                            '&:hover': {
+                              bgcolor: guestTypeFilter === 'vm' ? 'info.dark' : 'action.hover',
+                            }
+                          }}
+                        >
+                          <ComputerIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
+                          VM
+                        </Box>
+                      </Tooltip>
+                      <Tooltip title="Show only LXC containers">
+                        <Box
+                          onClick={() => setGuestTypeFilter('lxc')}
+                          sx={{
+                            px: 1,
+                            py: 0.5,
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            bgcolor: guestTypeFilter === 'lxc' ? 'success.main' : 'transparent',
+                            color: guestTypeFilter === 'lxc' ? 'success.contrastText' : 'text.primary',
+                            borderLeft: '1px solid',
+                            borderLeftColor: 'divider',
+                            '&:hover': {
+                              bgcolor: guestTypeFilter === 'lxc' ? 'success.dark' : 'action.hover',
+                            }
+                          }}
+                        >
+                          <ViewInArIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
+                          LXC
+                        </Box>
+                      </Tooltip>
                     </Box>
-                    
-                    {/* Status Filter - Moved here from the top controls */}
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <PlayCircleOutlineIcon sx={{ fontSize: '0.875rem', mr: 0.5, opacity: 0.7, color: 'primary.main' }} />
-                      <Typography variant="caption" sx={{ mr: 1, fontWeight: 600 }}>Status:</Typography>
-                      <Box sx={{ 
-                        display: 'flex', 
-                        borderRadius: 1, 
-                        border: '1px solid', 
-                        borderColor: 'divider', 
-                        overflow: 'hidden'
-                      }}>
-                        <Tooltip title="Show only running systems">
-                          <Box
-                            onClick={() => setShowStopped(false)}
-                            sx={{
-                              px: 1.5,
-                              py: 0.5,
-                              fontSize: '0.75rem',
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              bgcolor: !showStopped ? 'success.main' : 'transparent',
-                              color: !showStopped ? 'success.contrastText' : 'text.primary',
-                              transition: 'all 0.2s ease',
-                              '&:hover': {
-                                bgcolor: !showStopped ? 'success.dark' : 'action.hover',
-                              }
-                            }}
-                          >
-                            <PlayArrowIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                            Running
-                          </Box>
-                        </Tooltip>
-                        <Tooltip title="Show all systems including stopped ones">
-                          <Box
-                            onClick={() => setShowStopped(true)}
-                            sx={{
-                              px: 1.5,
-                              py: 0.5,
-                              fontSize: '0.75rem',
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              bgcolor: showStopped ? 'primary.main' : 'transparent',
-                              color: showStopped ? 'primary.contrastText' : 'text.primary',
-                              borderLeft: '1px solid',
-                              borderLeftColor: 'divider',
-                              transition: 'all 0.2s ease',
-                              '&:hover': {
-                                bgcolor: showStopped ? 'primary.dark' : 'action.hover',
-                              }
-                            }}
-                          >
-                            <AllInclusiveIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                            All
-                          </Box>
-                        </Tooltip>
-                      </Box>
+                  </Box>
+                  
+                  {/* Status Filter */}
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <PlayCircleOutlineIcon sx={{ fontSize: '0.875rem', mr: 0.5, opacity: 0.7, color: 'primary.main' }} />
+                    <Typography variant="caption" sx={{ mr: 1, fontWeight: 600 }}>Status:</Typography>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      borderRadius: 1, 
+                      border: '1px solid', 
+                      borderColor: 'divider', 
+                      overflow: 'hidden'
+                    }}>
+                      <Tooltip title="Show only running systems">
+                        <Box
+                          onClick={() => setShowStopped(false)}
+                          sx={{
+                            px: 1.5,
+                            py: 0.5,
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            bgcolor: !showStopped ? 'success.main' : 'transparent',
+                            color: !showStopped ? 'success.contrastText' : 'text.primary',
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              bgcolor: !showStopped ? 'success.dark' : 'action.hover',
+                            }
+                          }}
+                        >
+                          <PlayArrowIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
+                          Running
+                        </Box>
+                      </Tooltip>
+                      <Tooltip title="Show all systems including stopped ones">
+                        <Box
+                          onClick={() => setShowStopped(true)}
+                          sx={{
+                            px: 1.5,
+                            py: 0.5,
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            bgcolor: showStopped ? 'primary.main' : 'transparent',
+                            color: showStopped ? 'primary.contrastText' : 'text.primary',
+                            borderLeft: '1px solid',
+                            borderLeftColor: 'divider',
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              bgcolor: showStopped ? 'primary.dark' : 'action.hover',
+                            }
+                          }}
+                        >
+                          <AllInclusiveIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
+                          All
+                        </Box>
+                      </Tooltip>
                     </Box>
                   </Box>
                 </Box>
                 
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                  <Typography 
-                    variant="caption" 
-                    color={Object.values(filters).some(val => val > 0) || selectedNode !== 'all' ? 'primary.main' : 'text.secondary'} 
-                    sx={{ 
-                      fontWeight: 500,
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}
-                    aria-live="polite" // Announce when this changes
-                  >
-                    {Object.values(filters).some(val => val > 0) || selectedNode !== 'all' ? (
-                      <>
-                        <InfoOutlinedIcon sx={{ fontSize: '0.875rem', mr: 0.5, opacity: 0.7 }} />
-                        {`Showing ${sortedAndFilteredData.length} of ${getNodeFilteredGuests(guestData).length} systems${selectedNode !== 'all' ? ` on ${selectedNode === 'node1' ? 'Production' : selectedNode === 'node2' ? 'Development' : 'Testing'}` : ''}`}
-                      </>
-                    ) : ''}
-                  </Typography>
-                  
+                {/* Filter summary text in its own dedicated row */}
+                {(Object.values(filters).some(val => val > 0) || selectedNode !== 'all') && (
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    width: '100%',
+                    mb: 2
+                  }}>
+                    <Typography 
+                      variant="caption" 
+                      color="primary.main"
+                      sx={{ 
+                        fontWeight: 500,
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                      aria-live="polite"
+                    >
+                      <InfoOutlinedIcon sx={{ fontSize: '0.875rem', mr: 0.5, opacity: 0.7 }} />
+                      {`Showing ${sortedAndFilteredData.length} of ${getNodeFilteredGuests(guestData).length} systems${selectedNode !== 'all' ? ` on ${selectedNode === 'node1' ? 'Production' : selectedNode === 'node2' ? 'Development' : 'Testing'}` : ''}`}
+                    </Typography>
+                  </Box>
+                )}
+                
+                {/* Reset button in its own row */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'flex-end', 
+                  width: '100%'
+                }}>
                   <Button 
                     variant={Object.values(filters).some(val => val > 0) ? "contained" : "outlined"}
                     size="small"
@@ -1988,22 +2000,10 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         background: Object.values(filters).some(val => val > 0) ? 
                           (theme => `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`) : 
                           (theme => alpha(theme.palette.primary.light, 0.1)),
-                        boxShadow: 2,
-                        transform: 'translateY(-1px)'
-                      },
-                      '&:active': {
-                        transform: 'translateY(0px)',
-                        boxShadow: 1
-                      },
-                      '&:focus-visible': {
-                        outline: '2px solid',
-                        outlineColor: 'primary.main',
-                        outlineOffset: 2,
                       }
                     }}
-                    aria-pressed={Object.values(filters).some(val => val > 0)}
                   >
-                    Reset All Filters
+                    Reset Filters
                   </Button>
                 </Box>
               </Box>
