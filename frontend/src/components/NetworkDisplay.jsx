@@ -399,14 +399,28 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
   const [filterAnchorEl, setFilterAnchorEl] = useState(null);
   const openFiltersPopover = Boolean(filterAnchorEl);
   
+  // Helper function to extract numeric ID from strings like "node-1-ct-105"
+  const extractNumericId = (fullId) => {
+    if (!fullId) return '';
+    
+    // Try to extract the last numeric part from the ID
+    const match = fullId.match(/(\d+)$/);
+    if (match && match[1]) {
+      return match[1];
+    }
+    
+    // Fallback to the original ID if no numeric part is found
+    return fullId;
+  };
+  
   // Sort state
   const [sortConfig, setSortConfig] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_SORT);
-      return saved ? JSON.parse(saved) : { key: 'name', direction: 'asc' };
+      return saved ? JSON.parse(saved) : { key: 'id', direction: 'asc' };
     } catch (e) {
       console.error('Error loading sort preferences:', e);
-      return { key: 'name', direction: 'asc' };
+      return { key: 'id', direction: 'asc' };
     }
   });
   
@@ -836,6 +850,14 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     return filteredData.sort((a, b) => {
       // For each sort key, define how to get the value to sort by
       switch (sortConfig.key) {
+        case 'id':
+          // Extract numeric IDs for proper sorting
+          const idA = parseInt(extractNumericId(a.id), 10) || 0;
+          const idB = parseInt(extractNumericId(b.id), 10) || 0;
+          return sortConfig.direction === 'asc' 
+            ? idA - idB
+            : idB - idA;
+            
         case 'name':
           return sortConfig.direction === 'asc' 
             ? a.name.localeCompare(b.name)
@@ -2032,6 +2054,56 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                   }
                 }}>
                   <TableCell 
+                    width="8%" 
+                    onClick={() => requestSort('id')}
+                    sx={{ 
+                      fontWeight: 'bold', 
+                      minHeight: '48px', 
+                      position: 'relative',
+                      cursor: 'pointer', 
+                      '&:hover': {
+                        backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                      },
+                      '&:focus-visible': {
+                        outline: '2px solid',
+                        outlineColor: 'primary.main',
+                        outlineOffset: -2,
+                      }
+                    }}
+                    aria-sort={sortConfig.key === 'id' ? sortConfig.direction : undefined}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      ID
+                      <TableSortLabel
+                        active={sortConfig.key === 'id'}
+                        direction={sortConfig.key === 'id' ? sortConfig.direction : 'asc'}
+                        sx={{
+                          '& .MuiTableSortLabel-icon': {
+                            opacity: sortConfig.key === 'id' ? 1 : 0.3,
+                            marginLeft: '4px !important',
+                          },
+                          '&.Mui-active': {
+                            color: 'inherit',
+                          },
+                          '&:hover': {
+                            color: 'primary.main',
+                          }
+                        }}
+                        IconComponent={props => (
+                          <ArrowDropDownIcon
+                            {...props}
+                            sx={{
+                              fontSize: '1.2rem',
+                              transform: sortConfig.key === 'id' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                              transition: 'transform 0.2s'
+                            }}
+                          />
+                        )}
+                      />
+                    </Box>
+                  </TableCell>
+                  
+                  <TableCell 
                     width="18%" 
                     onClick={() => requestSort('name')}
                     sx={{ 
@@ -2511,7 +2583,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         // Highlight rows that match active filters with subtle indicators
                         ...(filters.cpu > 0 && cpuUsage > filters.cpu && (
                           guestTypeFilter === 'all' ? {
-                            '& td:nth-of-type(3)': { 
+                            '& td:nth-of-type(4)': { 
                               backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
                               transition: 'background-color 0.2s ease',
                               '&:hover': {
@@ -2519,7 +2591,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                               }
                             }
                           } : {
-                            '& td:nth-of-type(2)': { 
+                            '& td:nth-of-type(3)': { 
                               backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
                               transition: 'background-color 0.2s ease',
                               '&:hover': {
@@ -2530,7 +2602,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         )),
                         ...(filters.memory > 0 && memoryUsage > filters.memory && (
                           guestTypeFilter === 'all' ? {
-                            '& td:nth-of-type(4)': { 
+                            '& td:nth-of-type(5)': { 
                               backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
                               transition: 'background-color 0.2s ease',
                               '&:hover': {
@@ -2538,7 +2610,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                               }
                             }
                           } : {
-                            '& td:nth-of-type(3)': { 
+                            '& td:nth-of-type(4)': { 
                               backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
                               transition: 'background-color 0.2s ease',
                               '&:hover': {
@@ -2549,7 +2621,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         )),
                         ...(filters.disk > 0 && diskUsage > filters.disk && (
                           guestTypeFilter === 'all' ? {
-                            '& td:nth-of-type(5)': { 
+                            '& td:nth-of-type(6)': { 
                               backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
                               transition: 'background-color 0.2s ease',
                               '&:hover': {
@@ -2557,7 +2629,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                               }
                             }
                           } : {
-                            '& td:nth-of-type(4)': { 
+                            '& td:nth-of-type(5)': { 
                               backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
                               transition: 'background-color 0.2s ease',
                               '&:hover': {
@@ -2568,7 +2640,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         )),
                         ...(filters.download > 0 && networkMetrics?.inRate >= sliderValueToNetworkRate(filters.download) && (
                           guestTypeFilter === 'all' ? {
-                            '& td:nth-of-type(6)': { 
+                            '& td:nth-of-type(7)': { 
                               backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
                               transition: 'background-color 0.2s ease',
                               '&:hover': {
@@ -2576,7 +2648,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                               }
                             }
                           } : {
-                            '& td:nth-of-type(5)': { 
+                            '& td:nth-of-type(6)': { 
                               backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
                               transition: 'background-color 0.2s ease',
                               '&:hover': {
@@ -2587,7 +2659,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         )),
                         ...(filters.upload > 0 && networkMetrics?.outRate >= sliderValueToNetworkRate(filters.upload) && (
                           guestTypeFilter === 'all' ? {
-                            '& td:nth-of-type(7)': { 
+                            '& td:nth-of-type(8)': { 
                               backgroundColor: theme => alpha(theme.palette.secondary.main, 0.06),
                               transition: 'background-color 0.2s ease',
                               '&:hover': {
@@ -2595,7 +2667,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                               }
                             }
                           } : {
-                            '& td:nth-of-type(6)': { 
+                            '& td:nth-of-type(7)': { 
                               backgroundColor: theme => alpha(theme.palette.secondary.main, 0.06),
                               transition: 'background-color 0.2s ease',
                               '&:hover': {
@@ -2605,6 +2677,20 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                           }
                         ))
                       }}>
+                        <TableCell>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              fontWeight: 500,
+                              fontFamily: 'monospace',
+                              color: theme => darkMode ? 'text.secondary' : 'text.primary'
+                            }}
+                            title={guest.id} // Show full ID on hover
+                          >
+                            {extractNumericId(guest.id)}
+                          </Typography>
+                        </TableCell>
+                        
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
                             <StatusIndicator status={guest.status} />
@@ -2718,7 +2804,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                    <TableCell colSpan={guestTypeFilter === 'all' ? 8 : 7} align="center" sx={{ py: 8 }}>
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 2 }}>
                         <NetworkCheckIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2, opacity: 0.6 }} />
                         <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -2733,7 +2819,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                 )}
                 {guestData.length > 0 && sortedAndFilteredData.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                    <TableCell colSpan={guestTypeFilter === 'all' ? 8 : 7} align="center" sx={{ py: 6 }}>
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 2 }}>
                         <FilterAltIcon sx={{ fontSize: 40, color: 'primary.light', mb: 2, opacity: 0.7 }} />
                         <Typography variant="h6" color="text.secondary" gutterBottom>
