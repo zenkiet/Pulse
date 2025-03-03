@@ -74,7 +74,7 @@ Your ProxMox API token needs these permissions:
 
 #### Option 1: Quick Command (Convenient but less secure)
 
-SSH into your ProxMox server and run this command to create a token with the necessary permissions:
+You can run this command either by SSH'ing into your ProxMox server or by using the Shell console in the ProxMox web UI (Datacenter → Shell):
 
 ```bash
 # Replace 'pulse' with your preferred token name if desired
