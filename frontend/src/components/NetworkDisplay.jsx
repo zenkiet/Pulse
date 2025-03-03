@@ -163,7 +163,20 @@ const ProgressWithLabel = ({ value, color = "primary", disabled = false, tooltip
       width: '100%',
       opacity: disabled ? 0.5 : 1,
     }}>
-      <Box sx={{ width: '100%', mr: 1 }}>
+      <Box sx={{ minWidth: 35, mr: 1 }}>
+        <Typography 
+          variant="body2" 
+          color="text.secondary"
+          sx={{ 
+            fontWeight: 500,
+            fontSize: '0.75rem',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {formatPercentage(normalizedValue)}
+        </Typography>
+      </Box>
+      <Box sx={{ width: '100%' }}>
         <LinearProgress 
           variant="determinate" 
           value={normalizedValue} 
@@ -178,19 +191,6 @@ const ProgressWithLabel = ({ value, color = "primary", disabled = false, tooltip
             }
           }}
         />
-      </Box>
-      <Box sx={{ minWidth: 35 }}>
-        <Typography 
-          variant="body2" 
-          color="text.secondary"
-          sx={{ 
-            fontWeight: 500,
-            fontSize: '0.75rem',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {formatPercentage(normalizedValue)}
-        </Typography>
       </Box>
     </Box>
   );
