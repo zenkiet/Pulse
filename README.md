@@ -16,7 +16,7 @@ cd frontend && npm install && cd ..
 cp .env.example .env
 ```
 
-### 🚀 Production
+### 🚀 Docker
 ```bash
 # 1. Create your .env file with ProxMox configuration
 cp .env.example .env
@@ -47,9 +47,9 @@ docker-compose up -d
 open http://localhost:7654  # or visit in your browser
 ```
 
-The Docker image is optimized for production use:
+The Docker image is optimized for:
 - Minimal image size with multi-stage builds
-- Runs as non-root user for security
+- Security with non-root user execution
 - Proper log handling and permissions
 - Automatic restart on failure
 - SSL/TLS support via environment variables
@@ -176,7 +176,6 @@ PROXMOX_NODE_2_TOKEN_SECRET=your-token-secret
 
 # App Configuration
 PORT=7654
-NODE_ENV=production
 LOG_LEVEL=info
 METRICS_HISTORY_MINUTES=60
 NODE_POLLING_INTERVAL_MS=1000

@@ -88,7 +88,7 @@ If you need to perform a release manually, follow these steps:
 
 4. Build Docker images:
    ```bash
-   docker build --target production -t rcourtman/pulse:X.Y.Z -t rcourtman/pulse:latest .
+   docker build -t rcourtman/pulse:X.Y.Z -t rcourtman/pulse:latest .
    ```
 
 5. Push Docker images:

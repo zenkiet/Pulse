@@ -43,9 +43,8 @@ RUN npm ci --only=production
 # Create logs directory with proper permissions
 RUN mkdir -p /app/logs && chown -R pulse:pulse /app/logs
 
-# Set production environment
-ENV NODE_ENV=production \
-    PORT=7654
+# Set environment variables
+ENV PORT=7654
 
 # Switch to non-root user
 USER pulse

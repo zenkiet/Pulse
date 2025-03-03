@@ -7,11 +7,8 @@ services:
     env_file:
       - .env
     environment:
-      - LOG_LEVEL=debug
-      - NODE_ENV=production
+      - LOG_LEVEL=info
       - NODE_OPTIONS=--no-warnings
-      - DEBUG=false
-      - NODE_DEBUG=false
       - SUPPRESS_NO_CONFIG_WARNING=true
     logging:
       driver: "json-file"
