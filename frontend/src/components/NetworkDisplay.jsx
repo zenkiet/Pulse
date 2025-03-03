@@ -64,6 +64,10 @@ import ClearIcon from '@mui/icons-material/Clear';
 import InputAdornment from '@mui/material/InputAdornment';
 import Popover from '@mui/material/Popover';
 import Badge from '@mui/material/Badge';
+import TextField from '@mui/material/TextField';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 
 // Define pulse animation
 const pulseAnimation = keyframes`
@@ -444,10 +448,10 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
   const [showStopped, setShowStopped] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_SHOW_STOPPED);
-      return saved ? JSON.parse(saved) === true : false;
+      return saved ? JSON.parse(saved) === true : false; // Default: false (show only running systems)
     } catch (e) {
       console.error('Error loading show stopped preference:', e);
-      return false;
+      return false; // Default to showing only running systems
     }
   });
   
@@ -466,10 +470,13 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
   
   // Filter popover handlers
   const handleFilterButtonClick = (event) => {
-    setFilterAnchorEl(event.currentTarget);
+    // Instead of opening a popover, toggle the filter section
+    setShowFilters(!showFilters);
   };
   
   const handleCloseFilterPopover = () => {
+    // This function is no longer needed for closing a popover
+    // but we'll keep it for compatibility with existing code
     setFilterAnchorEl(null);
   };
   
@@ -484,10 +491,10 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
   const [guestTypeFilter, setGuestTypeFilter] = useState(() => {
     try {
       const saved = localStorage.getItem('guestTypeFilter');
-      return saved ? JSON.parse(saved) : 'all'; // 'all', 'vm', or 'lxc'
+      return saved ? JSON.parse(saved) : 'all'; // Default: 'all' (show both VMs and LXCs)
     } catch (e) {
       console.error('Error loading guest type filter preference:', e);
-      return 'all';
+      return 'all'; // Default to showing all guest types
     }
   });
   
@@ -1229,81 +1236,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
               />
             </Box>
             
-            {/* Guest Type Filter */}
-            <Box sx={{ display: 'flex', alignItems: 'center', ml: 2 }}>
-              {/* Removed TYPE: title to create more space */}
-              <Box sx={{ display: 'flex', borderRadius: 1, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
-                <Tooltip title="Show all guests">
-                  <Box
-                    onClick={() => setGuestTypeFilter('all')}
-                    sx={{
-                      px: 1,
-                      py: 0.5,
-                      fontSize: '0.75rem',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      bgcolor: guestTypeFilter === 'all' ? 'primary.main' : 'transparent',
-                      color: guestTypeFilter === 'all' ? 'primary.contrastText' : 'text.primary',
-                      '&:hover': {
-                        bgcolor: guestTypeFilter === 'all' ? 'primary.dark' : 'action.hover',
-                      }
-                    }}
-                  >
-                    All
-                  </Box>
-                </Tooltip>
-                <Tooltip title="Show only virtual machines">
-                  <Box
-                    onClick={() => setGuestTypeFilter('vm')}
-                    sx={{
-                      px: 1,
-                      py: 0.5,
-                      fontSize: '0.75rem',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      bgcolor: guestTypeFilter === 'vm' ? 'info.main' : 'transparent',
-                      color: guestTypeFilter === 'vm' ? 'info.contrastText' : 'text.primary',
-                      borderLeft: '1px solid',
-                      borderLeftColor: 'divider',
-                      '&:hover': {
-                        bgcolor: guestTypeFilter === 'vm' ? 'info.dark' : 'action.hover',
-                      }
-                    }}
-                  >
-                    <ComputerIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                    VM
-                  </Box>
-                </Tooltip>
-                <Tooltip title="Show only LXC containers">
-                  <Box
-                    onClick={() => setGuestTypeFilter('lxc')}
-                    sx={{
-                      px: 1,
-                      py: 0.5,
-                      fontSize: '0.75rem',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      bgcolor: guestTypeFilter === 'lxc' ? 'success.main' : 'transparent',
-                      color: guestTypeFilter === 'lxc' ? 'success.contrastText' : 'text.primary',
-                      borderLeft: '1px solid',
-                      borderLeftColor: 'divider',
-                      '&:hover': {
-                        bgcolor: guestTypeFilter === 'lxc' ? 'success.dark' : 'action.hover',
-                      }
-                    }}
-                  >
-                    <ViewInArIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                    LXC
-                  </Box>
-                </Tooltip>
-              </Box>
-            </Box>
+            {/* Guest Type Filter - Removed from here and moved to filter panel */}
             
             {/* Node indicator */}
             {/* Removing the Node indicator as it's redundant with the node selection dropdown at the top right */}
@@ -1329,364 +1262,66 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                 flexGrow: { xs: 1, md: 0 },
                 justifyContent: { xs: 'center', md: 'flex-start' }
               }}>
-                {/* Removed FILTERS: title to create more space and simplify UI */}
-                <Tooltip title={showFilters ? "Hide filters" : "Show filters"}>
-                  <Box 
-                    onClick={() => setShowFilters(!showFilters)}
-                    sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center',
-                      borderRadius: 1,
-                      border: '1px solid',
-                      borderColor: (Object.values(filters).some(val => val > 0) || searchTerm || showFilters) 
-                        ? 'primary.main' 
-                        : 'divider',
-                      px: 1.5,
-                      py: 0.5,
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      bgcolor: (Object.values(filters).some(val => val > 0) || searchTerm || showFilters) 
-                        ? 'primary.main' 
-                        : 'transparent',
-                      color: (Object.values(filters).some(val => val > 0) || searchTerm || showFilters) 
-                        ? 'primary.contrastText' 
-                        : 'text.primary',
-                      transition: 'all 0.2s ease',
-                      boxShadow: (Object.values(filters).some(val => val > 0) || searchTerm || showFilters)
-                        ? 1
-                        : 0,
-                      '&:hover': {
-                        bgcolor: (Object.values(filters).some(val => val > 0) || searchTerm || showFilters)
-                          ? 'primary.dark'
-                          : 'action.hover',
-                        borderColor: (Object.values(filters).some(val => val > 0) || searchTerm || showFilters)
-                          ? 'primary.dark'
-                          : 'primary.main',
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
-                    aria-expanded={showFilters}
-                    aria-controls="filter-panel"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setShowFilters(!showFilters);
-                      }
-                    }}
-                  >
-                    <FilterAltIcon 
-                      sx={{ 
-                        fontSize: '0.875rem', 
-                        mr: 0.75,
-                        transition: 'transform 0.2s ease',
-                        transform: showFilters ? 'rotate(180deg)' : 'rotate(0deg)'
-                      }}
-                    />
-                    
-                    {(Object.values(filters).some(val => val > 0) || searchTerm) ? (
-                      <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center',
-                        fontWeight: 600
-                      }}>
-                        {`${sortedAndFilteredData.length}/${guestData.length}`}
-                      </Box>
-                    ) : (
-                      <Box component="span" sx={{ display: { xs: 'none', sm: 'block' } }}>
-                        {showFilters ? "Hide" : "Show"}
+                {/* Unified filter button that toggles the filter section */}
+                <Button
+                  size="small"
+                  variant={showFilters || activeFilterCount > 0 ? "contained" : "outlined"}
+                  color="primary"
+                  onClick={handleFilterButtonClick}
+                  startIcon={<FilterAltIcon fontSize="small" />}
+                  title="Toggle Filters Panel (Alt+F)" // Add tooltip with keyboard shortcut
+                  sx={{ 
+                    height: 32, 
+                    textTransform: 'none',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    borderRadius: '4px',
+                    transition: 'all 0.2s ease',
+                    boxShadow: (showFilters || activeFilterCount > 0) ? 1 : 0,
+                    '&:focus-visible': {
+                      outline: '2px solid',
+                      outlineColor: 'primary.main',
+                      outlineOffset: 2,
+                    }
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    Filters
+                    {activeFilterCount > 0 && (
+                      <Box
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          ml: 1,
+                          bgcolor: 'error.main',
+                          color: 'error.contrastText',
+                          borderRadius: '50%',
+                          width: 18,
+                          height: 18,
+                          fontSize: '0.65rem',
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        {activeFilterCount}
                       </Box>
                     )}
                   </Box>
-                </Tooltip>
-
-                {/* Replace the filter chips with a compact button and popover */}
-                <Box sx={{ display: 'flex', alignItems: 'center', ml: 1.5 }}>
-                  {activeFilterCount > 0 && (
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      color="primary"
-                      onClick={handleFilterButtonClick}
-                      startIcon={<FilterAltIcon fontSize="small" />}
-                      title="Toggle Filters Panel (Alt+F)" // Add tooltip with keyboard shortcut
-                      sx={{ 
-                        height: 28, 
-                        textTransform: 'none',
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
-                        borderRadius: '4px',
-                      }}
-                    >
-                      <Badge 
-                        badgeContent={activeFilterCount} 
-                        color="error"
-                        sx={{ 
-                          '& .MuiBadge-badge': { 
-                            fontSize: '0.65rem', 
-                            height: 16, 
-                            minWidth: 16, 
-                            padding: '0 4px'
-                          } 
-                        }}
-                      >
-                        Filters
-                      </Badge>
-                    </Button>
-                  )}
-                  
-                  <Popover
-                    open={openFiltersPopover}
-                    anchorEl={filterAnchorEl}
-                    onClose={handleCloseFilterPopover}
-                    anchorOrigin={{
-                      vertical: 'bottom',
-                      horizontal: 'left',
-                    }}
-                    transformOrigin={{
-                      vertical: 'top',
-                      horizontal: 'left',
-                    }}
-                    sx={{
-                      '& .MuiPopover-paper': {
-                        mt: 1,
-                        boxShadow: 3,
-                        overflow: 'visible',
-                        '&:before': {
-                          content: '""',
-                          position: 'absolute',
-                          top: '-6px',
-                          left: '16px',
-                          width: 12,
-                          height: 12,
-                          bgcolor: 'background.paper',
-                          transform: 'rotate(45deg)',
-                          boxShadow: '-3px -3px 5px rgba(0,0,0,0.04)',
-                          zIndex: 0,
-                        }
-                      }
-                    }}
-                  >
-                    <Box sx={{ 
-                      width: 320, 
-                      maxHeight: 400, 
-                      overflow: 'auto',
-                      p: 2
-                    }}>
-                      <Box sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        mb: 2,
-                        pb: 1.5,
-                        borderBottom: '1px solid',
-                        borderColor: 'divider'
-                      }}>
-                        <Typography variant="subtitle2">
-                          Active Filters ({activeFilterCount})
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Button 
-                            size="small" 
-                            variant="outlined" 
-                            startIcon={<FilterAltOffIcon />}
-                            title="Reset All Filters (Alt+R)" // Add tooltip with keyboard shortcut
-                            onClick={() => {
-                              resetFilters();
-                              handleCloseFilterPopover();
-                            }}
-                          >
-                            Reset All
-                          </Button>
-                          <IconButton
-                            size="small"
-                            onClick={handleCloseFilterPopover}
-                            title="Close Panel (Esc)" // Add tooltip with keyboard shortcut
-                            sx={{ ml: 0.5 }}
-                          >
-                            <CloseIcon fontSize="small" />
-                          </IconButton>
-                        </Box>
-                      </Box>
-                      
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                        {/* Search filters */}
-                        {(activeSearchTerms.length > 0 || (searchTerm && !activeSearchTerms.includes(searchTerm))) && (
-                          <Box>
-                            <Typography variant="caption" fontWeight="bold" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                              Search Terms
-                            </Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                              {activeSearchTerms.map((term) => (
-                                <Chip
-                                  key={term}
-                                  size="small"
-                                  icon={<SearchIcon fontSize="small" />}
-                                  label={`"${term}"`}
-                                  color="primary"
-                                  onDelete={() => removeSearchTerm(term)}
-                                />
-                              ))}
-                              {searchTerm && !activeSearchTerms.includes(searchTerm) && (
-                                <Chip
-                                  size="small"
-                                  icon={<SearchIcon fontSize="small" />}
-                                  label={`"${searchTerm}"`}
-                                  color="secondary"
-                                  onDelete={() => setSearchTerm('')}
-                                />
-                              )}
-                            </Box>
-                          </Box>
-                        )}
-                        
-                        {/* Resource filters */}
-                        {Object.entries(filters).some(([key, value]) => value > 0) && (
-                          <Box>
-                            <Typography variant="caption" fontWeight="bold" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                              Resource Filters
-                            </Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                              {filters.cpu > 0 && (
-                                <Chip
-                                  size="small"
-                                  icon={<SpeedIcon fontSize="small" />}
-                                  label={`CPU ≥ ${formatPercentage(filters.cpu)}`}
-                                  color="primary"
-                                  onDelete={() => clearFilter('cpu')}
-                                />
-                              )}
-                              
-                              {filters.memory > 0 && (
-                                <Chip
-                                  size="small"
-                                  icon={<MemoryIcon fontSize="small" />}
-                                  label={`MEM ≥ ${formatPercentage(filters.memory)}`}
-                                  color="primary"
-                                  onDelete={() => clearFilter('memory')}
-                                />
-                              )}
-                              
-                              {filters.disk > 0 && (
-                                <Chip
-                                  size="small"
-                                  icon={<StorageIcon fontSize="small" />}
-                                  label={`DISK ≥ ${formatPercentage(filters.disk)}`}
-                                  color="primary"
-                                  onDelete={() => clearFilter('disk')}
-                                />
-                              )}
-                            </Box>
-                          </Box>
-                        )}
-                        
-                        {/* Network filters */}
-                        {(filters.download > 0 || filters.upload > 0) && (
-                          <Box>
-                            <Typography variant="caption" fontWeight="bold" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                              Network Filters
-                            </Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                              {filters.download > 0 && (
-                                <Chip
-                                  size="small"
-                                  icon={<ArrowDownwardIcon fontSize="small" />}
-                                  label={`DL ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}`}
-                                  color="primary"
-                                  onDelete={() => clearFilter('download')}
-                                />
-                              )}
-                              
-                              {filters.upload > 0 && (
-                                <Chip
-                                  size="small"
-                                  icon={<ArrowUpwardIcon fontSize="small" />}
-                                  label={`UL ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}`}
-                                  color="secondary"
-                                  onDelete={() => clearFilter('upload')}
-                                />
-                              )}
-                            </Box>
-                          </Box>
-                        )}
-                      </Box>
-                    </Box>
-                  </Popover>
-                </Box>
+                </Button>
+                
+                {/* Remove the separate filter popover since we're combining everything */}
+                {/* The filter chips will now be shown in the expanded filter section */}
+                
               </Box>
               
-              {/* Display controls */}
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                {/* Removed STATUS: title to create more space */}
-                <Box sx={{ 
-                  display: 'flex', 
-                  borderRadius: 1, 
-                  border: '1px solid', 
-                  borderColor: 'divider', 
-                  overflow: 'hidden',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-                }}>
-                  <Tooltip title="Show only running systems">
-                    <Box
-                      onClick={() => setShowStopped(false)}
-                      sx={{
-                        px: 1.5,
-                        py: 0.5,
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        bgcolor: !showStopped ? 'primary.main' : 'transparent',
-                        color: !showStopped ? 'primary.contrastText' : 'text.primary',
-                        transition: 'all 0.2s ease',
-                        boxShadow: !showStopped ? 1 : 0,
-                        '&:hover': {
-                          bgcolor: !showStopped ? 'primary.dark' : 'action.hover',
-                        }
-                      }}
-                    >
-                      <CircleIcon sx={{ 
-                        fontSize: '0.625rem', 
-                        mr: 0.75, 
-                        color: !showStopped ? 'inherit' : 'success.main' 
-                      }} />
-                      Running
-                    </Box>
-                  </Tooltip>
-                  <Tooltip title="Show all systems including stopped ones">
-                    <Box
-                      onClick={() => setShowStopped(true)}
-                      sx={{
-                        px: 1.5,
-                        py: 0.5,
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        bgcolor: showStopped ? 'primary.main' : 'transparent',
-                        color: showStopped ? 'primary.contrastText' : 'text.primary',
-                        borderLeft: '1px solid',
-                        borderLeftColor: 'divider',
-                        transition: 'all 0.2s ease',
-                        boxShadow: showStopped ? 1 : 0,
-                        '&:hover': {
-                          bgcolor: showStopped ? 'primary.dark' : 'action.hover',
-                        }
-                      }}
-                    >
-                      <AllInclusiveIcon sx={{ fontSize: '0.75rem', mr: 0.75 }} />
-                      All
-                    </Box>
-                  </Tooltip>
-                </Box>
-              </Box>
+              {/* Display controls - Running/Stopped toggle removed from here and moved to filter panel */}
+              {/* Remove the separate filter popover since we're combining everything */}
+              {/* The filter chips will now be shown in the expanded filter section */}
+              
             </Box>
           </Box>
           
-          {/* Filter Panel that shows when filters are active */}
+          {/* Filter Panel that shows when filters are active - now includes active filter chips */}
           <Collapse in={showFilters} timeout="auto" sx={{
             '& .MuiCollapse-wrapperInner': {
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
@@ -1711,6 +1346,23 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
               role="region"
               aria-label="Filter controls"
             >
+              {/* Add active filters section at the top */}
+              {activeFilterCount > 0 && (
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  mb: 2,
+                  pb: 1.5,
+                  borderBottom: '1px solid',
+                  borderColor: 'divider'
+                }}>
+                  <Typography variant="subtitle2">
+                    Active Filters ({activeFilterCount})
+                  </Typography>
+                </Box>
+              )}
+              
               <Typography 
                 variant="subtitle2" 
                 sx={{ 
@@ -1724,12 +1376,14 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                 <FilterAltIcon sx={{ fontSize: '1rem', mr: 1, opacity: 0.7 }} />
                 Adjust minimum thresholds:
               </Typography>
+              
+              {/* CPU Filter */}
               <Box sx={{ 
                 display: 'grid', 
                 gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr', lg: '1fr 1fr 1fr 1fr 1fr' },
-                gap: 3
+                gap: 3,
+                mb: 3
               }}>
-                {/* CPU Filter */}
                 <Box sx={{ 
                   backgroundColor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
                   borderRadius: 1.5,
@@ -2010,6 +1664,90 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       </Box>
                     </Box>
               
+              {/* Add search term chips if any exist - moved below slider cards */}
+              {(activeSearchTerms.length > 0 || (searchTerm && !activeSearchTerms.includes(searchTerm))) && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="caption" fontWeight="bold" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                    Search Terms
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                    {activeSearchTerms.map((term) => (
+                      <Chip
+                        key={term}
+                        size="small"
+                        icon={<SearchIcon fontSize="small" />}
+                        label={`"${term}"`}
+                        color="primary"
+                        onDelete={() => removeSearchTerm(term)}
+                      />
+                    ))}
+                    {searchTerm && !activeSearchTerms.includes(searchTerm) && (
+                      <Chip
+                        size="small"
+                        icon={<SearchIcon fontSize="small" />}
+                        label={`"${searchTerm}"`}
+                        color="secondary"
+                        onDelete={() => setSearchTerm('')}
+                      />
+                    )}
+                  </Box>
+                </Box>
+              )}
+              
+              {/* Resource filter chips if any exist - moved below slider cards */}
+              {Object.entries(filters).some(([key, value]) => value > 0) && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="caption" fontWeight="bold" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                    Resource Filters
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                    {Object.entries(filters).map(([key, value]) => {
+                      if (value <= 0) return null;
+                      
+                      let label = '';
+                      let icon = null;
+                      
+                      switch(key) {
+                        case 'cpu':
+                          label = `CPU > ${value}%`;
+                          icon = <SpeedIcon fontSize="small" />;
+                          break;
+                        case 'memory':
+                          label = `Memory > ${value}%`;
+                          icon = <MemoryIcon fontSize="small" />;
+                          break;
+                        case 'disk':
+                          label = `Disk > ${value}%`;
+                          icon = <StorageIcon fontSize="small" />;
+                          break;
+                        case 'download':
+                          label = `Download > ${formatNetworkRateForFilter(sliderValueToNetworkRate(value))}`;
+                          icon = <DownloadIcon fontSize="small" />;
+                          break;
+                        case 'upload':
+                          label = `Upload > ${formatNetworkRateForFilter(sliderValueToNetworkRate(value))}`;
+                          icon = <UploadIcon fontSize="small" />;
+                          break;
+                        default:
+                          return null;
+                      }
+                      
+                      return (
+                        <Chip
+                          key={key}
+                          size="small"
+                          icon={icon}
+                          label={label}
+                          color="primary"
+                          variant="outlined"
+                          onDelete={() => clearFilter(key)}
+                        />
+                      );
+                    })}
+                  </Box>
+                </Box>
+              )}
+              
               <Box sx={{ 
                 display: 'flex', 
                 justifyContent: 'space-between', 
@@ -2019,46 +1757,201 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                 borderTop: '1px solid',
                 borderTopColor: 'divider'
               }}>
-                <Typography 
-                  variant="caption" 
-                  color={Object.values(filters).some(val => val > 0) || selectedNode !== 'all' ? 'primary.main' : 'text.secondary'} 
-                  sx={{ 
-                    fontWeight: 500,
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}
-                  aria-live="polite" // Announce when this changes
-                >
-                  {Object.values(filters).some(val => val > 0) || selectedNode !== 'all' ? (
-                    <>
-                      <InfoOutlinedIcon sx={{ fontSize: '0.875rem', mr: 0.5, opacity: 0.7 }} />
-                      {`Showing ${sortedAndFilteredData.length} of ${getNodeFilteredGuests(guestData).length} systems${selectedNode !== 'all' ? ` on ${selectedNode === 'node1' ? 'Production' : selectedNode === 'node2' ? 'Development' : 'Testing'}` : ''}`}
-                    </>
-                  ) : ''}
-                </Typography>
-                <Button 
-                  variant={Object.values(filters).some(val => val > 0) ? "contained" : "outlined"}
-                  size="small"
-                  color="primary"
-                  onClick={resetFilters}
-                  startIcon={<RestartAltIcon />}
-                  title="Reset All Filters (Alt+R)" // Add tooltip with keyboard shortcut
-                  sx={{ 
-                    height: 32,
-                    transition: 'all 0.2s ease',
-                    fontWeight: Object.values(filters).some(val => val > 0) ? 600 : 400,
-                    textTransform: 'none',
-                    boxShadow: Object.values(filters).some(val => val > 0) ? 1 : 0,
-                    '&:focus-visible': {
-                      outline: '2px solid',
-                      outlineColor: 'primary.main',
-                      outlineOffset: 2,
-                    }
-                  }}
-                  aria-pressed={Object.values(filters).some(val => val > 0)}
-                >
-                  Reset All Filters
-                </Button>
+                {/* Guest Type Filter - Moved to its own section above the filter info */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  mb: 2, 
+                  width: '100%',
+                  pb: 2,
+                  borderBottom: '1px solid',
+                  borderBottomColor: 'divider'
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: { xs: 'wrap', sm: 'nowrap' }, gap: { xs: 2, sm: 3 } }}>
+                    {/* Guest Type Filter */}
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <FilterListIcon sx={{ fontSize: '0.875rem', mr: 0.5, opacity: 0.7, color: 'primary.main' }} />
+                      <Typography variant="caption" sx={{ mr: 1, fontWeight: 600 }}>Guest Type:</Typography>
+                      <Box sx={{ display: 'flex', borderRadius: 1, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+                        <Tooltip title="Show all guests">
+                          <Box
+                            onClick={() => setGuestTypeFilter('all')}
+                            sx={{
+                              px: 1,
+                              py: 0.5,
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              bgcolor: guestTypeFilter === 'all' ? 'primary.main' : 'transparent',
+                              color: guestTypeFilter === 'all' ? 'primary.contrastText' : 'text.primary',
+                              '&:hover': {
+                                bgcolor: guestTypeFilter === 'all' ? 'primary.dark' : 'action.hover',
+                              }
+                            }}
+                          >
+                            All
+                          </Box>
+                        </Tooltip>
+                        <Tooltip title="Show only virtual machines">
+                          <Box
+                            onClick={() => setGuestTypeFilter('vm')}
+                            sx={{
+                              px: 1,
+                              py: 0.5,
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              bgcolor: guestTypeFilter === 'vm' ? 'info.main' : 'transparent',
+                              color: guestTypeFilter === 'vm' ? 'info.contrastText' : 'text.primary',
+                              borderLeft: '1px solid',
+                              borderLeftColor: 'divider',
+                              '&:hover': {
+                                bgcolor: guestTypeFilter === 'vm' ? 'info.dark' : 'action.hover',
+                              }
+                            }}
+                          >
+                            <ComputerIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
+                            VM
+                          </Box>
+                        </Tooltip>
+                        <Tooltip title="Show only LXC containers">
+                          <Box
+                            onClick={() => setGuestTypeFilter('lxc')}
+                            sx={{
+                              px: 1,
+                              py: 0.5,
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              bgcolor: guestTypeFilter === 'lxc' ? 'success.main' : 'transparent',
+                              color: guestTypeFilter === 'lxc' ? 'success.contrastText' : 'text.primary',
+                              borderLeft: '1px solid',
+                              borderLeftColor: 'divider',
+                              '&:hover': {
+                                bgcolor: guestTypeFilter === 'lxc' ? 'success.dark' : 'action.hover',
+                              }
+                            }}
+                          >
+                            <ViewInArIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
+                            LXC
+                          </Box>
+                        </Tooltip>
+                      </Box>
+                    </Box>
+                    
+                    {/* Status Filter - Moved here from the top controls */}
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <PlayCircleOutlineIcon sx={{ fontSize: '0.875rem', mr: 0.5, opacity: 0.7, color: 'primary.main' }} />
+                      <Typography variant="caption" sx={{ mr: 1, fontWeight: 600 }}>Status:</Typography>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        borderRadius: 1, 
+                        border: '1px solid', 
+                        borderColor: 'divider', 
+                        overflow: 'hidden'
+                      }}>
+                        <Tooltip title="Show only running systems">
+                          <Box
+                            onClick={() => setShowStopped(false)}
+                            sx={{
+                              px: 1.5,
+                              py: 0.5,
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              bgcolor: !showStopped ? 'success.main' : 'transparent',
+                              color: !showStopped ? 'success.contrastText' : 'text.primary',
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                bgcolor: !showStopped ? 'success.dark' : 'action.hover',
+                              }
+                            }}
+                          >
+                            <PlayArrowIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
+                            Running
+                          </Box>
+                        </Tooltip>
+                        <Tooltip title="Show all systems including stopped ones">
+                          <Box
+                            onClick={() => setShowStopped(true)}
+                            sx={{
+                              px: 1.5,
+                              py: 0.5,
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              bgcolor: showStopped ? 'primary.main' : 'transparent',
+                              color: showStopped ? 'primary.contrastText' : 'text.primary',
+                              borderLeft: '1px solid',
+                              borderLeftColor: 'divider',
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                bgcolor: showStopped ? 'primary.dark' : 'action.hover',
+                              }
+                            }}
+                          >
+                            <AllInclusiveIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
+                            All
+                          </Box>
+                        </Tooltip>
+                      </Box>
+                    </Box>
+                  </Box>
+                </Box>
+                
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                  <Typography 
+                    variant="caption" 
+                    color={Object.values(filters).some(val => val > 0) || selectedNode !== 'all' ? 'primary.main' : 'text.secondary'} 
+                    sx={{ 
+                      fontWeight: 500,
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    aria-live="polite" // Announce when this changes
+                  >
+                    {Object.values(filters).some(val => val > 0) || selectedNode !== 'all' ? (
+                      <>
+                        <InfoOutlinedIcon sx={{ fontSize: '0.875rem', mr: 0.5, opacity: 0.7 }} />
+                        {`Showing ${sortedAndFilteredData.length} of ${getNodeFilteredGuests(guestData).length} systems${selectedNode !== 'all' ? ` on ${selectedNode === 'node1' ? 'Production' : selectedNode === 'node2' ? 'Development' : 'Testing'}` : ''}`}
+                      </>
+                    ) : ''}
+                  </Typography>
+                  
+                  <Button 
+                    variant={Object.values(filters).some(val => val > 0) ? "contained" : "outlined"}
+                    size="small"
+                    color="primary"
+                    onClick={resetFilters}
+                    startIcon={<RestartAltIcon />}
+                    title="Reset All Filters (Alt+R)" // Add tooltip with keyboard shortcut
+                    sx={{ 
+                      height: 32,
+                      transition: 'all 0.2s ease',
+                      fontWeight: Object.values(filters).some(val => val > 0) ? 600 : 400,
+                      textTransform: 'none',
+                      boxShadow: Object.values(filters).some(val => val > 0) ? 1 : 0,
+                      '&:focus-visible': {
+                        outline: '2px solid',
+                        outlineColor: 'primary.main',
+                        outlineOffset: 2,
+                      }
+                    }}
+                    aria-pressed={Object.values(filters).some(val => val > 0)}
+                  >
+                    Reset All Filters
+                  </Button>
+                </Box>
               </Box>
             </Box>
           </Collapse>
