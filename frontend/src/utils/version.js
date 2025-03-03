@@ -1,4 +1,4 @@
 // This file contains the version information for the application
 // It is automatically updated when a new release is created
 
-export const VERSION = '1.0.13'; // Updated by GitHub Actions
+export const VERSION = '1.0.15'; // Updated manually
