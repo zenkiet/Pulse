@@ -1,41 +1,62 @@
 import winston from 'winston';
 import config from '../config';
 
-// Define log format
-const logFormat = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-  winston.format.errors({ stack: true }),
-  winston.format.splat(),
-  winston.format.json()
-);
+// Define custom format to avoid binary data serialization
+const customFormat = winston.format.printf(({ timestamp, level, message, component, nodeId, ...meta }) => {
+  // Filter out binary data and large objects from meta
+  const filteredMeta = { ...meta };
+  
+  // Remove service field if it's the default
+  if (filteredMeta.service === 'pulse') {
+    delete filteredMeta.service;
+  }
+  
+  // Remove error.config and other large objects that might contain binary data
+  if (filteredMeta.error && typeof filteredMeta.error === 'object') {
+    // Keep only essential error information
+    const error = filteredMeta.error as any;
+    filteredMeta.error = { 
+      message: error.message || 'Unknown error',
+      name: error.name || 'Error',
+      code: error.code || undefined
+    };
+  }
+  
+  // Format the log message
+  const metaStr = Object.keys(filteredMeta).length ? `\n${JSON.stringify(filteredMeta, null, 2)}` : '';
+  const componentStr = component ? `[${component}]` : '';
+  const nodeStr = nodeId ? `[${nodeId}]` : '';
+  return `${timestamp} ${level} ${componentStr}${nodeStr}: ${message}${metaStr}`;
+});
 
-// Create console transport
+// Create console transport with custom format
 const consoleTransport = new winston.transports.Console({
   format: winston.format.combine(
     winston.format.colorize(),
-    winston.format.printf(({ timestamp, level, message, component, nodeId, ...meta }) => {
-      const metaStr = Object.keys(meta).length ? `\n${JSON.stringify(meta, null, 2)}` : '';
-      const componentStr = component ? `[${component}]` : '';
-      const nodeStr = nodeId ? `[${nodeId}]` : '';
-      return `${timestamp} ${level} ${componentStr}${nodeStr}: ${message}${metaStr}`;
-    })
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    customFormat
   )
 });
 
 // Create the logger
 const logger = winston.createLogger({
   level: config.logLevel,
-  format: logFormat,
   defaultMeta: { service: 'pulse' },
   transports: [consoleTransport]
 });
 
-// Add file transport in production
+// Add file transport in production with custom format
 if (config.nodeEnv === 'production') {
+  const fileFormat = winston.format.combine(
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    customFormat
+  );
+  
   logger.add(
     new winston.transports.File({ 
       filename: 'logs/error.log', 
       level: 'error',
+      format: fileFormat,
       maxsize: 5242880, // 5MB
       maxFiles: 5
     })
@@ -44,6 +65,7 @@ if (config.nodeEnv === 'production') {
   logger.add(
     new winston.transports.File({ 
       filename: 'logs/combined.log',
+      format: fileFormat,
       maxsize: 5242880, // 5MB
       maxFiles: 5
     })
