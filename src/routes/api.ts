@@ -91,6 +91,14 @@ router.get('/nodes/:nodeId/guests', (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/containers - Get all containers across all nodes
+ */
+router.get('/containers', (req: Request, res: Response) => {
+  const containers = nodeManager.getContainers();
+  res.json(createResponse(containers));
+});
+
+/**
  * GET /api/guests - Get all guests
  */
 router.get('/guests', (req: Request, res: Response) => {
