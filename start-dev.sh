@@ -22,8 +22,8 @@ sleep 3
 # Get the host IP (use 0.0.0.0 in Docker, otherwise use localhost or your local IP)
 HOST_IP="0.0.0.0"
 if [[ -z "${DOCKER_CONTAINER}" ]]; then
-  # Not in Docker, use localhost or your specific IP
-  HOST_IP="localhost"
+  # Not in Docker, still use 0.0.0.0 to bind to all interfaces
+  HOST_IP="0.0.0.0"
 fi
 
 # Start the frontend Vite dev server
