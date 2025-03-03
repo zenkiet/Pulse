@@ -122,9 +122,9 @@ export class MetricsService extends EventEmitter {
       guestId,
       type,
       metrics: {
-        // If guest.cpu is defined, use it directly (it's already a percentage)
-        // Otherwise, calculate it from cpus if available
-        cpu: guest.cpu !== undefined ? guest.cpu : (guest.cpus > 0 ? 0 : 0),
+        // ProxMox returns CPU as a decimal (e.g., 0.0854 for 8.54%)
+        // We need to multiply by 100 to get the percentage
+        cpu: guest.cpu !== undefined ? guest.cpu * 100 : (guest.cpus > 0 ? 0 : 0),
         memory: {
           total: guest.maxmem,
           used: guest.memory,
