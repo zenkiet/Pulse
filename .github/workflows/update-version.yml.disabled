@@ -1,0 +1,41 @@
+name: Update Version
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Update version file
+        run: |
+          # Extract version from the release tag (remove 'v' prefix if present)
+          VERSION=$(echo ${{ github.ref_name }} | sed 's/^v//')
+
+          # Create utils directory if it doesn't exist
+          mkdir -p frontend/src/utils
+
+          # Update the version.js file
+          echo "// This file contains the version information for the application" > frontend/src/utils/version.js
+          echo "// It is automatically updated when a new release is created" >> frontend/src/utils/version.js
+          echo "" >> frontend/src/utils/version.js
+          echo "export const VERSION = '$VERSION'; // Updated by GitHub Actions" >> frontend/src/utils/version.js
+
+      - name: Commit and push if changed
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+          git add frontend/src/utils/version.js
+          git diff --staged --quiet || (git commit -m "Update version to ${{ github.ref_name }}" && git push)
