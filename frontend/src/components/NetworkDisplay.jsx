@@ -1442,35 +1442,33 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       CPU Usage
                     </Typography>
                   </Box>
-                  <Tooltip title={`CPU usage ≥ ${formatPercentage(filters.cpu)}`} arrow placement="top">
-                            <Slider
-                              value={filters.cpu}
-                      onChange={(_, newValue) => updateFilter('cpu', newValue)}
-                              onMouseDown={() => handleSliderDragStart('cpu')}
-                      onMouseUp={handleSliderDragEnd}
-                      aria-labelledby="cpu-filter-label"
-                      aria-valuetext={`${formatPercentage(filters.cpu)}`}
-                      valueLabelDisplay="auto"
-                      valueLabelFormat={value => `${formatPercentage(value)}`}
-                              sx={{ 
-                        color: theme => filters.cpu > 0 ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.4),
-                                  height: 4,
-                                '& .MuiSlider-thumb': { 
-                          height: 14,
-                          width: 14,
-                          opacity: 1,
-                          backgroundColor: theme.palette.primary.main,
-                                  '&:hover, &.Mui-focusVisible': { 
-                            boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
-                                  }
-                                },
-                                '& .MuiSlider-valueLabel': {
-                          fontWeight: 'bold',
-                          lineHeight: 1.2
-                                }
-                              }}
-                            />
-                  </Tooltip>
+                  <Slider
+                    value={filters.cpu}
+                    onChange={(_, newValue) => updateFilter('cpu', newValue)}
+                    onMouseDown={() => handleSliderDragStart('cpu')}
+                    onMouseUp={handleSliderDragEnd}
+                    aria-labelledby="cpu-filter-label"
+                    aria-valuetext={`${formatPercentage(filters.cpu)}`}
+                    valueLabelDisplay="auto"
+                    valueLabelFormat={value => `${formatPercentage(value)}`}
+                    sx={{ 
+                      color: theme => filters.cpu > 0 ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.4),
+                      height: 4,
+                      '& .MuiSlider-thumb': { 
+                        height: 14,
+                        width: 14,
+                        opacity: 1,
+                        backgroundColor: theme.palette.primary.main,
+                        '&:hover, &.Mui-focusVisible': { 
+                          boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
+                        }
+                      },
+                      '& .MuiSlider-valueLabel': {
+                        fontWeight: 'bold',
+                        lineHeight: 1.2
+                      }
+                    }}
+                  />
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
                     <Typography variant="caption" color="text.secondary">0%</Typography>
                     <Typography variant="caption" color="text.secondary">100%</Typography>
@@ -1500,35 +1498,33 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       Memory Usage
                     </Typography>
                   </Box>
-                  <Tooltip title={`Memory usage ≥ ${formatPercentage(filters.memory)}`} arrow placement="top">
-                            <Slider
-                              value={filters.memory}
-                      onChange={(_, newValue) => updateFilter('memory', newValue)}
-                              onMouseDown={() => handleSliderDragStart('memory')}
-                      onMouseUp={handleSliderDragEnd}
-                      aria-labelledby="memory-filter-label"
-                      aria-valuetext={`${formatPercentage(filters.memory)}`}
-                      valueLabelDisplay="auto"
-                      valueLabelFormat={value => `${formatPercentage(value)}`}
-                              sx={{ 
-                        color: theme => filters.memory > 0 ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.4),
-                                  height: 4,
-                                '& .MuiSlider-thumb': { 
-                          height: 14,
-                          width: 14,
-                          opacity: 1,
-                          backgroundColor: theme.palette.primary.main,
-                                  '&:hover, &.Mui-focusVisible': { 
-                            boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
-                                  }
-                                },
-                                '& .MuiSlider-valueLabel': {
-                          fontWeight: 'bold',
-                          lineHeight: 1.2
-                                }
-                              }}
-                            />
-                  </Tooltip>
+                  <Slider
+                    value={filters.memory}
+                    onChange={(_, newValue) => updateFilter('memory', newValue)}
+                    onMouseDown={() => handleSliderDragStart('memory')}
+                    onMouseUp={handleSliderDragEnd}
+                    aria-labelledby="memory-filter-label"
+                    aria-valuetext={`${formatPercentage(filters.memory)}`}
+                    valueLabelDisplay="auto"
+                    valueLabelFormat={value => `${formatPercentage(value)}`}
+                    sx={{ 
+                      color: theme => filters.memory > 0 ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.4),
+                      height: 4,
+                      '& .MuiSlider-thumb': { 
+                        height: 14,
+                        width: 14,
+                        opacity: 1,
+                        backgroundColor: theme.palette.primary.main,
+                        '&:hover, &.Mui-focusVisible': { 
+                          boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
+                        }
+                      },
+                      '& .MuiSlider-valueLabel': {
+                        fontWeight: 'bold',
+                        lineHeight: 1.2
+                      }
+                    }}
+                  />
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
                     <Typography variant="caption" color="text.secondary">0%</Typography>
                     <Typography variant="caption" color="text.secondary">100%</Typography>
@@ -1558,35 +1554,33 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       Disk Usage
                     </Typography>
                   </Box>
-                  <Tooltip title={`Disk usage ≥ ${formatPercentage(filters.disk)}`} arrow placement="top">
-                    <Slider
-                              value={filters.disk} 
-                      onChange={(_, newValue) => updateFilter('disk', newValue)}
-                      onMouseDown={() => handleSliderDragStart('disk')}
-                      onMouseUp={handleSliderDragEnd}
-                      aria-labelledby="disk-filter-label"
-                      aria-valuetext={`${formatPercentage(filters.disk)}`}
-                      valueLabelDisplay="auto"
-                      valueLabelFormat={value => `${formatPercentage(value)}`}
-                              sx={{ 
-                        color: theme => filters.disk > 0 ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.4),
-                                height: 4,
-                        '& .MuiSlider-thumb': {
-                          height: 14,
-                          width: 14,
-                          opacity: 1,
-                          backgroundColor: theme.palette.primary.main,
-                          '&:hover, &.Mui-focusVisible': {
-                            boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
-                          }
-                        },
-                        '& .MuiSlider-valueLabel': {
-                          fontWeight: 'bold',
-                          lineHeight: 1.2
-                                }
-                              }} 
-                            />
-                  </Tooltip>
+                  <Slider
+                    value={filters.disk} 
+                    onChange={(_, newValue) => updateFilter('disk', newValue)}
+                    onMouseDown={() => handleSliderDragStart('disk')}
+                    onMouseUp={handleSliderDragEnd}
+                    aria-labelledby="disk-filter-label"
+                    aria-valuetext={`${formatPercentage(filters.disk)}`}
+                    valueLabelDisplay="auto"
+                    valueLabelFormat={value => `${formatPercentage(value)}`}
+                    sx={{ 
+                      color: theme => filters.disk > 0 ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.4),
+                      height: 4,
+                      '& .MuiSlider-thumb': {
+                        height: 14,
+                        width: 14,
+                        opacity: 1,
+                        backgroundColor: theme.palette.primary.main,
+                        '&:hover, &.Mui-focusVisible': {
+                          boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
+                        }
+                      },
+                      '& .MuiSlider-valueLabel': {
+                        fontWeight: 'bold',
+                        lineHeight: 1.2
+                      }
+                    }} 
+                  />
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
                     <Typography variant="caption" color="text.secondary">0%</Typography>
                     <Typography variant="caption" color="text.secondary">100%</Typography>
@@ -1607,7 +1601,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                   }
                 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <ArrowDownwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem', color: 'primary.main' }} />
+                    <ArrowDownwardIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem', color: 'secondary.main' }} />
                     <Typography 
                       variant="body2" 
                       sx={{ fontWeight: 600 }}
@@ -1616,35 +1610,33 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       Download Rate
                     </Typography>
                   </Box>
-                  <Tooltip title={`Download ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}`} arrow placement="top">
-                            <Slider
-                      value={filters.download}
-                      onChange={(_, newValue) => updateFilter('download', newValue)}
-                      onMouseDown={() => handleSliderDragStart('download')}
-                      onMouseUp={handleSliderDragEnd}
-                      aria-labelledby="download-filter-label"
-                      aria-valuetext={`${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}`}
-                      valueLabelDisplay="auto"
-                      valueLabelFormat={value => formatNetworkRateForFilter(sliderValueToNetworkRate(value))}
-                              sx={{ 
-                        color: theme => filters.download > 0 ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.4),
-                                  height: 4,
-                                '& .MuiSlider-thumb': { 
-                          height: 14,
-                          width: 14,
-                          opacity: 1,
-                          backgroundColor: theme.palette.primary.main,
-                                  '&:hover, &.Mui-focusVisible': { 
-                            boxShadow: `0px 0px 0px 8px ${alpha('#3a7bd5', 0.16)}`
-                                  }
-                                },
-                                '& .MuiSlider-valueLabel': {
-                          fontWeight: 'bold',
-                          lineHeight: 1.2
-                                }
-                              }}
-                            />
-                  </Tooltip>
+                  <Slider
+                    value={filters.download}
+                    onChange={(_, newValue) => updateFilter('download', newValue)}
+                    onMouseDown={() => handleSliderDragStart('download')}
+                    onMouseUp={handleSliderDragEnd}
+                    aria-labelledby="download-filter-label"
+                    aria-valuetext={`${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}`}
+                    valueLabelDisplay="auto"
+                    valueLabelFormat={value => formatNetworkRateForFilter(sliderValueToNetworkRate(value))}
+                    sx={{
+                      color: theme => filters.download > 0 ? theme.palette.secondary.main : alpha(theme.palette.secondary.main, 0.4),
+                      height: 4,
+                      '& .MuiSlider-thumb': {
+                        height: 14,
+                        width: 14,
+                        opacity: 1,
+                        backgroundColor: theme.palette.secondary.main,
+                        '&:hover, &.Mui-focusVisible': {
+                          boxShadow: `0px 0px 0px 8px ${alpha('#9c27b0', 0.16)}`
+                        }
+                      },
+                      '& .MuiSlider-valueLabel': {
+                        fontWeight: 'bold',
+                        lineHeight: 1.2
+                      }
+                    }}
+                  />
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
                     <Typography variant="caption" color="text.secondary">0 B/s</Typography>
                     <Typography variant="caption" color="text.secondary">10 MB/s</Typography>
@@ -1674,35 +1666,33 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       Upload Rate
                     </Typography>
                   </Box>
-                  <Tooltip title={`Upload ≥ ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}`} arrow placement="top">
-                    <Slider
-                      value={filters.upload}
-                      onChange={(_, newValue) => updateFilter('upload', newValue)}
-                      onMouseDown={() => handleSliderDragStart('upload')}
-                      onMouseUp={handleSliderDragEnd}
-                      aria-labelledby="upload-filter-label"
-                      aria-valuetext={`${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}`}
-                      valueLabelDisplay="auto"
-                      valueLabelFormat={value => formatNetworkRateForFilter(sliderValueToNetworkRate(value))}
-                      sx={{
-                        color: theme => filters.upload > 0 ? theme.palette.secondary.main : alpha(theme.palette.secondary.main, 0.4),
-                        height: 4,
-                        '& .MuiSlider-thumb': {
-                          height: 14,
-                          width: 14,
-                          opacity: 1,
-                          backgroundColor: theme.palette.secondary.main,
-                          '&:hover, &.Mui-focusVisible': {
-                            boxShadow: `0px 0px 0px 8px ${alpha('#9c27b0', 0.16)}`
-                          }
-                        },
-                        '& .MuiSlider-valueLabel': {
-                          fontWeight: 'bold',
-                          lineHeight: 1.2
+                  <Slider
+                    value={filters.upload}
+                    onChange={(_, newValue) => updateFilter('upload', newValue)}
+                    onMouseDown={() => handleSliderDragStart('upload')}
+                    onMouseUp={handleSliderDragEnd}
+                    aria-labelledby="upload-filter-label"
+                    aria-valuetext={`${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}`}
+                    valueLabelDisplay="auto"
+                    valueLabelFormat={value => formatNetworkRateForFilter(sliderValueToNetworkRate(value))}
+                    sx={{
+                      color: theme => filters.upload > 0 ? theme.palette.secondary.main : alpha(theme.palette.secondary.main, 0.4),
+                      height: 4,
+                      '& .MuiSlider-thumb': {
+                        height: 14,
+                        width: 14,
+                        opacity: 1,
+                        backgroundColor: theme.palette.secondary.main,
+                        '&:hover, &.Mui-focusVisible': {
+                          boxShadow: `0px 0px 0px 8px ${alpha('#9c27b0', 0.16)}`
                         }
-                      }}
-                    />
-                  </Tooltip>
+                      },
+                      '& .MuiSlider-valueLabel': {
+                        fontWeight: 'bold',
+                        lineHeight: 1.2
+                      }
+                    }}
+                  />
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
                     <Typography variant="caption" color="text.secondary">0 B/s</Typography>
                     <Typography variant="caption" color="text.secondary">10 MB/s</Typography>
