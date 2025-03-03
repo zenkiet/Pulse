@@ -1944,6 +1944,129 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       </Tooltip>
                     </Box>
                   </Box>
+                  
+                  {/* Export Options */}
+                  {guestData.length > 0 && sortedAndFilteredData.length > 0 && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', ml: 'auto' }}>
+                      <Typography variant="caption" sx={{ mr: 1, fontWeight: 600 }}>Export:</Typography>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Tooltip title="Export as PDF">
+                          <IconButton
+                            size="small"
+                            onClick={generatePDF}
+                            sx={{
+                              padding: 0.5,
+                              '&:hover': {
+                                backgroundColor: alpha(theme.palette.primary.main, 0.1)
+                              }
+                            }}
+                          >
+                            <PictureAsPdfIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        
+                        <Tooltip title="Export as CSV">
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              try {
+                                console.log('CSV export started');
+                                
+                                // Create CSV content
+                                const headers = ['Name', 'Status', 'CPU Usage', 'Memory Usage', 'Disk Usage', 'Download', 'Upload'];
+                                const csvRows = [headers];
+                                
+                                // Helper function to escape CSV values properly
+                                const escapeCSV = (value) => {
+                                  if (value === null || value === undefined) return '';
+                                  const str = String(value);
+                                  // If the value contains commas, quotes, or newlines, wrap it in quotes
+                                  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                                    // Double up any quotes
+                                    return `"${str.replace(/"/g, '""')}"`;
+                                  }
+                                  return str;
+                                };
+                                
+                                // Add data rows
+                                sortedAndFilteredData.forEach(guest => {
+                                  try {
+                                    const metrics = getMetricsForGuest(guest.id);
+                                    const networkMetrics = metrics?.metrics?.network;
+                                    
+                                    // Get resource metrics
+                                    const cpuUsage = metrics?.metrics?.cpu || 0;
+                                    
+                                    const memoryData = metrics?.metrics?.memory || {};
+                                    const memoryUsage = memoryData.percentUsed || 
+                                      (memoryData.total && memoryData.used ? 
+                                        (memoryData.used / memoryData.total) * 100 : 0);
+                                    
+                                    const diskData = metrics?.metrics?.disk || {};
+                                    const diskUsage = diskData.percentUsed || 
+                                      (diskData.total && diskData.used ? 
+                                        (diskData.used / diskData.total) * 100 : 0);
+                                    
+                                    csvRows.push([
+                                      escapeCSV(guest.name || 'Unknown'),
+                                      escapeCSV(guest.status || 'Unknown'),
+                                      escapeCSV(formatPercentage(cpuUsage)),
+                                      escapeCSV(formatPercentage(memoryUsage)),
+                                      escapeCSV(formatPercentage(diskUsage)),
+                                      escapeCSV(guest.status === 'running' && networkMetrics ? 
+                                        formatNetworkRate(networkMetrics.inRate || 0) : '-'),
+                                      escapeCSV(guest.status === 'running' && networkMetrics ? 
+                                        formatNetworkRate(networkMetrics.outRate || 0) : '-')
+                                    ]);
+                                  } catch (rowError) {
+                                    console.error('Error processing CSV row for guest:', guest?.name, rowError);
+                                    // Add a fallback row with error information
+                                    csvRows.push([
+                                      escapeCSV(guest?.name || 'Unknown'),
+                                      escapeCSV(guest?.status || 'Unknown'),
+                                      'Error', 'Error', 'Error', 'Error', 'Error'
+                                    ]);
+                                  }
+                                });
+                                
+                                // Convert to CSV string
+                                const csvContent = csvRows.map(row => row.join(',')).join('\n');
+                                console.log('CSV content generated');
+                                
+                                // Create and download the file
+                                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                                const url = URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.setAttribute('href', url);
+                                link.setAttribute('download', `container-status-${new Date().toISOString().split('T')[0]}.csv`);
+                                link.style.visibility = 'hidden';
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                URL.revokeObjectURL(url);
+                                console.log('CSV downloaded successfully');
+                              } catch (error) {
+                                console.error('Error exporting CSV:', error);
+                                if (error.message) {
+                                  alert(`Failed to export CSV: ${error.message}`);
+                                } else {
+                                  alert('Failed to export CSV. Please check the console for details.');
+                                }
+                              }
+                            }}
+                            sx={{
+                              padding: 0.5,
+                              '&:hover': {
+                                backgroundColor: alpha(theme.palette.primary.main, 0.1)
+                              }
+                            }}
+                          >
+                            <FileDownloadIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </Box>
+                  )}
                 </Box>
                 
                 {/* Filter summary text in its own dedicated row */}
@@ -2828,136 +2951,6 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
               </TableBody>
             </Table>
           </TableContainer>
-
-          {/* PDF Export Button */}
-          {guestData.length > 0 && sortedAndFilteredData.length > 0 && (
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'flex-end', 
-              mt: 0.5, 
-              px: 1,
-              gap: 0.5
-            }}>
-              <Tooltip title="Export as PDF">
-                <IconButton
-                  size="small"
-                  onClick={generatePDF}
-                  sx={{
-                    opacity: 0.5,
-                    padding: 0.5,
-                    '&:hover': {
-                      opacity: 0.8,
-                      backgroundColor: 'transparent'
-                    }
-                  }}
-                >
-                  <PictureAsPdfIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-              
-              <Tooltip title="Export as CSV">
-                <IconButton
-                  size="small"
-                  onClick={() => {
-                    try {
-                      console.log('CSV export started');
-                      
-                      // Create CSV content
-                      const headers = ['Name', 'Status', 'CPU Usage', 'Memory Usage', 'Disk Usage', 'Download', 'Upload'];
-                      const csvRows = [headers];
-                      
-                      // Helper function to escape CSV values properly
-                      const escapeCSV = (value) => {
-                        if (value === null || value === undefined) return '';
-                        const str = String(value);
-                        // If the value contains commas, quotes, or newlines, wrap it in quotes
-                        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-                          // Double up any quotes
-                          return `"${str.replace(/"/g, '""')}"`;
-                        }
-                        return str;
-                      };
-                      
-                      // Add data rows
-                      sortedAndFilteredData.forEach(guest => {
-                        try {
-                          const metrics = getMetricsForGuest(guest.id);
-                          const networkMetrics = metrics?.metrics?.network;
-                          
-                          // Get resource metrics
-                          const cpuUsage = metrics?.metrics?.cpu || 0;
-                          
-                          const memoryData = metrics?.metrics?.memory || {};
-                          const memoryUsage = memoryData.percentUsed || 
-                            (memoryData.total && memoryData.used ? 
-                              (memoryData.used / memoryData.total) * 100 : 0);
-                          
-                          const diskData = metrics?.metrics?.disk || {};
-                          const diskUsage = diskData.percentUsed || 
-                            (diskData.total && diskData.used ? 
-                              (diskData.used / diskData.total) * 100 : 0);
-                          
-                          csvRows.push([
-                            escapeCSV(guest.name || 'Unknown'),
-                            escapeCSV(guest.status || 'Unknown'),
-                            escapeCSV(formatPercentage(cpuUsage)),
-                            escapeCSV(formatPercentage(memoryUsage)),
-                            escapeCSV(formatPercentage(diskUsage)),
-                            escapeCSV(guest.status === 'running' && networkMetrics ? 
-                              formatNetworkRate(networkMetrics.inRate || 0) : '-'),
-                            escapeCSV(guest.status === 'running' && networkMetrics ? 
-                              formatNetworkRate(networkMetrics.outRate || 0) : '-')
-                          ]);
-                        } catch (rowError) {
-                          console.error('Error processing CSV row for guest:', guest?.name, rowError);
-                          // Add a fallback row with error information
-                          csvRows.push([
-                            escapeCSV(guest?.name || 'Unknown'),
-                            escapeCSV(guest?.status || 'Unknown'),
-                            'Error', 'Error', 'Error', 'Error', 'Error'
-                          ]);
-                        }
-                      });
-                      
-                      // Convert to CSV string
-                      const csvContent = csvRows.map(row => row.join(',')).join('\n');
-                      console.log('CSV content generated');
-                      
-                      // Create and download the file
-                      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                      const url = URL.createObjectURL(blob);
-                      const link = document.createElement('a');
-                      link.setAttribute('href', url);
-                      link.setAttribute('download', `container-status-${new Date().toISOString().split('T')[0]}.csv`);
-                      link.style.visibility = 'hidden';
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                      URL.revokeObjectURL(url);
-                      console.log('CSV downloaded successfully');
-                    } catch (error) {
-                      console.error('Error exporting CSV:', error);
-                      if (error.message) {
-                        alert(`Failed to export CSV: ${error.message}`);
-                      } else {
-                        alert('Failed to export CSV. Please check the console for details.');
-                      }
-                    }
-                  }}
-                  sx={{
-                    opacity: 0.5,
-                    padding: 0.5,
-                    '&:hover': {
-                      opacity: 0.8,
-                      backgroundColor: 'transparent'
-                    }
-                  }}
-                >
-                  <FileDownloadIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          )}
         </CardContent>
       </Card>
     </Box>
