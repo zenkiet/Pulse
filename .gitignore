@@ -38,3 +38,4 @@ scripts/release.sh
 
 # Release process
 .release-prompt.md
+.commit-prompt.md
