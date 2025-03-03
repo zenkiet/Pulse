@@ -70,6 +70,57 @@ Your ProxMox API token needs these permissions:
   - Sys.Audit
   - Pool.Audit
 
+### Creating a ProxMox API Token
+
+#### Option 1: Quick Command (Convenient but less secure)
+
+SSH into your ProxMox server and run this command to create a token with the necessary permissions:
+
+```bash
+# Replace 'pulse' with your preferred token name if desired
+pveum user token add root@pam pulse --privsep=0 && \
+pveum acl modify / -user root@pam -role PVEAuditor && \
+pveum user token list root@pam
+```
+
+⚠️ **Why this is less secure:**
+- Uses the root account (best practice is to use a dedicated user)
+- Disables privilege separation (--privsep=0)
+- Grants access to all resources (/)
+- Outputs the token secret to the terminal (could be logged)
+
+#### Option 2: Step-by-Step Guide (More secure)
+
+1. **Log in to the ProxMox web interface**
+
+2. **Create a dedicated user** (optional but recommended)
+   - Go to Datacenter → Permissions → Users
+   - Click "Add"
+   - Enter a username (e.g., "pulse-monitor")
+   - Set a password and enable the user
+
+3. **Create an API token**
+   - Go to Datacenter → Permissions → API Tokens
+   - Click "Add"
+   - Select your user (e.g., "pulse-monitor@pam" or "root@pam")
+   - Enter a token ID (e.g., "monitoring")
+   - Uncheck "Privilege Separation" only if necessary
+   - Click "Add"
+   - **Important:** Save the displayed token value securely - it will only be shown once!
+
+4. **Assign permissions**
+   - Go to Datacenter → Permissions → Add
+   - Path: /
+   - User: Your user (e.g., "pulse-monitor@pam")
+   - Role: PVEAuditor
+   - Click "Add"
+
+5. **Update your .env file**
+   ```
+   PROXMOX_NODE_1_TOKEN_ID=pulse-monitor@pam!monitoring
+   PROXMOX_NODE_1_TOKEN_SECRET=your-saved-token-value
+   ```
+
 ## 🛠️ Common Docker Commands
 
 ```bash
@@ -111,6 +162,7 @@ docker run -d -p 7654:7654 --env-file .env --name pulse-app --restart unless-sto
    NODE_TLS_REJECT_UNAUTHORIZED=0
    ```
 3. **Port Conflicts**: Change the port mapping in your docker run command if port 7654 is already in use
+4. **API Token Issues**: Ensure your token has the correct permissions (PVEAuditor role)
 
 ## 📋 Advanced Configuration
 
