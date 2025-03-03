@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import useSocket from '../hooks/useSocket';
 import { useThemeContext } from '../context/ThemeContext';
 import { 
@@ -603,13 +603,15 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     
     // Existing keyboard functionality...
     if (e.key === 'Escape') {
-      setEscRecentlyPressed(true);
-      setTimeout(() => setEscRecentlyPressed(false), 300);
-      
       // If filter popover is open, close it
       if (openFiltersPopover) {
         handleCloseFilterPopover();
         return;
+      }
+      
+      // Always collapse the filter dropdown
+      if (showFilters) {
+        setShowFilters(false);
       }
       
       // If there are active filters, clear them
@@ -628,7 +630,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
         searchInputRef.current?.blur();
       }
     }
-  }, [openFiltersPopover, handleCloseFilterPopover, searchInputRef, setSearchTerm, setEscRecentlyPressed, activeFilterCount, resetFilters]);
+  }, [openFiltersPopover, handleCloseFilterPopover, searchInputRef, setSearchTerm, activeFilterCount, resetFilters, showFilters, setShowFilters]);
 
   // Add key event listener
   useEffect(() => {
@@ -637,6 +639,53 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [handleKeyDown]);
+  
+  // Add key event listener for auto-focusing search on typing
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      // Skip if we're in an input, textarea, or contentEditable element
+      if (
+        document.activeElement.tagName === 'INPUT' ||
+        document.activeElement.tagName === 'TEXTAREA' ||
+        document.activeElement.isContentEditable
+      ) {
+        return;
+      }
+      
+      // Skip for modifier keys, navigation keys, and function keys
+      if (
+        e.ctrlKey || e.altKey || e.metaKey || // Modifier keys
+        e.key === 'Tab' || e.key === 'Escape' || // Navigation keys
+        e.key.startsWith('Arrow') || e.key.startsWith('Page') || 
+        e.key === 'Home' || e.key === 'End' ||
+        (e.key.startsWith('F') && e.key.length > 1) // Function keys (F1-F12)
+      ) {
+        return;
+      }
+      
+      // Focus search input for alphanumeric keys and space
+      if (
+        (e.key.length === 1 && /[a-zA-Z0-9\s]/.test(e.key)) ||
+        e.key === ' '
+      ) {
+        // Prevent default to avoid typing the key before focus
+        e.preventDefault();
+        
+        // Focus the search input
+        searchInputRef.current?.focus();
+        
+        // If it's not a space, set the search term to the pressed key
+        if (e.key !== ' ') {
+          setSearchTerm(e.key);
+        }
+      }
+    };
+    
+    document.addEventListener('keydown', handleGlobalKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleGlobalKeyDown);
+    };
+  }, [searchInputRef, setSearchTerm]);
   
   // Function to add a search term to active filters
   const addSearchTerm = (term) => {
@@ -1122,6 +1171,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                 placeholder="Search systems..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                inputRef={searchInputRef}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && searchTerm.trim()) {
                     addSearchTerm(searchTerm.trim());
