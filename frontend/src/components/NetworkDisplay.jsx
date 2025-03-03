@@ -157,7 +157,7 @@ const networkRateToSliderValue = (bytesPerSecond) => {
 };
 
 // Progress bar with label and tooltip
-const ProgressWithLabel = ({ value, color = "primary", disabled = false, tooltipText }) => {
+const ProgressWithLabel = React.memo(({ value, color = "primary", disabled = false, tooltipText }) => {
   const normalizedValue = Math.min(Math.max(0, value), 100);
   
   const progressBar = (
@@ -208,10 +208,10 @@ const ProgressWithLabel = ({ value, color = "primary", disabled = false, tooltip
   }
   
   return progressBar;
-};
+});
 
 // Status indicator circle
-const StatusIndicator = ({ status }) => {
+const StatusIndicator = React.memo(({ status }) => {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
   let color = 'grey';
@@ -246,15 +246,15 @@ const StatusIndicator = ({ status }) => {
       }}
     />
   );
-};
+});
 
 // KeyboardShortcut component with better a11y
 const KeyboardShortcut = ({ shortcut, sx = {} }) => (
   <Box
     component="span"
     sx={{
-      display: 'inline-flex',
-      alignItems: 'center',
+      display: 'inline-flex', 
+      alignItems: 'center', 
       justifyContent: 'center',
       px: 0.7,
       py: 0.3,

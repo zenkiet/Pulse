@@ -92,9 +92,9 @@ const config: AppConfig = {
   enableDevTools: process.env.ENABLE_DEV_TOOLS === 'true',
   metricsHistoryMinutes: parseInt(process.env.METRICS_HISTORY_MINUTES || '60', 10),
   ignoreSSLErrors: process.env.IGNORE_SSL_ERRORS === 'true',
-  // More responsive polling intervals
-  nodePollingIntervalMs: parseInt(process.env.NODE_POLLING_INTERVAL_MS || '5000', 10),
-  eventPollingIntervalMs: parseInt(process.env.EVENT_POLLING_INTERVAL_MS || '2000', 10),
+  // More responsive polling intervals - reduced for maximum responsiveness
+  nodePollingIntervalMs: parseInt(process.env.NODE_POLLING_INTERVAL_MS || '2000', 10),
+  eventPollingIntervalMs: parseInt(process.env.EVENT_POLLING_INTERVAL_MS || '1000', 10),
   nodes: parseNodeConfigs()
 };
 

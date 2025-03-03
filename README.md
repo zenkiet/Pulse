@@ -410,9 +410,11 @@ IGNORE_SSL_ERRORS=true
 NODE_TLS_REJECT_UNAUTHORIZED=0
 
 # Polling Intervals (in milliseconds)
-NODE_POLLING_INTERVAL_MS=10000
-EVENT_POLLING_INTERVAL_MS=2000
+NODE_POLLING_INTERVAL_MS=2000
+EVENT_POLLING_INTERVAL_MS=1000
 ```
+
+The application is optimized for maximum responsiveness with polling intervals of 2000ms for nodes and 1000ms for events. For environments with limited resources, you may want to increase these values.
 
 The `NODE_TLS_REJECT_UNAUTHORIZED=0` setting is particularly important when using self-signed certificates, as it tells Node.js to ignore SSL certificate validation errors. Note that this should only be used in development environments or when you trust your network, as it bypasses security checks.
 
@@ -524,13 +526,34 @@ When reporting issues, please include:
 ### Polling Intervals
 Adjust these settings in your `.env` file based on your needs:
 ```bash
-# Increase intervals to reduce server load
-NODE_POLLING_INTERVAL_MS=30000    # Default: 10000 (10 seconds)
-EVENT_POLLING_INTERVAL_MS=5000    # Default: 2000 (2 seconds)
+# For maximum responsiveness (high update frequency)
+NODE_POLLING_INTERVAL_MS=2000     # Default: 2000 (2 seconds)
+EVENT_POLLING_INTERVAL_MS=1000    # Default: 1000 (1 second)
 
-# Reduce metrics history for lower memory usage
-METRICS_HISTORY_MINUTES=30        # Default: 60 minutes
+# For balanced performance (medium update frequency)
+NODE_POLLING_INTERVAL_MS=5000     # 5 seconds
+EVENT_POLLING_INTERVAL_MS=2000    # 2 seconds
+
+# For minimal server load (less frequent updates)
+NODE_POLLING_INTERVAL_MS=30000    # 30 seconds
+EVENT_POLLING_INTERVAL_MS=5000    # 5 seconds
+
+# Adjust metrics history for memory usage optimization
+METRICS_HISTORY_MINUTES=60        # Default: 60 minutes
 ```
+
+### WebSocket Configuration
+The application uses optimized WebSocket settings for real-time updates:
+
+- **Backend WebSocket**:
+  - `pingTimeout`: 15000ms (15 seconds)
+  - `pingInterval`: 2000ms (2 seconds, matches node polling)
+  - `perMessageDeflate`: Enabled with threshold at 512 bytes
+
+- **Frontend Socket.io Client**:
+  - Primary transport: WebSockets with polling fallback
+  - Reconnection attempts: 20
+  - Connection recovery: Enabled for up to 2 minutes of disconnection
 
 ### Resource Usage Guidelines
 - Memory usage scales with:
@@ -540,39 +563,22 @@ METRICS_HISTORY_MINUTES=30        # Default: 60 minutes
   - Polling frequency
 
 ### Optimization Tips
-1. **High-Traffic Environments**:
+1. **For Maximum Responsiveness**:
+   - Use the lowest polling intervals (2000ms/1000ms)
+   - Ensure your server has adequate CPU resources
+   - Maintain a stable network connection between the app and Proxmox
+   - Use a modern browser with WebSocket support
+
+2. **High-Traffic Environments**:
    - Increase polling intervals
    - Reduce metrics history
    - Use a reverse proxy with caching
    - Consider running multiple instances
 
-2. **Low-Resource Environments**:
+3. **Low-Resource Environments**:
    - Reduce WebSocket connections
-   - Minimize browser connections
-   - Use production mode
-   - Optimize Docker container resources
-
-3. **Large Clusters**:
-   - Monitor resource usage
-   - Adjust Node.js memory limits
-   - Consider horizontal scaling
-   - Use load balancing
-
-### Docker Resource Limits
-Example `docker-compose.yml` with optimized settings:
-```yaml
-services:
-  pulse:
-    image: rcourtman/pulse:latest
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 256M
-    environment:
-      NODE_OPTIONS: "--max-old-space-size=256"
-```
+   - Increase polling intervals
+   - Reduce metrics history
 
 ## Security Best Practices
 

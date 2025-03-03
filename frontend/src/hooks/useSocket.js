@@ -28,17 +28,17 @@ const useSocket = (url) => {
     // Socket.io connection configuration
     socketRef.current = io(socketUrl, {
       transports: ['websocket', 'polling'],  // Allow fallback to polling
-      reconnectionAttempts: 15,              // Increased from 10
-      reconnectionDelay: 1500,               // Increased from 1000
-      timeout: 10000,                        // Increased from 5000
+      reconnectionAttempts: 20,              // Increased from 15
+      reconnectionDelay: 1000,               // Reduced from 1500
+      timeout: 8000,                         // Reduced from 10000
       forceNew: true,
       autoConnect: true,
       reconnection: true,
-      reconnectionDelayMax: 10000,           // Increased from 5000
-      randomizationFactor: 0.5,
+      reconnectionDelayMax: 5000,            // Reduced from 10000
+      randomizationFactor: 0.3,              // Reduced from 0.5 for more predictable reconnection timing
       // Add connection state recovery
       connectionStateRecovery: {
-        maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
+        maxDisconnectionDuration: 2 * 60 * 1000,
         skipMiddlewares: true,
       }
     });
@@ -213,50 +213,69 @@ const useSocket = (url) => {
   const handleMetricsUpdate = useCallback((payload) => {
     // Handle both single metric and array of metrics
     const metricData = Array.isArray(payload) ? payload : [payload];
-    console.log('Processing metrics data:', metricData);
     
-    // Log the specific guest IDs we're receiving metrics for
-    metricData.forEach(metric => {
-      console.log(`Received metrics for guest: ${metric.guestId || 'unknown'} at ${new Date().toLocaleTimeString()}`);
-    });
+    // Important performance optimization:
+    // Only log in development mode to reduce overhead
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Processing metrics data:', metricData);
+      // Log the specific guest IDs we're receiving metrics for
+      metricData.forEach(metric => {
+        console.log(`Received metrics for guest: ${metric.guestId || 'unknown'} at ${new Date().toLocaleTimeString()}`);
+      });
+    }
     
-    // Important: Create a new metrics array instead of modifying the existing one
-    // This ensures React detects the state change and re-renders
+    // Use functional update to avoid closure issues with stale state
     setMetricsData(prevMetrics => {
-      // Make a deep copy to ensure we don't modify the original state
+      // Performance optimization: Check if we actually have new data before updating
+      if (!metricData.length) return prevMetrics;
+      
+      // Make a new array to ensure React detects the change
       const newMetrics = [...prevMetrics];
       let hasChanges = false;
       
+      // Process updates with a Map for O(1) lookups instead of O(n) array searches
+      const metricsMap = new Map();
+      
+      // First create a map of existing metrics for faster lookup
+      prevMetrics.forEach(metric => {
+        if (metric.guestId) {
+          metricsMap.set(metric.guestId, metric);
+        }
+      });
+      
+      // Then process the updates
       metricData.forEach(metric => {
         if (!metric.guestId) {
-          console.warn('Received metric without guestId:', metric);
-          return;
+          return; // Skip metrics without a guestId
         }
         
-        const index = newMetrics.findIndex(m => m.guestId === metric.guestId);
+        const existingMetric = metricsMap.get(metric.guestId);
         
-        if (index >= 0) {
-          // Update existing metric with new values
-          newMetrics[index] = {
-            ...newMetrics[index],
-            ...metric,
-            timestamp: metric.timestamp || Date.now()
-          };
-          console.log(`Updated metrics for ${metric.guestId}`);
-          hasChanges = true;
+        if (existingMetric) {
+          // Update existing metric only if the timestamp is newer
+          if (!existingMetric.timestamp || metric.timestamp >= existingMetric.timestamp) {
+            // Find the index in the array
+            const index = newMetrics.findIndex(m => m.guestId === metric.guestId);
+            if (index >= 0) {
+              newMetrics[index] = {
+                ...existingMetric,
+                ...metric,
+                timestamp: metric.timestamp || Date.now()
+              };
+              hasChanges = true;
+            }
+          }
         } else {
           // Add new metric
           newMetrics.push({
             ...metric,
             timestamp: metric.timestamp || Date.now()
           });
-          console.log(`Added new metrics for ${metric.guestId}`);
           hasChanges = true;
         }
       });
       
       // Only update state if there were actual changes
-      console.log('Updated metrics array:', newMetrics);
       return hasChanges ? newMetrics : prevMetrics;
     });
   }, []);

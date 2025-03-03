@@ -17,12 +17,12 @@ export class WebSocketServer {
         methods: ['GET', 'POST']
       },
       transports: ['websocket', 'polling'],
-      pingTimeout: 20000,         // Increased from 10000
-      pingInterval: 5000,         // Set to match node polling interval
-      connectTimeout: 10000,      // Increased from 5000
+      pingTimeout: 15000,         // Reduced from 20000
+      pingInterval: 2000,         // Reduced from 5000 to match more frequent node polling interval
+      connectTimeout: 8000,       // Reduced from 10000
       allowUpgrades: true,
       perMessageDeflate: {
-        threshold: 1024
+        threshold: 512            // Reduced from 1024 to compress smaller messages
       },
       maxHttpBufferSize: 1e8, // 100 MB
       // Add connection retry logic
