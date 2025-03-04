@@ -46,7 +46,6 @@ import PersonIcon from '@mui/icons-material/Person';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import ComputerIcon from '@mui/icons-material/Computer';
-import ViewInArIcon from '@mui/icons-material/ViewInAr';
 import InputBase from '@mui/material/InputBase';
 import DnsIcon from '@mui/icons-material/Dns';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -72,6 +71,11 @@ import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Divider from '@mui/material/Divider';
+import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
+import DevicesOutlinedIcon from '@mui/icons-material/DevicesOutlined';
+import ComputerOutlinedIcon from '@mui/icons-material/ComputerOutlined';
+import StorageOutlinedIcon from '@mui/icons-material/StorageOutlined';
+import DevicesIcon from '@mui/icons-material/Devices';
 
 // Define pulse animation
 const pulseAnimation = keyframes`
@@ -890,12 +894,16 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
       }
       
       if (filters.download > 0) {
-        const downloadRate = getMetricsForGuest(guest.id)?.metrics?.network?.inRate || 0;
+        const networkData = getMetricsForGuest(guest.id)?.metrics?.network || {};
+        const downloadRate = networkData.rx_rate || 0;
+        
         if (downloadRate < sliderValueToNetworkRate(filters.download)) return false;
       }
       
       if (filters.upload > 0) {
-        const uploadRate = getMetricsForGuest(guest.id)?.metrics?.network?.outRate || 0;
+        const networkData = getMetricsForGuest(guest.id)?.metrics?.network || {};
+        const uploadRate = networkData.tx_rate || 0;
+        
         if (uploadRate < sliderValueToNetworkRate(filters.upload)) return false;
       }
       
@@ -903,83 +911,116 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     });
     
     // Sort the filtered data
-    return filteredData.sort((a, b) => {
-      // For each sort key, define how to get the value to sort by
+    return [...filteredData].sort((a, b) => {
+      // Get the values to compare based on the sort key
+      let aValue, bValue;
+      
       switch (sortConfig.key) {
         case 'id':
-          // Extract numeric IDs for proper sorting
-          const idA = parseInt(extractNumericId(a.id), 10) || 0;
-          const idB = parseInt(extractNumericId(b.id), 10) || 0;
-          return sortConfig.direction === 'asc' 
-            ? idA - idB
-            : idB - idA;
-            
+          // Extract numeric ID for sorting
+          aValue = extractNumericId(a.id);
+          bValue = extractNumericId(b.id);
+          
+          // If both are numeric, compare as numbers
+          if (!isNaN(aValue) && !isNaN(bValue)) {
+            aValue = Number(aValue);
+            bValue = Number(bValue);
+          } else {
+            // Otherwise compare as strings
+            aValue = String(a.id).toLowerCase();
+            bValue = String(b.id).toLowerCase();
+          }
+          break;
+          
+        case 'type':
+          // Sort by type (qemu first, then lxc)
+          aValue = a.type === 'qemu' ? 0 : 1;
+          bValue = b.type === 'qemu' ? 0 : 1;
+          break;
+          
         case 'name':
-          return sortConfig.direction === 'asc' 
-            ? a.name.localeCompare(b.name)
-            : b.name.localeCompare(a.name);
-        
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+          
         case 'status':
-          return sortConfig.direction === 'asc' 
-            ? a.status.localeCompare(b.status)
-            : b.status.localeCompare(a.status);
-        
+          // Sort by status with running first, then by uptime
+          if (a.status === b.status) {
+            // If both have the same status, sort by uptime (for running VMs)
+            if (a.status === 'running') {
+              aValue = getMetricsForGuest(a.id)?.metrics?.uptime || 0;
+              bValue = getMetricsForGuest(b.id)?.metrics?.uptime || 0;
+            } else {
+              // For non-running VMs, sort by name
+              aValue = a.name.toLowerCase();
+              bValue = b.name.toLowerCase();
+            }
+          } else {
+            // Running VMs come first
+            return a.status === 'running' ? -1 : 1;
+          }
+          break;
+          
         case 'cpu':
-          const cpuA = getMetricsForGuest(a.id)?.metrics?.cpu || 0;
-          const cpuB = getMetricsForGuest(b.id)?.metrics?.cpu || 0;
-          return sortConfig.direction === 'asc' ? cpuA - cpuB : cpuB - cpuA;
-        
+          aValue = getMetricsForGuest(a.id)?.metrics?.cpu || 0;
+          bValue = getMetricsForGuest(b.id)?.metrics?.cpu || 0;
+          break;
+          
         case 'memory':
-          const memoryDataA = getMetricsForGuest(a.id)?.metrics?.memory || {};
-          const memoryDataB = getMetricsForGuest(b.id)?.metrics?.memory || {};
+          const aMemData = getMetricsForGuest(a.id)?.metrics?.memory || {};
+          const bMemData = getMetricsForGuest(b.id)?.metrics?.memory || {};
           
-          const memoryUsageA = memoryDataA.percentUsed || 
-            (memoryDataA.total && memoryDataA.used ? 
-              (memoryDataA.used / memoryDataA.total) * 100 : 0);
-              
-          const memoryUsageB = memoryDataB.percentUsed || 
-            (memoryDataB.total && memoryDataB.used ? 
-              (memoryDataB.used / memoryDataB.total) * 100 : 0);
+          aValue = aMemData.percentUsed || 
+            (aMemData.total && aMemData.used ? 
+              (aMemData.used / aMemData.total) * 100 : 0);
+          bValue = bMemData.percentUsed || 
+            (bMemData.total && bMemData.used ? 
+              (bMemData.used / bMemData.total) * 100 : 0);
+          break;
           
-          return sortConfig.direction === 'asc' ? memoryUsageA - memoryUsageB : memoryUsageB - memoryUsageA;
-        
         case 'disk':
-          const diskDataA = getMetricsForGuest(a.id)?.metrics?.disk || {};
-          const diskDataB = getMetricsForGuest(b.id)?.metrics?.disk || {};
+          const aDiskData = getMetricsForGuest(a.id)?.metrics?.disk || {};
+          const bDiskData = getMetricsForGuest(b.id)?.metrics?.disk || {};
           
-          const diskUsageA = diskDataA.percentUsed || 
-            (diskDataA.total && diskDataA.used ? 
-              (diskDataA.used / diskDataA.total) * 100 : 0);
-              
-          const diskUsageB = diskDataB.percentUsed || 
-            (diskDataB.total && diskDataB.used ? 
-              (diskDataB.used / diskDataB.total) * 100 : 0);
+          aValue = aDiskData.percentUsed || 
+            (aDiskData.total && aDiskData.used ? 
+              (aDiskData.used / aDiskData.total) * 100 : 0);
+          bValue = bDiskData.percentUsed || 
+            (bDiskData.total && bDiskData.used ? 
+              (bDiskData.used / bDiskData.total) * 100 : 0);
+          break;
           
-          return sortConfig.direction === 'asc' ? diskUsageA - diskUsageB : diskUsageB - diskUsageA;
-        
         case 'download':
-          const downloadA = getMetricsForGuest(a.id)?.metrics?.network?.inRate || 0;
-          const downloadB = getMetricsForGuest(b.id)?.metrics?.network?.inRate || 0;
-          return sortConfig.direction === 'asc' ? downloadA - downloadB : downloadB - downloadA;
-        
+          const aNetworkData = getMetricsForGuest(a.id)?.metrics?.network || {};
+          const bNetworkData = getMetricsForGuest(b.id)?.metrics?.network || {};
+          
+          aValue = aNetworkData.rx_rate || 0;
+          bValue = bNetworkData.rx_rate || 0;
+          break;
+          
         case 'upload':
-          const uploadA = getMetricsForGuest(a.id)?.metrics?.network?.outRate || 0;
-          const uploadB = getMetricsForGuest(b.id)?.metrics?.network?.outRate || 0;
-          return sortConfig.direction === 'asc' ? uploadA - uploadB : uploadB - uploadA;
-        
-        case 'uptime':
-          const uptimeA = getMetricsForGuest(a.id)?.metrics?.uptime || 0;
-          const uptimeB = getMetricsForGuest(b.id)?.metrics?.uptime || 0;
-          return sortConfig.direction === 'asc' ? uptimeA - uptimeB : uptimeB - uptimeA;
-        
-        case 'updated':
-          const updatedA = getMetricsForGuest(a.id)?.timestamp || 0;
-          const updatedB = getMetricsForGuest(b.id)?.timestamp || 0;
-          return sortConfig.direction === 'asc' ? updatedA - updatedB : updatedB - updatedA;
-        
+          const aNetData = getMetricsForGuest(a.id)?.metrics?.network || {};
+          const bNetData = getMetricsForGuest(b.id)?.metrics?.network || {};
+          
+          aValue = aNetData.tx_rate || 0;
+          bValue = bNetData.tx_rate || 0;
+          break;
+          
         default:
           return 0;
       }
+      
+      // Determine the sort direction
+      const direction = sortConfig.direction === 'asc' ? 1 : -1;
+      
+      // Compare the values
+      if (aValue < bValue) {
+        return -1 * direction;
+      }
+      if (aValue > bValue) {
+        return 1 * direction;
+      }
+      return 0;
     });
   };
   
@@ -997,7 +1038,108 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
   // Get the sorted and filtered data
   const sortedAndFilteredData = useMemo(() => {
     return getSortedAndFilteredData(getNodeFilteredGuests(guestData));
-  }, [getSortedAndFilteredData, getNodeFilteredGuests, guestData, sortConfig, filters, showStopped, searchTerm, activeSearchTerms, selectedNode]);
+  }, [getSortedAndFilteredData, getNodeFilteredGuests, guestData, sortConfig, filters, showStopped, searchTerm, activeSearchTerms, selectedNode, guestTypeFilter]);
+  
+  // Count VMs and containers separately - always showing what would be displayed if that type was selected
+  const guestTypeCounts = useMemo(() => {
+    if (!guestData || guestData.length === 0) {
+      return {
+        vms: 0,
+        containers: 0,
+        totalVms: 0,
+        totalContainers: 0
+      };
+    }
+    
+    // Get all guests for the selected node
+    const nodeFilteredGuests = getNodeFilteredGuests(guestData);
+    
+    // Count total VMs and containers (regardless of filters)
+    const totalCounts = nodeFilteredGuests.reduce((counts, guest) => {
+      if (guest.type === 'qemu') {
+        counts.totalVms += 1;
+      } else if (guest.type === 'lxc') {
+        counts.totalContainers += 1;
+      }
+      return counts;
+    }, { totalVms: 0, totalContainers: 0 });
+    
+    // Calculate what would be shown for each type if it was selected
+    // This ensures the numbers don't change when clicking the filters
+    const baseFiltered = nodeFilteredGuests.filter(guest => {
+      // Apply all filters except the guest type filter
+      if (!showStopped && guest.status !== 'running') return false;
+      
+      // Apply search filters
+      const guestName = guest.name.toLowerCase();
+      const guestId = guest.id.toLowerCase();
+      
+      if (searchTerm) {
+        if (!guestName.includes(searchTerm.toLowerCase()) && !guestId.includes(searchTerm.toLowerCase())) {
+          return false;
+        }
+      } else if (activeSearchTerms.length > 0) {
+        const matchesActiveTerms = activeSearchTerms.some(term => 
+          guestName.includes(term.toLowerCase()) || guestId.includes(term.toLowerCase())
+        );
+        
+        if (!matchesActiveTerms) {
+          return false;
+        }
+      }
+      
+      // Apply resource filters
+      if (filters.cpu > 0) {
+        const cpuUsage = getMetricsForGuest(guest.id)?.metrics?.cpu || 0;
+        if (cpuUsage < filters.cpu) return false;
+      }
+      
+      if (filters.memory > 0) {
+        const memoryData = getMetricsForGuest(guest.id)?.metrics?.memory || {};
+        const memoryUsage = memoryData.percentUsed || 
+          (memoryData.total && memoryData.used ? 
+            (memoryData.used / memoryData.total) * 100 : 0);
+        
+        if (memoryUsage < filters.memory) return false;
+      }
+      
+      if (filters.disk > 0) {
+        const diskData = getMetricsForGuest(guest.id)?.metrics?.disk || {};
+        const diskUsage = diskData.percentUsed || 
+          (diskData.total && diskData.used ? 
+            (diskData.used / diskData.total) * 100 : 0);
+        
+        if (diskUsage < filters.disk) return false;
+      }
+      
+      if (filters.download > 0) {
+        const networkData = getMetricsForGuest(guest.id)?.metrics?.network || {};
+        const downloadRate = networkData.rx_rate || 0;
+        
+        if (downloadRate < sliderValueToNetworkRate(filters.download)) return false;
+      }
+      
+      if (filters.upload > 0) {
+        const networkData = getMetricsForGuest(guest.id)?.metrics?.network || {};
+        const uploadRate = networkData.tx_rate || 0;
+        
+        if (uploadRate < sliderValueToNetworkRate(filters.upload)) return false;
+      }
+      
+      return true;
+    });
+    
+    // Count what would be shown for each type
+    const vmCount = baseFiltered.filter(guest => guest.type === 'qemu').length;
+    const containerCount = baseFiltered.filter(guest => guest.type === 'lxc').length;
+    
+    return {
+      vms: vmCount,
+      containers: containerCount,
+      totalVms: totalCounts.totalVms,
+      totalContainers: totalCounts.totalContainers
+    };
+  }, [guestData, getNodeFilteredGuests, showStopped, searchTerm, activeSearchTerms, filters, getMetricsForGuest, sliderValueToNetworkRate]);
   
   // Function to generate and download PDF
   const generatePDF = useCallback(() => {
@@ -1320,7 +1462,9 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                 />
               </Box>
               
-              {/* Filter button - moved next to search box */}
+              {/* Guest count bubble indicator - REMOVED FROM HERE */}
+              
+              {/* Filter button */}
               <Button
                 ref={filterButtonRef}
                 size="small"
@@ -1419,7 +1563,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
               justifyContent: { xs: 'space-between', md: 'flex-start' },
               pr: { md: 5 }  // Add right padding to avoid overlap with dark mode toggle
             }}>
-              {/* Other controls can go here */}
+              {/* Remove the guest count indicator section */}
             </Box>
           </Box>
           
@@ -1880,81 +2024,102 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                   }}>
                     {/* Guest Type Filter */}
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <FilterListIcon sx={{ fontSize: '0.875rem', mr: 0.5, opacity: 0.7, color: 'primary.main' }} />
-                      <Typography variant="caption" sx={{ mr: 1, fontWeight: 600 }}>Guest Type:</Typography>
-                      <Box sx={{ display: 'flex', borderRadius: 1, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
-                        <Tooltip title="Show all guests">
-                          <Box
-                            onClick={() => setGuestTypeFilter('all')}
-                            sx={{
-                              px: 1,
-                              py: 0.5,
-                              fontSize: '0.75rem',
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              bgcolor: guestTypeFilter === 'all' ? 'primary.main' : 'transparent',
-                              color: guestTypeFilter === 'all' ? 'primary.contrastText' : 'text.primary',
-                              '&:hover': {
-                                bgcolor: guestTypeFilter === 'all' ? 'primary.dark' : 'action.hover',
-                              }
-                            }}
-                          >
-                            All
-                          </Box>
-                        </Tooltip>
-                        <Tooltip title="Show only virtual machines">
-                          <Box
-                            onClick={() => setGuestTypeFilter('vm')}
-                            sx={{
-                              px: 1,
-                              py: 0.5,
-                              fontSize: '0.75rem',
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              bgcolor: guestTypeFilter === 'vm' ? 'info.main' : 'transparent',
-                              color: guestTypeFilter === 'vm' ? 'info.contrastText' : 'text.primary',
-                              borderLeft: '1px solid',
-                              borderLeftColor: 'divider',
-                              '&:hover': {
-                                bgcolor: guestTypeFilter === 'vm' ? 'info.dark' : 'action.hover',
-                              }
-                            }}
-                          >
-                            <ComputerIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                            VM
-                          </Box>
-                        </Tooltip>
-                        <Tooltip title="Show only LXC containers">
-                          <Box
-                            onClick={() => setGuestTypeFilter('lxc')}
-                            sx={{
-                              px: 1,
-                              py: 0.5,
-                              fontSize: '0.75rem',
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              bgcolor: guestTypeFilter === 'lxc' ? 'success.main' : 'transparent',
-                              color: guestTypeFilter === 'lxc' ? 'success.contrastText' : 'text.primary',
-                              borderLeft: '1px solid',
-                              borderLeftColor: 'divider',
-                              '&:hover': {
-                                bgcolor: guestTypeFilter === 'lxc' ? 'success.dark' : 'action.hover',
-                              }
-                            }}
-                          >
-                            <ViewInArIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                            LXC
-                          </Box>
-                        </Tooltip>
+                      <DevicesIcon sx={{ fontSize: '0.875rem', mr: 0.5, opacity: 0.7, color: 'primary.main' }} />
+                      <Typography variant="caption" sx={{ mr: 1, fontWeight: 600 }}>Type:</Typography>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        borderRadius: 1, 
+                        border: '1px solid', 
+                        borderColor: 'divider', 
+                        overflow: 'hidden'
+                      }}>
+                        <Button
+                          size="small"
+                          onClick={() => setGuestTypeFilter('all')}
+                          sx={{
+                            py: 0.5,
+                            px: 1.5,
+                            minWidth: 0,
+                            color: guestTypeFilter === 'all' ? 'primary.main' : 'text.secondary',
+                            bgcolor: guestTypeFilter === 'all' ? alpha('#1976d2', 0.08) : 'transparent',
+                            borderRight: '1px solid',
+                            borderColor: 'divider',
+                            '&:hover': {
+                              bgcolor: guestTypeFilter === 'all' ? alpha('#1976d2', 0.12) : alpha('#000', 0.04)
+                            }
+                          }}
+                        >
+                          All
+                        </Button>
+                        <Button
+                          size="small"
+                          onClick={() => setGuestTypeFilter('vm')}
+                          sx={{
+                            py: 0.5,
+                            px: 1.5,
+                            minWidth: 0,
+                            color: guestTypeFilter === 'vm' ? 'info.main' : 'text.secondary',
+                            bgcolor: guestTypeFilter === 'vm' ? alpha('#0288d1', 0.08) : 'transparent',
+                            borderRight: '1px solid',
+                            borderColor: 'divider',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            '&:hover': {
+                              bgcolor: guestTypeFilter === 'vm' ? alpha('#0288d1', 0.12) : alpha('#000', 0.04)
+                            }
+                          }}
+                        >
+                          <ComputerOutlinedIcon sx={{ fontSize: '0.9rem' }} />
+                          VMs
+                          {guestTypeCounts.vms > 0 && (
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                ml: 0.5,
+                                fontSize: '0.7rem',
+                                opacity: 0.7
+                              }}
+                            >
+                              ({guestTypeCounts.vms})
+                            </Typography>
+                          )}
+                        </Button>
+                        <Button
+                          size="small"
+                          onClick={() => setGuestTypeFilter('lxc')}
+                          sx={{
+                            py: 0.5,
+                            px: 1.5,
+                            minWidth: 0,
+                            color: guestTypeFilter === 'lxc' ? 'success.main' : 'text.secondary',
+                            bgcolor: guestTypeFilter === 'lxc' ? alpha('#2e7d32', 0.08) : 'transparent',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            '&:hover': {
+                              bgcolor: guestTypeFilter === 'lxc' ? alpha('#2e7d32', 0.12) : alpha('#000', 0.04)
+                            }
+                          }}
+                        >
+                          <StorageOutlinedIcon sx={{ fontSize: '0.9rem' }} />
+                          LXC
+                          {guestTypeCounts.containers > 0 && (
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                ml: 0.5,
+                                fontSize: '0.7rem',
+                                opacity: 0.7
+                              }}
+                            >
+                              ({guestTypeCounts.containers})
+                            </Typography>
+                          )}
+                        </Button>
                       </Box>
                     </Box>
-                    
+
                     {/* Status Filter */}
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <PlayCircleOutlineIcon sx={{ fontSize: '0.875rem', mr: 0.5, opacity: 0.7, color: 'primary.main' }} />
@@ -1966,54 +2131,48 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         borderColor: 'divider', 
                         overflow: 'hidden'
                       }}>
-                        <Tooltip title="Show only running systems">
-                          <Box
-                            onClick={() => setShowStopped(false)}
-                            sx={{
-                              px: 1.5,
-                              py: 0.5,
-                              fontSize: '0.75rem',
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              bgcolor: !showStopped ? 'success.main' : 'transparent',
-                              color: !showStopped ? 'success.contrastText' : 'text.primary',
-                              transition: 'all 0.2s ease',
-                              '&:hover': {
-                                bgcolor: !showStopped ? 'success.dark' : 'action.hover',
-                              }
-                            }}
-                          >
-                            <PlayArrowIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                            Running
-                          </Box>
-                        </Tooltip>
-                        <Tooltip title="Show all systems including stopped ones">
-                          <Box
-                            onClick={() => setShowStopped(true)}
-                            sx={{
-                              px: 1.5,
-                              py: 0.5,
-                              fontSize: '0.75rem',
-                              fontWeight: 500,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              bgcolor: showStopped ? 'primary.main' : 'transparent',
-                              color: showStopped ? 'primary.contrastText' : 'text.primary',
-                              borderLeft: '1px solid',
-                              borderLeftColor: 'divider',
-                              transition: 'all 0.2s ease',
-                              '&:hover': {
-                                bgcolor: showStopped ? 'primary.dark' : 'action.hover',
-                              }
-                            }}
-                          >
-                            <AllInclusiveIcon sx={{ fontSize: '0.75rem', mr: 0.5 }} />
-                            All
-                          </Box>
-                        </Tooltip>
+                        <Button
+                          size="small"
+                          onClick={() => setShowStopped(false)}
+                          sx={{
+                            py: 0.5,
+                            px: 1.5,
+                            minWidth: 0,
+                            color: !showStopped ? 'success.main' : 'text.secondary',
+                            bgcolor: !showStopped ? alpha('#2e7d32', 0.08) : 'transparent',
+                            borderRight: '1px solid',
+                            borderColor: 'divider',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            '&:hover': {
+                              bgcolor: !showStopped ? alpha('#2e7d32', 0.12) : alpha('#000', 0.04)
+                            }
+                          }}
+                        >
+                          <PlayArrowIcon sx={{ fontSize: '0.9rem' }} />
+                          Running
+                        </Button>
+                        <Button
+                          size="small"
+                          onClick={() => setShowStopped(true)}
+                          sx={{
+                            py: 0.5,
+                            px: 1.5,
+                            minWidth: 0,
+                            color: showStopped ? 'primary.main' : 'text.secondary',
+                            bgcolor: showStopped ? alpha('#1976d2', 0.08) : 'transparent',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            '&:hover': {
+                              bgcolor: showStopped ? alpha('#1976d2', 0.12) : alpha('#000', 0.04)
+                            }
+                          }}
+                        >
+                          <AllInclusiveIcon sx={{ fontSize: '0.9rem' }} />
+                          All
+                        </Button>
                       </Box>
                     </Box>
                     
@@ -2281,14 +2440,80 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     transition: 'padding 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-height 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
                   }
                 }}>
+                  {/* Type Column */}
                   <TableCell 
-                    width="8%" 
+                    width="4%" 
+                    onClick={() => requestSort('type')}
+                    sx={{ 
+                      fontWeight: 'bold', 
+                      minHeight: '48px',
+                      position: 'relative',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      padding: 0,
+                      '&:hover': {
+                        backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                      },
+                      '&:focus-visible': {
+                        outline: '2px solid',
+                        outlineColor: 'primary.main',
+                        outlineOffset: -2,
+                      }
+                    }}
+                    aria-sort={sortConfig.key === 'type' ? sortConfig.direction : undefined}
+                  >
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      width: '100%',
+                      height: '100%',
+                      position: 'relative'
+                    }}>
+                      <TableSortLabel
+                        active={sortConfig.key === 'type'}
+                        direction={sortConfig.key === 'type' ? sortConfig.direction : 'asc'}
+                        sx={{
+                          width: '100%',
+                          justifyContent: 'center',
+                          '& .MuiTableSortLabel-icon': {
+                            opacity: sortConfig.key === 'type' ? 1 : 0.3,
+                            position: 'absolute',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            marginLeft: '0 !important'
+                          },
+                          '&.Mui-active': {
+                            color: 'inherit',
+                          },
+                          '&:hover': {
+                            color: 'primary.main',
+                          }
+                        }}
+                        IconComponent={props => (
+                          <ArrowDropDownIcon
+                            {...props}
+                            sx={{
+                              fontSize: '1.2rem',
+                              transform: sortConfig.key === 'type' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                              transition: 'transform 0.2s'
+                            }}
+                          />
+                        )}
+                      />
+                    </Box>
+                  </TableCell>
+
+                  <TableCell 
+                    width="7%" 
                     onClick={() => requestSort('id')}
                     sx={{ 
                       fontWeight: 'bold', 
-                      minHeight: '48px', 
+                      minHeight: '48px',
                       position: 'relative',
-                      cursor: 'pointer', 
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      pr: 3, // Add right padding for sort icon
                       '&:hover': {
                         backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
                       },
@@ -2300,7 +2525,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     }}
                     aria-sort={sortConfig.key === 'id' ? sortConfig.direction : undefined}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                       ID
                       <TableSortLabel
                         active={sortConfig.key === 'id'}
@@ -2330,15 +2555,18 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       />
                     </Box>
                   </TableCell>
-                  
+
+                  {/* Name Column */}
                   <TableCell 
-                    width="18%" 
+                    width="15%" 
                     onClick={() => requestSort('name')}
                     sx={{ 
                       fontWeight: 'bold', 
-                      minHeight: '48px', 
+                      minHeight: '48px',
                       position: 'relative',
-                      cursor: 'pointer', 
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      pr: 3, // Add right padding for sort icon
                       '&:hover': {
                         backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
                       },
@@ -2350,7 +2578,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     }}
                     aria-sort={sortConfig.key === 'name' ? sortConfig.direction : undefined}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                       Name
                       <TableSortLabel
                         active={sortConfig.key === 'name'}
@@ -2907,9 +3135,15 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                           }
                         ))
                       }}>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
-                            {/* Type indicator */}
+                        <TableCell sx={{ padding: 0 }}>
+                          <Box sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            width: '100%',
+                            height: '100%',
+                            py: 1
+                          }}>
                             {guest.type === 'qemu' ? (
                               <Tooltip title="Virtual Machine">
                                 <Box
@@ -2939,22 +3173,25 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                                     minWidth: '20px'
                                   }}
                                 >
-                                  <ViewInArIcon sx={{ fontSize: '0.8rem' }} />
+                                  <StorageOutlinedIcon sx={{ fontSize: '0.8rem' }} />
                                 </Box>
                               </Tooltip>
                             )}
-                            <Typography 
-                              variant="body2" 
-                              sx={{ 
-                                fontWeight: 500,
-                                fontFamily: 'monospace',
-                                color: theme => darkMode ? 'text.secondary' : 'text.primary'
-                              }}
-                              title={guest.id} // Show full ID on hover
-                            >
-                              {extractNumericId(guest.id)}
-                            </Typography>
                           </Box>
+                        </TableCell>
+                        
+                        <TableCell>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              fontWeight: 500,
+                              fontFamily: 'monospace',
+                              color: theme => darkMode ? 'text.secondary' : 'text.primary'
+                            }}
+                            title={guest.id} // Show full ID on hover
+                          >
+                            {extractNumericId(guest.id)}
+                          </Typography>
                         </TableCell>
                         
                         <TableCell>
