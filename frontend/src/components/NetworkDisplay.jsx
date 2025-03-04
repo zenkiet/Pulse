@@ -3309,8 +3309,24 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                 )}
                 {guestData.length > 0 && sortedAndFilteredData.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={guestTypeFilter === 'all' ? 8 : 8} align="center" sx={{ py: 6 }}>
-                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 2 }}>
+                    <TableCell 
+                      colSpan={9} 
+                      align="center" 
+                      sx={{ 
+                        py: 6,
+                        width: '100%',
+                        '& > div': {
+                          width: '100%'
+                        }
+                      }}
+                    >
+                      <Box sx={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center', 
+                        py: 2,
+                        width: '100%'
+                      }}>
                         <FilterAltIcon sx={{ fontSize: 40, color: 'primary.light', mb: 2, opacity: 0.7 }} />
                         <Typography variant="h6" color="text.secondary" gutterBottom>
                           No Matching Systems
@@ -3319,12 +3335,12 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                           Try adjusting your filters or search terms
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                        <Chip 
-                          label="Reset Filters" 
-                          color="primary" 
-                          onClick={resetFilters}
-                          sx={{ mt: 1 }}
-                        />
+                          <Chip 
+                            label="Reset Filters" 
+                            color="primary" 
+                            onClick={resetFilters}
+                            sx={{ mt: 1 }}
+                          />
                           <Chip 
                             label="Show Stopped Systems" 
                             color="default" 
