@@ -5,6 +5,19 @@ A lightweight, responsive ProxMox monitoring application that displays real-time
 ![Dashboard](docs/images/dashboard.png)
 *Main dashboard showing node overview and resource usage*
 
+## 📑 Table of Contents
+- [Quick Start with Docker](#-quick-start-with-docker)
+- [Configuration](#-configuration)
+- [Common Docker Commands](#️-common-docker-commands)
+- [Features](#-features)
+- [Troubleshooting](#-troubleshooting)
+- [Advanced Configuration](#-advanced-configuration)
+- [Development](#-development)
+- [System Requirements](#-system-requirements)
+- [Version Information](#-version-information)
+- [Contributing](#-contributing)
+- [License](#-license)
+
 ## 🚀 Quick Start with Docker
 
 ### Option 1: Simple Docker Run
@@ -42,7 +55,7 @@ mv .env.example .env
 nano .env  # or use your preferred editor
 
 # 3. Run with Docker Compose
-docker-compose up -d
+docker compose up -d  # Note: newer Docker versions use 'docker compose' (no hyphen)
 
 # 4. Access the application
 # Open http://localhost:7654 in your browser
@@ -141,6 +154,10 @@ docker restart pulse-app
 docker pull rcourtman/pulse:latest
 docker rm -f pulse-app
 docker run -d -p 7654:7654 --env-file .env --name pulse-app --restart unless-stopped rcourtman/pulse:latest
+
+# For Docker Compose users
+docker compose pull  # Pull latest image
+docker compose up -d  # Restart with new image
 ```
 
 ## ✨ Features
@@ -203,6 +220,40 @@ cd frontend && npm install && cd ..
 The development server will be accessible at:
 - http://localhost:3000 - from the local machine
 - http://your-ip-address:3000 - from other devices on your network
+
+## 💻 System Requirements
+
+- **Docker**: Version 20.10.0 or higher
+- **Memory**: Minimum 256MB RAM (512MB recommended)
+- **CPU**: Any modern CPU (1+ cores)
+- **Disk Space**: Approximately 100MB for the Docker image
+- **Network**: Connectivity to your ProxMox server(s)
+- **Browser**: Any modern browser (Chrome, Firefox, Safari, Edge)
+
+## 🔄 Version Information
+
+Current version: 1.2.1
+
+To check for updates:
+```bash
+# Check for newer image versions
+docker pull rcourtman/pulse:latest
+
+# View current running version
+docker exec pulse-app cat /app/package.json | grep version
+```
+
+## 👥 Contributing
+
+Contributions are welcome! Here's how you can contribute:
+
+1. **Fork the repository**
+2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
+3. **Commit your changes**: `git commit -m 'Add some amazing feature'`
+4. **Push to the branch**: `git push origin feature/amazing-feature`
+5. **Open a Pull Request**
+
+Please make sure to update tests as appropriate and follow the code style of the project.
 
 ## 📄 License
 
