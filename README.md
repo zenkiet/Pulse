@@ -214,7 +214,7 @@ npm install
 cd frontend && npm install && cd ..
 
 # Start the development server
-./start-dev.sh
+./start-dev.sh  # You'll need to create this script first (see below)
 ```
 
 The development server will be accessible at:
@@ -223,7 +223,7 @@ The development server will be accessible at:
 
 ### Development Script
 
-Since the `start-dev.sh` script might not be included in the repository, here's the content you can use:
+**Note: The `start-dev.sh` script is not included in the repository.** You need to create it yourself using the content below:
 
 ```bash
 #!/bin/bash
@@ -266,7 +266,15 @@ cd frontend && npm run dev -- --host "${HOST_IP}" --port 3000
 kill $BACKEND_PID
 ```
 
-Save this as `start-dev.sh` in your project root and make it executable with `chmod +x start-dev.sh`.
+Create a new file named `start-dev.sh` in your project root with the content above, then make it executable:
+
+```bash
+# Create the script file
+nano start-dev.sh  # Paste the content above and save
+
+# Make it executable
+chmod +x start-dev.sh
+```
 
 ## 💻 System Requirements
 
