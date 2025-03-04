@@ -33,7 +33,8 @@
       },
       "waitForSelector": "#root",
       "lightModeOnly": true,
-      "beforeScreenshot": "const filterBtn = document.querySelector('button[data-filter-button=\"true\"]'); if (filterBtn) { filterBtn.click(); }"
+      "beforeScreenshot": "const filterBtn = document.querySelector('button[data-filter-button=\"true\"]'); if (filterBtn) { filterBtn.click(); } else { const allButtons = Array.from(document.querySelectorAll('button')); const filterButton = allButtons.find(btn => btn.textContent && btn.textContent.includes('Filter')); if (filterButton) filterButton.click(); }",
+      "waitForTimeout": 2000
     }
   ]
 } 
