@@ -107,7 +107,7 @@ const STORAGE_KEY_SEARCH_TERMS = 'network_display_search_terms';
 
 // Helper function to format bytes
 const formatBytes = (bytes, decimals = 2) => {
-  if (bytes === 0) return '0 B';
+  if (bytes === undefined || bytes === null || isNaN(bytes) || bytes === 0) return '0 B';
   
   const k = 1024;
   const dm = 0; // No decimals
@@ -120,7 +120,7 @@ const formatBytes = (bytes, decimals = 2) => {
 
 // Helper function specifically for network rates
 const formatNetworkRate = (bytesPerSecond) => {
-  if (bytesPerSecond === 0) return '0 B/s';
+  if (bytesPerSecond === undefined || bytesPerSecond === null || isNaN(bytesPerSecond) || bytesPerSecond === 0) return '0 B/s';
   
   // No minimum threshold - show actual values
   return formatBytes(bytesPerSecond) + '/s';
@@ -134,7 +134,7 @@ const formatPercentage = (value) => {
 
 // Helper function to format network rates for filter display
 const formatNetworkRateForFilter = (bytesPerSecond) => {
-  if (bytesPerSecond === 0) return '0 B/s';
+  if (bytesPerSecond === undefined || bytesPerSecond === null || isNaN(bytesPerSecond) || bytesPerSecond === 0) return '0 B/s';
   
   // Simplified format for filter display
   const kb = bytesPerSecond / 1024;
@@ -2890,7 +2890,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         <TableCell>
                           {isRunning && networkMetrics ? (
                             <Typography variant="body2" color="primary" noWrap fontWeight="medium">
-                              ↓ {formatNetworkRate(networkMetrics.inRate || 0)}
+                              ↓ {formatNetworkRate(networkMetrics.inRate ?? 0)}
                             </Typography>
                           ) : (
                             <Typography variant="body2" color="text.disabled" noWrap>
@@ -2901,7 +2901,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         <TableCell>
                           {isRunning && networkMetrics ? (
                             <Typography variant="body2" color="secondary" noWrap fontWeight="medium">
-                              ↑ {formatNetworkRate(networkMetrics.outRate || 0)}
+                              ↑ {formatNetworkRate(networkMetrics.outRate ?? 0)}
                             </Typography>
                           ) : (
                             <Typography variant="body2" color="text.disabled" noWrap>
