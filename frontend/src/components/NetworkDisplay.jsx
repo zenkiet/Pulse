@@ -113,7 +113,17 @@ const formatBytes = (bytes, decimals = 2) => {
   const dm = 0; // No decimals
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
   
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  // Ensure bytes is a positive number
+  bytes = Math.abs(bytes);
+  
+  // Calculate the appropriate size index
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
+  
+  // Ensure i is within bounds of the sizes array
+  if (i < 0 || i >= sizes.length) {
+    console.error(`Invalid size index: ${i} for bytes: ${bytes}`);
+    return `${bytes} B`; // Fallback to bytes with B unit
+  }
   
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 };
@@ -122,8 +132,13 @@ const formatBytes = (bytes, decimals = 2) => {
 const formatNetworkRate = (bytesPerSecond) => {
   if (bytesPerSecond === undefined || bytesPerSecond === null || isNaN(bytesPerSecond) || bytesPerSecond === 0) return '0 B/s';
   
-  // No minimum threshold - show actual values
-  return formatBytes(bytesPerSecond) + '/s';
+  try {
+    // No minimum threshold - show actual values
+    return formatBytes(bytesPerSecond) + '/s';
+  } catch (error) {
+    console.error('Error formatting network rate:', error, 'Value:', bytesPerSecond);
+    return '0 B/s'; // Fallback to zero if there's an error
+  }
 };
 
 // Helper function to format percentage
