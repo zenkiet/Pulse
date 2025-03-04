@@ -20,6 +20,8 @@ socket-debug.log
 
 # Reports
 reports/
+# But include the mock test report for documentation
+!reports/proxmox-api-test-*.json
 
 # IDE and editor files
 .idea/
