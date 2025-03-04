@@ -1,21 +1,24 @@
 import { EventEmitter } from 'events';
 import { ProxmoxClient } from '../api/proxmox-client';
+import { MockClient } from '../api/mock-client';
 import { createLogger } from '../utils/logger';
 import config from '../config';
 import { NodeConfig, ProxmoxNodeStatus, ProxmoxVM, ProxmoxContainer, ProxmoxGuest, ProxmoxEvent } from '../types';
 
 export class NodeManager extends EventEmitter {
-  private nodes: Map<string, ProxmoxClient> = new Map();
+  private nodes: Map<string, ProxmoxClient | MockClient> = new Map();
   private nodeStatus: Map<string, ProxmoxNodeStatus> = new Map();
   private vms: Map<string, ProxmoxVM> = new Map();
   private containers: Map<string, ProxmoxContainer> = new Map();
   private eventUnsubscribers: Map<string, () => void> = new Map();
   private logger = createLogger('NodeManager');
   private pollingInterval: NodeJS.Timeout | null = null;
+  private isMockData: boolean = false;
 
   constructor() {
     super();
     this.logger.info('Initializing NodeManager');
+    this.isMockData = process.env.USE_MOCK_DATA === 'true' || process.env.MOCK_DATA_ENABLED === 'true';
     this.initializeNodes();
   }
 
@@ -43,24 +46,46 @@ export class NodeManager extends EventEmitter {
     try {
       this.logger.info(`Adding node: ${nodeConfig.name} (${nodeConfig.host})`);
       
-      // Create ProxMox client
-      const client = new ProxmoxClient(nodeConfig, config.ignoreSSLErrors);
+      // Create client based on whether mock data is enabled
+      let client;
+      if (this.isMockData) {
+        client = new MockClient(nodeConfig);
+      } else {
+        client = new ProxmoxClient(nodeConfig, config.ignoreSSLErrors);
+      }
       
       // Test connection
       const connected = await client.testConnection();
+      
       if (!connected) {
         this.logger.error(`Failed to connect to node: ${nodeConfig.name}`);
         return false;
       }
       
-      // Add to nodes map
+      // Store the client
       this.nodes.set(nodeConfig.id, client);
       
-      // Subscribe to events
-      const unsubscribe = await client.subscribeToEvents(this.handleEvent.bind(this));
-      this.eventUnsubscribers.set(nodeConfig.id, unsubscribe);
+      // Set up event handlers
+      client.on('nodeStatus', (status: ProxmoxNodeStatus) => {
+        this.handleNodeStatusUpdate(nodeConfig.id, status);
+      });
       
-      // Fetch initial data
+      client.on('vmList', (vms: ProxmoxVM[]) => {
+        this.handleVMListUpdate(nodeConfig.id, vms);
+      });
+      
+      client.on('containerList', (containers: ProxmoxContainer[]) => {
+        this.handleContainerListUpdate(nodeConfig.id, containers);
+      });
+      
+      client.on('event', (event: ProxmoxEvent) => {
+        this.handleEvent(nodeConfig.id, event);
+      });
+      
+      // Set up event polling
+      client.setupEventPolling();
+      
+      // Refresh data immediately
       await this.refreshNodeData(nodeConfig.id);
       
       this.logger.info(`Node added successfully: ${nodeConfig.name}`);
@@ -162,56 +187,30 @@ export class NodeManager extends EventEmitter {
       const nodeStatus = await client.getNodeStatus();
       this.logger.debug(`Received status for node: ${nodeId}`, { status: nodeStatus.status });
       
-      // Check if status changed
-      const previousStatus = this.nodeStatus.get(nodeId);
-      const statusChanged = !previousStatus || previousStatus.status !== nodeStatus.status;
-      
       // Update node status
-      this.nodeStatus.set(nodeId, nodeStatus);
-      
-      // Emit event if status changed
-      if (statusChanged) {
-        this.logger.debug(`Node status changed for ${nodeId}: ${previousStatus?.status || 'unknown'} -> ${nodeStatus.status}`);
-        this.emit('nodeStatusChanged', nodeStatus);
-      }
+      this.handleNodeStatusUpdate(nodeId, nodeStatus);
       
       // Only fetch VMs and containers if node is online
       if (nodeStatus.status === 'online') {
         // Get VMs
         this.logger.debug(`Getting VMs for node: ${nodeId}`);
-        const vms = await client.getVirtualMachines();
-        this.logger.debug(`Received ${vms.length} VMs for node: ${nodeId}`);
+        let vms: ProxmoxVM[] = [];
         
-        // Update VMs
-        for (const vm of vms) {
-          const previousVM = this.vms.get(vm.id);
-          const statusChanged = !previousVM || previousVM.status !== vm.status;
-          
-          this.vms.set(vm.id, vm);
-          
-          if (statusChanged) {
-            this.logger.debug(`VM status changed for ${vm.id}: ${previousVM?.status || 'unknown'} -> ${vm.status}`);
-            this.emit('guestStatusChanged', vm);
-          }
+        // Handle different client types
+        if (client instanceof ProxmoxClient) {
+          vms = await client.getVirtualMachines();
+        } else {
+          vms = await client.getVMs();
         }
+        
+        this.logger.debug(`Received ${vms.length} VMs for node: ${nodeId}`);
+        this.handleVMListUpdate(nodeId, vms);
         
         // Get containers
         this.logger.debug(`Getting containers for node: ${nodeId}`);
         const containers = await client.getContainers();
         this.logger.debug(`Received ${containers.length} containers for node: ${nodeId}`);
-        
-        // Update containers
-        for (const container of containers) {
-          const previousContainer = this.containers.get(container.id);
-          const statusChanged = !previousContainer || previousContainer.status !== container.status;
-          
-          this.containers.set(container.id, container);
-          
-          if (statusChanged) {
-            this.logger.debug(`Container status changed for ${container.id}: ${previousContainer?.status || 'unknown'} -> ${container.status}`);
-            this.emit('guestStatusChanged', container);
-          }
-        }
+        this.handleContainerListUpdate(nodeId, containers);
         
         // Emit metrics update event
         this.logger.debug(`Emitting metrics update for node: ${nodeId}`);
@@ -222,19 +221,28 @@ export class NodeManager extends EventEmitter {
           vms,
           containers
         });
-      } else {
-        this.logger.debug(`Node ${nodeId} is offline, skipping VM and container updates`);
       }
+      
+      this.logger.debug(`Refresh complete for node: ${nodeId}`);
     } catch (error) {
       this.logger.error(`Error refreshing node data: ${nodeId}`, { error });
-      throw error;
+      
+      // If we can't connect, mark the node as offline
+      const currentStatus = this.nodeStatus.get(nodeId);
+      if (currentStatus && currentStatus.status !== 'offline') {
+        const offlineStatus: ProxmoxNodeStatus = {
+          ...currentStatus,
+          status: 'offline'
+        };
+        this.handleNodeStatusUpdate(nodeId, offlineStatus);
+      }
     }
   }
 
   /**
    * Handle event from ProxMox
    */
-  private handleEvent(event: ProxmoxEvent): void {
+  private handleEvent(nodeId: string, event: ProxmoxEvent): void {
     // Only process important events
     if (this.isImportantEvent(event)) {
       this.logger.debug(`Received important event: ${event.description}`, { event });
@@ -244,8 +252,8 @@ export class NodeManager extends EventEmitter {
       
       // Refresh node data immediately if it's an important event
       // This makes the UI update much faster in response to events
-      this.refreshNodeData(event.node).catch(error => {
-        this.logger.error(`Error refreshing node after event: ${event.node}`, { error });
+      this.refreshNodeData(nodeId).catch(error => {
+        this.logger.error(`Error refreshing node after event: ${nodeId}`, { error });
       });
     }
   }
@@ -364,6 +372,66 @@ export class NodeManager extends EventEmitter {
     
     this.eventUnsubscribers.clear();
     this.logger.info('NodeManager shutdown complete');
+  }
+
+  /**
+   * Handle node status update
+   */
+  private handleNodeStatusUpdate(nodeId: string, status: ProxmoxNodeStatus): void {
+    this.logger.debug(`Received node status update for ${nodeId}`);
+    
+    // Check if status changed
+    const previousStatus = this.nodeStatus.get(nodeId);
+    const statusChanged = !previousStatus || previousStatus.status !== status.status;
+    
+    // Update node status
+    this.nodeStatus.set(nodeId, status);
+    
+    // Emit event if status changed
+    if (statusChanged) {
+      this.logger.debug(`Node status changed for ${nodeId}: ${previousStatus?.status || 'unknown'} -> ${status.status}`);
+      this.emit('nodeStatusChanged', status);
+    }
+  }
+
+  /**
+   * Handle VM list update
+   */
+  private handleVMListUpdate(nodeId: string, vms: ProxmoxVM[]): void {
+    this.logger.debug(`Received VM list update for ${nodeId}: ${vms.length} VMs`);
+    
+    // Update VMs
+    for (const vm of vms) {
+      const previousVM = this.vms.get(vm.id);
+      const statusChanged = !previousVM || previousVM.status !== vm.status;
+      
+      this.vms.set(vm.id, vm);
+      
+      if (statusChanged) {
+        this.logger.debug(`VM status changed for ${vm.id}: ${previousVM?.status || 'unknown'} -> ${vm.status}`);
+        this.emit('guestStatusChanged', vm);
+      }
+    }
+  }
+
+  /**
+   * Handle container list update
+   */
+  private handleContainerListUpdate(nodeId: string, containers: ProxmoxContainer[]): void {
+    this.logger.debug(`Received container list update for ${nodeId}: ${containers.length} containers`);
+    
+    // Update containers
+    for (const container of containers) {
+      const previousContainer = this.containers.get(container.id);
+      const statusChanged = !previousContainer || previousContainer.status !== container.status;
+      
+      this.containers.set(container.id, container);
+      
+      if (statusChanged) {
+        this.logger.debug(`Container status changed for ${container.id}: ${previousContainer?.status || 'unknown'} -> ${container.status}`);
+        this.emit('guestStatusChanged', container);
+      }
+    }
   }
 }
 

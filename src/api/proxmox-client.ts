@@ -1,89 +1,100 @@
 import axios, { AxiosInstance } from 'axios';
 import https from 'https';
+import { EventEmitter } from 'events';
 import { createLogger } from '../utils/logger';
 import { NodeConfig, ProxmoxNodeStatus, ProxmoxVM, ProxmoxContainer, ProxmoxEvent } from '../types';
 import { formatSafeTokenId } from '../utils/config-validator';
 import { formatBytes, bytesToMB, mbToBytes } from '../utils/format';
 import config from '../config';
+import winston from 'winston';
 
-export class ProxmoxClient {
-  private client: AxiosInstance;
-  private logger = createLogger('ProxmoxClient');
-  private nodeName = '';
+export class ProxmoxClient extends EventEmitter {
   private config: NodeConfig;
-  private retryAttempts: number;
-  private retryDelayMs: number;
+  private logger: winston.Logger;
+  private client: AxiosInstance | null = null;
+  private retryAttempts: number = 3;
+  private retryDelayMs: number = 5000;
   private eventLastTimestamp = 0;
+  private isMockData: boolean = false;
+  private nodeName = '';
 
   constructor(config: NodeConfig, ignoreSSLErrors: boolean = false) {
+    super();
     this.config = config;
     this.logger = createLogger('ProxmoxClient', config.id);
     
-    // Get timeout from environment variable or use default
-    const apiTimeoutMs = parseInt(process.env.API_TIMEOUT_MS || '60000', 10);
-    this.retryAttempts = parseInt(process.env.API_RETRY_ATTEMPTS || '3', 10);
-    this.retryDelayMs = parseInt(process.env.API_RETRY_DELAY_MS || '5000', 10);
+    // Check if this is a mock data client
+    this.isMockData = process.env.USE_MOCK_DATA === 'true' || process.env.MOCK_DATA_ENABLED === 'true';
     
-    // Create axios instance with base configuration
-    const axiosConfig = {
-      baseURL: `${config.host}/api2/json`,
-      headers: {
-        Authorization: `PVEAPIToken=${config.tokenId}=${config.tokenSecret}`
-      },
-      timeout: apiTimeoutMs,
-      httpsAgent: new https.Agent({
-        rejectUnauthorized: !ignoreSSLErrors
-      })
-    };
-    
-    this.client = axios.create(axiosConfig);
-    this.logger.info(`ProxMox API client created with timeout: ${apiTimeoutMs}ms and ${this.retryAttempts} retry attempts`);
+    if (this.isMockData) {
+      this.logger.info('Mock data mode enabled. Using mock data server.');
+    } else {
+      // Get timeout from environment variable or use default
+      const apiTimeoutMs = parseInt(process.env.API_TIMEOUT_MS || '60000', 10);
+      this.retryAttempts = parseInt(process.env.API_RETRY_ATTEMPTS || '3', 10);
+      this.retryDelayMs = parseInt(process.env.API_RETRY_DELAY_MS || '5000', 10);
+      
+      // Create axios instance with base configuration
+      const axiosConfig = {
+        baseURL: `${config.host}/api2/json`,
+        headers: {
+          Authorization: `PVEAPIToken=${config.tokenId}=${config.tokenSecret}`
+        },
+        timeout: apiTimeoutMs,
+        httpsAgent: new https.Agent({
+          rejectUnauthorized: !ignoreSSLErrors
+        })
+      };
+      
+      this.client = axios.create(axiosConfig);
+      this.logger.info(`ProxMox API client created with timeout: ${apiTimeoutMs}ms and ${this.retryAttempts} retry attempts`);
 
-    // Add request interceptor for logging
-    this.client.interceptors.request.use(request => {
-      this.logger.debug(`API Request: ${request.method?.toUpperCase()} ${request.url}`, { 
-        params: request.params 
-      });
-      return request;
-    });
-
-    // Add response interceptor for logging
-    this.client.interceptors.response.use(
-      response => {
-        this.logger.debug(`API Response: ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`, { 
-          data: response.data 
+      // Add request interceptor for logging
+      this.client.interceptors.request.use(request => {
+        this.logger.debug(`API Request: ${request.method?.toUpperCase()} ${request.url}`, { 
+          params: request.params 
         });
-        return response;
-      },
-      async error => {
-        if (error.response) {
-          this.logger.error(`API Error: ${error.response.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`, { 
-            data: error.response.data 
+        return request;
+      });
+
+      // Add response interceptor for logging
+      this.client.interceptors.response.use(
+        response => {
+          this.logger.debug(`API Response: ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`, { 
+            data: response.data 
           });
-        } else {
-          this.logger.error(`API Error: ${error.message}`, { error });
+          return response;
+        },
+        async error => {
+          if (error.response) {
+            this.logger.error(`API Error: ${error.response.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`, { 
+              data: error.response.data 
+            });
+          } else {
+            this.logger.error(`API Error: ${error.message}`, { error });
+          }
+          
+          // Implement retry logic for network errors and timeouts
+          const config = error.config;
+          
+          // Only retry on network errors or timeouts, not on 4xx or 5xx responses
+          if (!error.response && config && (!config.retryCount || config.retryCount < this.retryAttempts)) {
+            config.retryCount = config.retryCount || 0;
+            config.retryCount++;
+            
+            this.logger.warn(`Retrying request (attempt ${config.retryCount}/${this.retryAttempts}): ${config.method?.toUpperCase()} ${config.url}`);
+            
+            // Use configured retry delay instead of exponential backoff
+            const delay = this.retryDelayMs;
+            await new Promise(resolve => setTimeout(resolve, delay));
+            
+            return this.client(config);
+          }
+          
+          return Promise.reject(error);
         }
-        
-        // Implement retry logic for network errors and timeouts
-        const config = error.config;
-        
-        // Only retry on network errors or timeouts, not on 4xx or 5xx responses
-        if (!error.response && config && (!config.retryCount || config.retryCount < this.retryAttempts)) {
-          config.retryCount = config.retryCount || 0;
-          config.retryCount++;
-          
-          this.logger.warn(`Retrying request (attempt ${config.retryCount}/${this.retryAttempts}): ${config.method?.toUpperCase()} ${config.url}`);
-          
-          // Use configured retry delay instead of exponential backoff
-          const delay = this.retryDelayMs;
-          await new Promise(resolve => setTimeout(resolve, delay));
-          
-          return this.client(config);
-        }
-        
-        return Promise.reject(error);
-      }
-    );
+      );
+    }
   }
 
   /**
@@ -93,6 +104,11 @@ export class ProxmoxClient {
     // If we already discovered the node name, return it
     if (this.nodeName) {
       return this.nodeName;
+    }
+
+    if (!this.client) {
+      this.logger.error('Client is not initialized');
+      return this.getNodeName();
     }
 
     try {
@@ -123,10 +139,12 @@ export class ProxmoxClient {
         // If we can't find a direct match, try to access each node's status endpoint
         for (const node of nodes) {
           try {
-            await this.client.get(`/nodes/${node.node}/status`);
-            this.nodeName = node.node;
-            this.logger.info(`Discovered node name by status check: ${this.nodeName}`);
-            return this.nodeName;
+            if (this.client) {
+              await this.client.get(`/nodes/${node.node}/status`);
+              this.nodeName = node.node;
+              this.logger.info(`Discovered node name by status check: ${this.nodeName}`);
+              return this.nodeName;
+            }
           } catch (error) {
             // This node is not accessible to us, try the next one
           }
@@ -608,5 +626,40 @@ export class ProxmoxClient {
     } else {
       return 'node';
     }
+  }
+
+  /**
+   * Set up event polling
+   */
+  setupEventPolling(): void {
+    // Use the existing subscribeToEvents method to set up polling
+    if (this.isMockData) {
+      this.logger.info('Mock data mode enabled, skipping event polling setup');
+      return;
+    }
+    
+    this.subscribeToEvents((event: ProxmoxEvent) => {
+      this.emit('event', event);
+    }).catch(error => {
+      this.logger.error('Failed to set up event polling', { error });
+    });
+    
+    // Set up periodic polling for node status, VMs, and containers
+    setInterval(async () => {
+      try {
+        if (this.client) {
+          const status = await this.getNodeStatus();
+          this.emit('nodeStatus', status);
+          
+          const vms = await this.getVirtualMachines();
+          this.emit('vmList', vms);
+          
+          const containers = await this.getContainers();
+          this.emit('containerList', containers);
+        }
+      } catch (error) {
+        this.logger.error('Error during periodic polling', { error });
+      }
+    }, config.nodePollingIntervalMs || 30000);
   }
 } 

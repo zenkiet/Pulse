@@ -188,6 +188,7 @@ router.get('/status', (req: Request, res: Response) => {
       vms: guests.filter(guest => guest.type === 'qemu').length,
       containers: guests.filter(guest => guest.type === 'lxc').length
     },
+    mockDataEnabled: process.env.USE_MOCK_DATA === 'true' || process.env.MOCK_DATA_ENABLED === 'true',
     uptime: process.uptime()
   };
   

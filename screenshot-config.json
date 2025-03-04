@@ -1,0 +1,39 @@
+{
+  "baseUrl": "http://localhost:3000",
+  "outputDir": "../../docs/images",
+  "mockData": {
+    "enabled": true,
+    "mockDataUrl": "http://localhost:3000/api/mock-data",
+    "setupScript": "window.localStorage.setItem('use_mock_data', 'true'); window.localStorage.setItem('MOCK_DATA_ENABLED', 'true'); window.localStorage.setItem('mock_enabled', 'true'); console.log('Mock data flags set in localStorage');"
+  },
+  "screenshots": [
+    {
+      "path": "/resources",
+      "name": "dashboard",
+      "viewportSize": {
+        "width": 1440,
+        "height": 900
+      },
+      "waitForSelector": "#root",
+      "createSplitView": true,
+      "splitViewConfig": {
+        "type": "vertical",
+        "addLabels": false,
+        "addIcons": false
+      },
+      "beforeScreenshot": "const nodeMenuButton = document.querySelector('button.MuiIconButton-root[aria-label=\"More options\"], button.MuiIconButton-root[aria-label=\"Menu\"], button.MuiIconButton-root[aria-haspopup=\"true\"]'); if (nodeMenuButton) { nodeMenuButton.click(); }",
+      "cleanupIndividualScreenshots": true
+    },
+    {
+      "path": "/resources",
+      "name": "filters",
+      "viewportSize": {
+        "width": 1440,
+        "height": 900
+      },
+      "waitForSelector": "#root",
+      "lightModeOnly": true,
+      "beforeScreenshot": "const filterBtn = document.querySelector('button[data-filter-button=\"true\"]'); if (filterBtn) { filterBtn.click(); }"
+    }
+  ]
+} 

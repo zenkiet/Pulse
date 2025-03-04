@@ -8,6 +8,34 @@ dotenv.config();
  * Parse node configurations from environment variables
  */
 function parseNodeConfigs(): NodeConfig[] {
+  // If mock data is enabled, return mock nodes instead of real ones
+  if (process.env.USE_MOCK_DATA === 'true' || process.env.MOCK_DATA_ENABLED === 'true') {
+    console.log('Mock data enabled. Using mock nodes instead of real Proxmox servers.');
+    return [
+      {
+        id: 'node-1',
+        name: 'pve-1',
+        host: 'http://localhost:7655',
+        tokenId: 'mock-token',
+        tokenSecret: 'mock-secret'
+      },
+      {
+        id: 'node-2',
+        name: 'pve-2',
+        host: 'http://localhost:7655',
+        tokenId: 'mock-token',
+        tokenSecret: 'mock-secret'
+      },
+      {
+        id: 'node-3',
+        name: 'pve-3',
+        host: 'http://localhost:7655',
+        tokenId: 'mock-token',
+        tokenSecret: 'mock-secret'
+      }
+    ];
+  }
+
   const nodes: NodeConfig[] = [];
   const nodePattern = /^PROXMOX_NODE_(\d+)_/;
   

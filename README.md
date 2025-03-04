@@ -15,6 +15,9 @@ A lightweight, responsive ProxMox monitoring application that displays real-time
 - [Troubleshooting](#-troubleshooting)
 - [Advanced Configuration](#-advanced-configuration)
 - [Development](#-development)
+  - [Development Architecture](#development-architecture)
+  - [Screenshot Automation](#screenshot-automation)
+  - [Developer Documentation](#developer-documentation)
 - [System Requirements](#-system-requirements)
 - [Version Information](#-version-information)
 - [Contributing](#-contributing)
@@ -170,7 +173,7 @@ docker compose up -d  # Restart with new image
 - Responsive design that works on desktop and mobile
 - WebSocket connection for live updates
 
-![Resources](docs/images/resources.png)
+![Filters](docs/images/filters.png)
 *Resource view with filtering options for VMs and containers*
 
 ## ❓ Troubleshooting
@@ -244,6 +247,26 @@ When you run `start-dev.sh`, both servers start automatically:
 3. API requests from the frontend are proxied to the backend
 
 In production, these are combined into a single service running on port 7654.
+
+### Screenshot Automation
+
+Pulse includes a fully self-contained screenshot automation tool to keep documentation images up-to-date with the latest UI changes. This tool can:
+
+- Capture screenshots of any page in the application
+- Create split-view images showing both light and dark modes
+- Crop specific regions for feature highlights
+- Automatically save images to the docs/images directory
+
+To update screenshots:
+
+```bash
+# From the project root
+npm run screenshots
+```
+
+**Note:** The screenshot tool is fully self-contained - it will automatically start the server with mock data enabled if needed, take all the screenshots, and then clean up by stopping any servers it started. This ensures a clean and consistent environment for generating documentation images.
+
+For more information, see the [Screenshot Documentation](docs/SCREENSHOTS.md).
 
 ### Developer Documentation
 
