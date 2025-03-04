@@ -43,3 +43,6 @@ scripts/release.sh
 
 # Development tools
 /tmp/pulse-*.log
+
+# Personal checklist
+VERSION_UPDATE_CHECKLIST.md
