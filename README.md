@@ -2,6 +2,8 @@
 
 A lightweight, responsive ProxMox monitoring application that displays real-time metrics for CPU, memory, network, and disk usage across multiple nodes.
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/rcourtman)
+
 ![Dashboard](docs/images/dashboard.png)
 *Main dashboard showing node overview and resource usage*
 
@@ -16,6 +18,7 @@ A lightweight, responsive ProxMox monitoring application that displays real-time
 - [System Requirements](#-system-requirements)
 - [Version Information](#-version-information)
 - [Contributing](#-contributing)
+- [Support](#-support)
 - [License](#-license)
 
 ## 🚀 Quick Start with Docker
@@ -295,3 +298,9 @@ When reporting issues, please use the appropriate issue template:
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## ❤️ Support
+
+If you find Pulse helpful, please consider supporting its development through Ko-fi. Your support helps keep this project maintained and free for everyone!
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/rcourtman)
