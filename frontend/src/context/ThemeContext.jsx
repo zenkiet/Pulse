@@ -180,6 +180,7 @@ export const AppThemeProvider = ({ children }) => {
             transition: 'background-color 0.3s ease, color 0.3s ease',
             scrollbarWidth: 'thin',
             scrollbarColor: darkMode ? '#3a3a3a #1e1e1e' : '#bbb #f1f1f1',
+            userSelect: 'none',
             '&::-webkit-scrollbar': {
               width: '8px',
               height: '8px',
