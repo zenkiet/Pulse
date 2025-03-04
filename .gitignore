@@ -40,6 +40,7 @@ scripts/release.sh
 # Release process
 .release-prompt.md
 .commit-prompt.md
+docs/RELEASE_PROCESS.md
 
 # Development tools
 /tmp/pulse-*.log
