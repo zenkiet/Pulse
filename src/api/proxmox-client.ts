@@ -1,53 +1,41 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import https from 'https';
 import { createLogger } from '../utils/logger';
 import { NodeConfig, ProxmoxNodeStatus, ProxmoxVM, ProxmoxContainer, ProxmoxEvent } from '../types';
 import { formatSafeTokenId } from '../utils/config-validator';
+import { formatBytes, bytesToMB, mbToBytes } from '../utils/format';
 import config from '../config';
 
 export class ProxmoxClient {
   private client: AxiosInstance;
+  private logger = createLogger('ProxmoxClient');
+  private nodeName = '';
   private config: NodeConfig;
-  private logger: ReturnType<typeof createLogger>;
-  private eventLastTimestamp: number = 0;
-  private nodeName: string = '';
   private retryAttempts: number;
   private retryDelayMs: number;
+  private eventLastTimestamp = 0;
 
   constructor(config: NodeConfig, ignoreSSLErrors: boolean = false) {
     this.config = config;
     this.logger = createLogger('ProxmoxClient', config.id);
-
+    
     // Get timeout from environment variable or use default
-    const apiTimeoutMs = parseInt(process.env.API_TIMEOUT_MS || '10000', 10);
-    
-    // Get retry attempts from environment variable or use default
+    const apiTimeoutMs = parseInt(process.env.API_TIMEOUT_MS || '60000', 10);
     this.retryAttempts = parseInt(process.env.API_RETRY_ATTEMPTS || '3', 10);
-    
-    // Get retry delay from environment variable or use default
-    this.retryDelayMs = parseInt(process.env.API_RETRY_DELAY_MS || '2000', 10);
+    this.retryDelayMs = parseInt(process.env.API_RETRY_DELAY_MS || '5000', 10);
     
     // Create axios instance with base configuration
-    const axiosConfig: AxiosRequestConfig = {
+    const axiosConfig = {
       baseURL: `${config.host}/api2/json`,
       headers: {
-        // Use the safe token ID format to handle special characters
-        'Authorization': `PVEAPIToken=${config.tokenId}=${config.tokenSecret}`
+        Authorization: `PVEAPIToken=${config.tokenId}=${config.tokenSecret}`
       },
       timeout: apiTimeoutMs,
-      // Always bypass SSL certificate validation to avoid TLS issues
       httpsAgent: new https.Agent({
-        rejectUnauthorized: false
+        rejectUnauthorized: !ignoreSSLErrors
       })
     };
-
-    // Log SSL validation status
-    if (ignoreSSLErrors) {
-      this.logger.warn('SSL certificate validation is disabled. This is not recommended for production.');
-    } else {
-      this.logger.warn('SSL certificate validation is being bypassed to troubleshoot connection issues.');
-    }
-
+    
     this.client = axios.create(axiosConfig);
     this.logger.info(`ProxMox API client created with timeout: ${apiTimeoutMs}ms and ${this.retryAttempts} retry attempts`);
 
@@ -293,8 +281,13 @@ export class ProxmoxClient {
           // Get detailed resource usage for this VM
           const resourceData = await this.getGuestResourceUsage('qemu', vm.vmid);
           
-          // Log the raw resource data for debugging
-          this.logger.debug(`Raw resource data for VM ${vm.vmid}:`, { resourceData });
+          // Use memory values from resource data if available, otherwise fall back to VM data
+          const memory = resourceData.mem !== undefined ? resourceData.mem : vm.mem;
+          const maxmem = resourceData.maxmem !== undefined ? resourceData.maxmem : vm.maxmem;
+          
+          // Use disk values from resource data if available
+          const disk = resourceData.disk !== undefined ? resourceData.disk : vm.disk;
+          const maxdisk = resourceData.maxdisk !== undefined ? resourceData.maxdisk : vm.maxdisk;
           
           return {
             id: `${this.config.id}-vm-${vm.vmid}`,
@@ -303,12 +296,11 @@ export class ProxmoxClient {
             node: this.config.id,
             vmid: vm.vmid,
             cpus: vm.cpus,
-            // Use CPU usage from detailed resource data - use raw value, don't multiply by 100
             cpu: resourceData.cpu,
-            memory: vm.mem,
-            maxmem: vm.maxmem,
-            disk: vm.disk,
-            maxdisk: vm.maxdisk,
+            memory: memory,
+            maxmem: maxmem,
+            disk: disk,
+            maxdisk: maxdisk,
             uptime: vm.uptime || 0,
             netin: resourceData.netin || vm.netin || 0,
             netout: resourceData.netout || vm.netout || 0,
