@@ -242,6 +242,10 @@ When you run `start-dev.sh`, both servers start automatically:
 
 In production, these are combined into a single service running on port 7654.
 
+### Developer Documentation
+
+For more detailed information about the codebase structure, key components, and design decisions, please refer to the [Developer Documentation](docs/DEVELOPER.md).
+
 The development server will be accessible at:
 - http://localhost:3000 - from the local machine
 - http://your-ip-address:3000 - from other devices on your network
@@ -279,6 +283,14 @@ Contributions are welcome! Here's how you can contribute:
 5. **Open a Pull Request**
 
 Please make sure to update tests as appropriate and follow the code style of the project.
+
+For more detailed information about contributing, please see our [Contributing Guidelines](CONTRIBUTING.md).
+
+### Reporting Issues
+
+When reporting issues, please use the appropriate issue template:
+- [Bug Report](.github/ISSUE_TEMPLATE/bug_report.md) - for reporting bugs or unexpected behavior
+- [Feature Request](.github/ISSUE_TEMPLATE/feature_request.md) - for suggesting new features or improvements
 
 ## 📄 License
 
