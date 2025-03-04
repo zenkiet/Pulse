@@ -224,6 +224,24 @@ cd frontend && npm install && cd ..
 - Sets NODE_ENV to development
 - Starts both backend and frontend development servers
 
+### Development Architecture
+
+Pulse uses a split architecture for development:
+- **Backend server** (port 7654): Node.js Express server that communicates with ProxMox
+- **Frontend server** (port 3000): Vite development server for the React frontend
+
+This separation provides several benefits:
+- **Hot Module Replacement (HMR)**: Changes to frontend code are instantly reflected without a full page reload
+- **Independent development**: Backend and frontend can be developed and tested separately
+- **API isolation**: Clear separation between data services and UI components
+
+When you run `start-dev.sh`, both servers start automatically:
+1. The backend server runs on port 7654 and handles all ProxMox API communication
+2. The frontend development server runs on port 3000 with hot reloading enabled
+3. API requests from the frontend are proxied to the backend
+
+In production, these are combined into a single service running on port 7654.
+
 The development server will be accessible at:
 - http://localhost:3000 - from the local machine
 - http://your-ip-address:3000 - from other devices on your network
