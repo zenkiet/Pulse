@@ -91,6 +91,7 @@ function AppContent() {
   // Handle node selection change
   const handleNodeChange = (event) => {
     setSelectedNode(event.target.value);
+    event.target.blur(); // Remove focus after selection
   };
   
   return (
@@ -98,6 +99,12 @@ function AppContent() {
       display: 'flex', 
       flexDirection: 'column', 
       minHeight: '100vh',
+    }}
+    onClick={(e) => {
+      // Only blur if clicking the container itself, not its children
+      if (e.target === e.currentTarget) {
+        document.activeElement?.blur();
+      }
     }}>
       <AppBar position="static" color="primary" elevation={0}>
         <Toolbar sx={{ px: { xs: 2, sm: 3 } }}>
@@ -215,26 +222,46 @@ function AppContent() {
             variant="outlined" 
             size="small"
             sx={{ 
-              minWidth: { xs: 120, sm: 200 },
-              mr: 2,
+              minWidth: { xs: 48, sm: 160 },
+              mr: { xs: 1, sm: 2 },
               '& .MuiOutlinedInput-root': {
                 color: 'white',
-                borderRadius: 2,
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                height: 32,
+                borderRadius: '8px',
+                textTransform: 'none',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                transition: 'all 0.2s ease',
+                boxShadow: 0,
+                background: 'transparent',
+                border: '1px solid',
+                borderColor: 'rgba(255, 255, 255, 0.3)',
                 '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                  background: theme => alpha(theme.palette.primary.light, 0.1),
+                  boxShadow: 2,
+                  transform: 'translateY(-1px)'
                 },
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'rgba(255, 255, 255, 0.3)',
-                },
-                '&:hover .MuiOutlinedInput-notchedOutline': {
+                '&.Mui-focused': {
+                  background: 'transparent',
                   borderColor: 'rgba(255, 255, 255, 0.5)',
+                  boxShadow: 1,
                 },
-                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'rgba(255, 255, 255, 0.7)',
+                '&:active': {
+                  transform: 'translateY(0px)',
+                  boxShadow: 1
                 },
                 '& .MuiSelect-icon': {
                   color: 'rgba(255, 255, 255, 0.7)',
+                },
+                padding: { xs: '4px 8px', sm: '4px 14px' },
+                '& .MuiOutlinedInput-notchedOutline': {
+                  border: 'none'
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  border: 'none'
+                },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                  border: 'none'
                 }
               }
             }}
@@ -242,40 +269,26 @@ function AppContent() {
             <Select
               value={selectedNode}
               onChange={handleNodeChange}
+              onClose={(event) => event.target?.blur()}
               displayEmpty
               renderValue={(selected) => {
                 const node = availableNodes.find(n => n.id === selected);
                 return (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
                     {selected === 'all' ? (
                       <ViewListIcon fontSize="small" />
                     ) : (
                       <DnsIcon fontSize="small" />
                     )}
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        fontWeight: 500,
+                        display: { xs: 'none', sm: 'block' }
+                      }}
+                    >
                       {node ? node.name : 'Select Node'}
                     </Typography>
-                    {node && (
-                      <Chip 
-                        label={selected === 'all' ? 
-                          `${node.count} nodes` : 
-                          `${node.count} guests`} 
-                        size="small" 
-                        sx={{ 
-                          height: 20, 
-                          fontSize: '0.7rem',
-                          bgcolor: selected === 'all' ? 
-                            'rgba(255, 255, 255, 0.35)' : 
-                            'rgba(255, 255, 255, 0.2)',
-                          color: 'white',
-                          ml: 'auto',
-                          border: selected === 'all' ? '1px solid rgba(255, 255, 255, 0.5)' : 'none',
-                          '& .MuiChip-label': {
-                            px: selected === 'all' ? 1 : 0.8,
-                          }
-                        }} 
-                      />
-                    )}
                   </Box>
                 );
               }}
@@ -323,26 +336,6 @@ function AppContent() {
                       fontWeight: selectedNode === node.id ? 600 : 400
                     }} 
                   />
-                  <Chip 
-                    label={node.id === 'all' ? 
-                      `${node.count} nodes` : 
-                      `${node.count} guests`}
-                    size="small" 
-                    sx={{ 
-                      height: 20, 
-                      fontSize: '0.7rem',
-                      bgcolor: theme => node.id === 'all' ? 
-                        alpha(theme.palette.primary.main, 0.15) : 
-                        alpha(theme.palette.primary.main, 0.1),
-                      color: 'primary.main',
-                      border: theme => node.id === 'all' ? 
-                        `1px solid ${alpha(theme.palette.primary.main, 0.3)}` : 
-                        'none',
-                      '& .MuiChip-label': {
-                        px: node.id === 'all' ? 1 : 0.8,
-                      }
-                    }} 
-                  />
                   {selectedNode === node.id && (
                     <CheckIcon 
                       fontSize="small" 
@@ -384,6 +377,11 @@ function AppContent() {
           mb: { xs: 2, sm: 4 }, 
           flexGrow: 1,
           px: { xs: 2, sm: 3 },
+        }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            document.activeElement?.blur();
+          }
         }}
       >
         <Box sx={{ my: { xs: 2, sm: 4 } }}>
