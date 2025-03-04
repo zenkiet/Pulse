@@ -535,10 +535,27 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
   
   // Handler for clicking outside the filter box
   const handleClickAway = (event) => {
-    // Don't close if clicking on the filter button or if dragging a slider
-    if (showFilters && !sliderDragging && !filterButtonRef.current?.contains(event.target)) {
-      setShowFilters(false);
+    // Don't close if clicking on the filter button, if dragging a slider,
+    // or if clicking on a select menu or dropdown
+    if (
+      !showFilters || 
+      sliderDragging || 
+      filterButtonRef.current?.contains(event.target) || 
+      event.target.closest('[data-filter-button="true"]') ||
+      // Check for MUI Select elements and their menus
+      event.target.closest('.MuiSelect-root') ||
+      event.target.closest('.MuiMenu-root') ||
+      event.target.closest('.MuiPopover-root') ||
+      // Prevent closing when interacting with sliders
+      event.target.closest('.MuiSlider-root')
+    ) {
+      return;
     }
+    
+    // Add a small delay to prevent race conditions with other click handlers
+    setTimeout(() => {
+      setShowFilters(false);
+    }, 50);
   };
   
   // Count active filters
@@ -1226,75 +1243,161 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
           }}>
             {/* Dark Mode Toggle removed - now in App header */}
             
-            {/* Search box - moved to the left */}
+            {/* Search and Filter section - grouped together */}
             <Box sx={{ 
               display: 'flex', 
               alignItems: 'center',
               position: 'relative',
-              width: { xs: '100%', md: '240px' },
+              width: { xs: '100%', md: 'auto' },
               mr: { xs: 0, md: 2 },
-              mb: { xs: 1, md: 0 }
+              mb: { xs: 1, md: 0 },
+              gap: 1
             }}>
-              <InputBase
-                placeholder="Search systems..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                inputRef={searchInputRef}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && searchTerm.trim()) {
-                    addSearchTerm(searchTerm.trim());
-                    setSearchTerm('');
-                  }
-                }}
-                startAdornment={
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ fontSize: '1.1rem', color: 'text.secondary' }} />
-                  </InputAdornment>
-                }
-                endAdornment={
-                  searchTerm && (
-                    <InputAdornment position="end">
-                      <IconButton 
-                        size="small" 
-                        onClick={() => setSearchTerm('')}
-                        sx={{ p: 0.5 }}
-                      >
-                        <ClearIcon sx={{ fontSize: '0.9rem' }} />
-                      </IconButton>
+              {/* Search box */}
+              <Box sx={{
+                position: 'relative',
+                width: { xs: '100%', md: '240px' },
+              }}>
+                <InputBase
+                  placeholder="Search systems..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  inputRef={searchInputRef}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && searchTerm.trim()) {
+                      addSearchTerm(searchTerm.trim());
+                      setSearchTerm('');
+                    }
+                  }}
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <SearchIcon sx={{ fontSize: '1.1rem', color: 'text.secondary' }} />
                     </InputAdornment>
-                  )
-                }
-                sx={{
-                  width: '100%',
-                  fontSize: '0.875rem',
+                  }
+                  endAdornment={
+                    searchTerm && (
+                      <InputAdornment position="end">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => setSearchTerm('')}
+                          sx={{ p: 0.5 }}
+                        >
+                          <ClearIcon sx={{ fontSize: '0.9rem' }} />
+                        </IconButton>
+                      </InputAdornment>
+                    )
+                  }
+                  sx={{
+                    width: '100%',
+                    fontSize: '0.875rem',
+                    px: 1.5,
+                    py: 0.75,
+                    borderRadius: 1,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    bgcolor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                    '&:hover': {
+                      borderColor: 'primary.main',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+                    },
+                    '&.Mui-focused': {
+                      borderColor: 'primary.main',
+                      boxShadow: theme => `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`,
+                    },
+                    '& .MuiInputBase-input': {
+                      p: 0,
+                      '&::placeholder': {
+                        color: 'text.secondary',
+                        opacity: 0.7,
+                      }
+                    }
+                  }}
+                  inputProps={{
+                    'aria-label': 'search systems',
+                  }}
+                />
+              </Box>
+              
+              {/* Filter button - moved next to search box */}
+              <Button
+                ref={filterButtonRef}
+                size="small"
+                variant={showFilters || activeFilterCount > 0 ? "contained" : "outlined"}
+                color="primary"
+                onClick={handleFilterButtonClick}
+                data-filter-button="true"
+                startIcon={<FilterAltIcon fontSize="small" sx={{ 
+                  color: (showFilters || activeFilterCount > 0) ? 'inherit' : 'text.secondary',
+                  opacity: (showFilters || activeFilterCount > 0) ? 1 : 0.7
+                }} />}
+                title="Toggle Filters Panel"
+                sx={{ 
+                  height: 32, 
+                  textTransform: 'none',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  borderRadius: '8px',
+                  transition: 'all 0.2s ease',
+                  boxShadow: (showFilters || activeFilterCount > 0) ? 1 : 0,
                   px: 1.5,
-                  py: 0.75,
-                  borderRadius: 1,
+                  background: (showFilters || activeFilterCount > 0) ? 
+                    (theme => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`) : 
+                    (theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7)),
                   border: '1px solid',
                   borderColor: 'divider',
-                  bgcolor: theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7),
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  color: (showFilters || activeFilterCount > 0) ? 'inherit' : 'text.secondary',
+                  '& .MuiButton-startIcon': {
+                    opacity: (showFilters || activeFilterCount > 0) ? 1 : 0.7
+                  },
                   '&:hover': {
+                    background: (showFilters || activeFilterCount > 0) ? 
+                      (theme => `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`) : 
+                      (theme => alpha(theme.palette.primary.light, 0.1)),
                     borderColor: 'primary.main',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+                    color: (showFilters || activeFilterCount > 0) ? 'inherit' : 'text.primary',
+                    '& .MuiButton-startIcon': {
+                      opacity: 1
+                    },
+                    boxShadow: 2,
+                    transform: 'translateY(-1px)'
                   },
-                  '&.Mui-focused': {
-                    borderColor: 'primary.main',
-                    boxShadow: theme => `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`,
+                  '&:active': {
+                    transform: 'translateY(0px)',
+                    boxShadow: 1
                   },
-                  '& .MuiInputBase-input': {
-                    p: 0,
-                    '&::placeholder': {
-                      color: 'text.secondary',
-                      opacity: 0.7,
-                    }
+                  '&:focus-visible': {
+                    outline: '2px solid',
+                    outlineColor: 'primary.main',
+                    outlineOffset: 2,
                   }
                 }}
-                inputProps={{
-                  'aria-label': 'search systems',
-                }}
-              />
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <Box
+                      sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        ml: 1,
+                        bgcolor: (showFilters || activeFilterCount > 0) ? 'rgba(255, 255, 255, 0.25)' : 'error.main',
+                        color: (showFilters || activeFilterCount > 0) ? 'white' : 'error.contrastText',
+                        borderRadius: '12px',
+                        width: 20,
+                        height: 20,
+                        fontSize: '0.7rem',
+                        fontWeight: 'bold',
+                        boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.2)'
+                      }}
+                    >
+                      {activeFilterCount}
+                    </Box>
+                  )}
+                </Box>
+              </Button>
             </Box>
             
             {/* Guest Type Filter - Removed from here and moved to filter panel */}
@@ -1305,7 +1408,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
             {/* Filter indicator */}
             <Box sx={{ flexGrow: 1, minHeight: { xs: 8, md: 0 } }} />
             
-            {/* Controls section */}
+            {/* Controls section - Filter button removed from here */}
             <Box sx={{ 
               display: 'flex', 
               alignItems: 'center',
@@ -1316,93 +1419,17 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
               justifyContent: { xs: 'space-between', md: 'flex-start' },
               pr: { md: 5 }  // Add right padding to avoid overlap with dark mode toggle
             }}>
-              {/* Filter controls - updated for better mobile experience */}
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center',
-                flexGrow: { xs: 1, md: 0 },
-                justifyContent: { xs: 'center', md: 'flex-start' }
-              }}>
-                {/* Unified filter button that toggles the filter section */}
-                <Button
-                  ref={filterButtonRef}
-                  size="small"
-                  variant={showFilters || activeFilterCount > 0 ? "contained" : "outlined"}
-                  color="primary"
-                  onClick={handleFilterButtonClick}
-                  startIcon={<FilterAltIcon fontSize="small" />}
-                  title="Toggle Filters Panel" // Removed Alt+F keyboard shortcut from tooltip
-                  sx={{ 
-                    height: 32, 
-                    textTransform: 'none',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    borderRadius: '8px',
-                    transition: 'all 0.2s ease',
-                    boxShadow: (showFilters || activeFilterCount > 0) ? 1 : 0,
-                    px: 1.5,
-                    background: (showFilters || activeFilterCount > 0) ? 
-                      (theme => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`) : 
-                      'transparent',
-                    border: (showFilters || activeFilterCount > 0) ? 'none' : '1px solid',
-                    borderColor: 'primary.light',
-                    '&:hover': {
-                      background: (showFilters || activeFilterCount > 0) ? 
-                        (theme => `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`) : 
-                        (theme => alpha(theme.palette.primary.light, 0.1)),
-                      boxShadow: 2,
-                      transform: 'translateY(-1px)'
-                    },
-                    '&:active': {
-                      transform: 'translateY(0px)',
-                      boxShadow: 1
-                    },
-                    '&:focus-visible': {
-                      outline: '2px solid',
-                      outlineColor: 'primary.main',
-                      outlineOffset: 2,
-                    }
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    Filters
-                    {activeFilterCount > 0 && (
-                      <Box
-                        sx={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          ml: 1,
-                          bgcolor: (showFilters || activeFilterCount > 0) ? 'rgba(255, 255, 255, 0.25)' : 'error.main',
-                          color: (showFilters || activeFilterCount > 0) ? 'white' : 'error.contrastText',
-                          borderRadius: '12px',
-                          width: 20,
-                          height: 20,
-                          fontSize: '0.7rem',
-                          fontWeight: 'bold',
-                          boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.2)'
-                        }}
-                      >
-                        {activeFilterCount}
-                      </Box>
-                    )}
-                  </Box>
-                </Button>
-                
-                {/* Remove the separate filter popover since we're combining everything */}
-                {/* The filter chips will now be shown in the expanded filter section */}
-                
-              </Box>
-              
-              {/* Display controls - Running/Stopped toggle removed from here and moved to filter panel */}
-              {/* Remove the separate filter popover since we're combining everything */}
-              {/* The filter chips will now be shown in the expanded filter section */}
-              
+              {/* Other controls can go here */}
             </Box>
           </Box>
           
           {/* Filter Panel that shows when filters are active - now includes active filter chips */}
-          <ClickAwayListener onClickAway={handleClickAway}>
+          <ClickAwayListener 
+            mouseEvent="onMouseDown" 
+            touchEvent="onTouchStart"
+            onClickAway={handleClickAway}
+            disableReactTree={true}
+          >
             <Collapse in={showFilters} timeout="auto" sx={{
               '& .MuiCollapse-wrapperInner': {
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
