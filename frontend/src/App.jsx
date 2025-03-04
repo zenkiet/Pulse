@@ -16,7 +16,8 @@ import {
   Chip,
   ListItemIcon,
   ListItemText,
-  Divider
+  Divider,
+  useTheme
 } from '@mui/material';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
@@ -33,6 +34,7 @@ function AppContent() {
   const { darkMode, toggleDarkMode } = useThemeContext();
   const [selectedNode, setSelectedNode] = useState('all');
   const { nodeData, guestData } = useSocket();
+  const theme = useTheme();
   
   // Transform the node data from the API into the format needed for the dropdown
   const availableNodes = React.useMemo(() => {
@@ -79,8 +81,8 @@ function AppContent() {
         });
       });
       
-      // Update the count for "All Nodes"
-      nodes[0].count = guestData ? guestData.length : 0;
+      // Update the count for "All Nodes" to show number of nodes instead of guests
+      nodes[0].count = nodeData.length;
     }
     
     return nodes;
@@ -255,14 +257,22 @@ function AppContent() {
                     </Typography>
                     {node && (
                       <Chip 
-                        label={node.count} 
+                        label={selected === 'all' ? 
+                          `${node.count} nodes` : 
+                          `${node.count} guests`} 
                         size="small" 
                         sx={{ 
                           height: 20, 
                           fontSize: '0.7rem',
-                          bgcolor: 'rgba(255, 255, 255, 0.2)',
+                          bgcolor: selected === 'all' ? 
+                            'rgba(255, 255, 255, 0.35)' : 
+                            'rgba(255, 255, 255, 0.2)',
                           color: 'white',
-                          ml: 'auto'
+                          ml: 'auto',
+                          border: selected === 'all' ? '1px solid rgba(255, 255, 255, 0.5)' : 'none',
+                          '& .MuiChip-label': {
+                            px: selected === 'all' ? 1 : 0.8,
+                          }
                         }} 
                       />
                     )}
@@ -314,13 +324,23 @@ function AppContent() {
                     }} 
                   />
                   <Chip 
-                    label={node.count} 
+                    label={node.id === 'all' ? 
+                      `${node.count} nodes` : 
+                      `${node.count} guests`}
                     size="small" 
                     sx={{ 
                       height: 20, 
                       fontSize: '0.7rem',
-                      bgcolor: theme => alpha(theme.palette.primary.main, 0.1),
-                      color: 'primary.main'
+                      bgcolor: theme => node.id === 'all' ? 
+                        alpha(theme.palette.primary.main, 0.15) : 
+                        alpha(theme.palette.primary.main, 0.1),
+                      color: 'primary.main',
+                      border: theme => node.id === 'all' ? 
+                        `1px solid ${alpha(theme.palette.primary.main, 0.3)}` : 
+                        'none',
+                      '& .MuiChip-label': {
+                        px: node.id === 'all' ? 1 : 0.8,
+                      }
                     }} 
                   />
                   {selectedNode === node.id && (
