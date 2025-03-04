@@ -217,6 +217,13 @@ cd frontend && npm install && cd ..
 ./start-dev.sh
 ```
 
+⚠️ **Warning**: The `start-dev.sh` script performs the following actions:
+- Stops any running Docker containers with "pulse" in their name
+- Kills any running Node.js processes serving the application
+- Frees ports 7654 and 3000 by terminating processes using them
+- Sets NODE_ENV to development
+- Starts both backend and frontend development servers
+
 The development server will be accessible at:
 - http://localhost:3000 - from the local machine
 - http://your-ip-address:3000 - from other devices on your network
