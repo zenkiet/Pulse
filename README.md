@@ -4,7 +4,7 @@ A lightweight, responsive ProxMox monitoring application that displays real-time
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/rcourtman)
 
-![Dashboard](docs/images/dashboard.png)
+![Dashboard](docs/images/dashboard-light.png)
 *Main dashboard showing node overview and resource usage*
 
 ## 📑 Table of Contents
