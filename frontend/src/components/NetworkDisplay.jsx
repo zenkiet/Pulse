@@ -2050,12 +2050,12 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                             py: 0.5,
                             px: 1.5,
                             minWidth: 0,
-                            color: guestTypeFilter === 'all' ? 'primary.main' : 'text.secondary',
-                            bgcolor: guestTypeFilter === 'all' ? alpha('#1976d2', 0.08) : 'transparent',
+                            color: guestTypeFilter === 'all' ? '#fff' : 'text.secondary',
+                            bgcolor: guestTypeFilter === 'all' ? 'primary.main' : alpha(theme.palette.text.secondary, 0.05),
                             borderRight: '1px solid',
                             borderColor: 'divider',
                             '&:hover': {
-                              bgcolor: guestTypeFilter === 'all' ? alpha('#1976d2', 0.12) : alpha('#000', 0.04)
+                              bgcolor: guestTypeFilter === 'all' ? 'primary.dark' : alpha(theme.palette.text.secondary, 0.1)
                             }
                           }}
                         >
@@ -2068,15 +2068,15 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                             py: 0.5,
                             px: 1.5,
                             minWidth: 0,
-                            color: guestTypeFilter === 'vm' ? 'info.main' : 'text.secondary',
-                            bgcolor: guestTypeFilter === 'vm' ? alpha('#0288d1', 0.08) : 'transparent',
+                            color: guestTypeFilter === 'vm' ? '#fff' : 'text.secondary',
+                            bgcolor: guestTypeFilter === 'vm' ? 'primary.main' : alpha(theme.palette.text.secondary, 0.05),
                             borderRight: '1px solid',
                             borderColor: 'divider',
                             display: 'flex',
                             alignItems: 'center',
                             gap: 0.5,
                             '&:hover': {
-                              bgcolor: guestTypeFilter === 'vm' ? alpha('#0288d1', 0.12) : alpha('#000', 0.04)
+                              bgcolor: guestTypeFilter === 'vm' ? 'primary.dark' : alpha(theme.palette.text.secondary, 0.1)
                             }
                           }}
                         >
@@ -2102,13 +2102,13 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                             py: 0.5,
                             px: 1.5,
                             minWidth: 0,
-                            color: guestTypeFilter === 'lxc' ? 'success.main' : 'text.secondary',
-                            bgcolor: guestTypeFilter === 'lxc' ? alpha('#2e7d32', 0.08) : 'transparent',
+                            color: guestTypeFilter === 'lxc' ? '#fff' : 'text.secondary',
+                            bgcolor: guestTypeFilter === 'lxc' ? 'primary.main' : alpha(theme.palette.text.secondary, 0.05),
                             display: 'flex',
                             alignItems: 'center',
                             gap: 0.5,
                             '&:hover': {
-                              bgcolor: guestTypeFilter === 'lxc' ? alpha('#2e7d32', 0.12) : alpha('#000', 0.04)
+                              bgcolor: guestTypeFilter === 'lxc' ? 'primary.dark' : alpha(theme.palette.text.secondary, 0.1)
                             }
                           }}
                         >
@@ -2143,45 +2143,37 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       }}>
                         <Button
                           size="small"
-                          onClick={() => setShowStopped(false)}
-                          sx={{
-                            py: 0.5,
-                            px: 1.5,
-                            minWidth: 0,
-                            color: !showStopped ? 'success.main' : 'text.secondary',
-                            bgcolor: !showStopped ? alpha('#2e7d32', 0.08) : 'transparent',
-                            borderRight: '1px solid',
-                            borderColor: 'divider',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 0.5,
-                            '&:hover': {
-                              bgcolor: !showStopped ? alpha('#2e7d32', 0.12) : alpha('#000', 0.04)
-                            }
-                          }}
-                        >
-                          <PlayArrowIcon sx={{ fontSize: '0.9rem' }} />
-                          Running
-                        </Button>
-                        <Button
-                          size="small"
                           onClick={() => setShowStopped(true)}
                           sx={{
                             py: 0.5,
                             px: 1.5,
                             minWidth: 0,
-                            color: showStopped ? 'primary.main' : 'text.secondary',
-                            bgcolor: showStopped ? alpha('#1976d2', 0.08) : 'transparent',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 0.5,
+                            color: showStopped ? '#fff' : 'text.secondary',
+                            bgcolor: showStopped ? 'primary.main' : alpha(theme.palette.text.secondary, 0.05),
+                            borderRight: '1px solid',
+                            borderColor: 'divider',
                             '&:hover': {
-                              bgcolor: showStopped ? alpha('#1976d2', 0.12) : alpha('#000', 0.04)
+                              bgcolor: showStopped ? 'primary.dark' : alpha(theme.palette.text.secondary, 0.1)
                             }
                           }}
                         >
-                          <AllInclusiveIcon sx={{ fontSize: '0.9rem' }} />
                           All
+                        </Button>
+                        <Button
+                          size="small"
+                          onClick={() => setShowStopped(false)}
+                          sx={{
+                            py: 0.5,
+                            px: 1.5,
+                            minWidth: 0,
+                            color: !showStopped ? '#fff' : 'text.secondary',
+                            bgcolor: !showStopped ? 'primary.main' : alpha(theme.palette.text.secondary, 0.05),
+                            '&:hover': {
+                              bgcolor: !showStopped ? 'primary.dark' : alpha(theme.palette.text.secondary, 0.1)
+                            }
+                          }}
+                        >
+                          Running
                         </Button>
                       </Box>
                     </Box>
@@ -2350,7 +2342,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       color="primary"
                       onClick={resetFilters}
                       startIcon={<RestartAltIcon />}
-                      title="Reset All Filters (Alt+R)" // Add tooltip with keyboard shortcut
+                      title="Reset All Filters (Alt+R)"
                       sx={{ 
                         height: 32,
                         transition: 'all 0.2s ease',
@@ -2358,16 +2350,15 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         textTransform: 'none',
                         borderRadius: '8px',
                         px: 1.5,
-                        background: Object.values(filters).some(val => val > 0) ? 
-                          (theme => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`) : 
-                          'transparent',
-                        border: Object.values(filters).some(val => val > 0) ? 'none' : '1px solid',
-                        borderColor: 'primary.light',
-                        boxShadow: Object.values(filters).some(val => val > 0) ? 1 : 0,
+                        color: Object.values(filters).some(val => val > 0) ? '#fff' : 'text.secondary',
+                        bgcolor: Object.values(filters).some(val => val > 0) ? 
+                          'primary.main' : alpha(theme.palette.text.secondary, 0.05),
+                        border: 'none',
+                        boxShadow: 0,
                         '&:hover': {
-                          background: Object.values(filters).some(val => val > 0) ? 
-                            (theme => `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`) : 
-                            (theme => alpha(theme.palette.primary.light, 0.1)),
+                          bgcolor: Object.values(filters).some(val => val > 0) ? 
+                            'primary.dark' : alpha(theme.palette.text.secondary, 0.1),
+                          boxShadow: 0
                         }
                       }}
                     >
