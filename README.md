@@ -7,7 +7,7 @@ A lightweight, responsive ProxMox monitoring application that displays real-time
 
 ## 🚀 Quick Start with Docker
 
-### Option 1: Simple Docker Run (Recommended for most users)
+### Option 1: Simple Docker Run
 
 ```bash
 # 1. Download the example environment file
