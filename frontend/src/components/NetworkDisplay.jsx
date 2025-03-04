@@ -1176,13 +1176,16 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
       
       // Define the table columns and rows
       const tableColumn = [
+        'Type',
+        'ID',
         'Name', 
         'Status', 
         'CPU Usage', 
         'Memory Usage', 
         'Disk Usage', 
         'Download', 
-        'Upload'
+        'Upload',
+        'Uptime'
       ];
       
       // Generate the rows from the filtered data - with safer data handling
@@ -1210,6 +1213,8 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
           
           // Format for the PDF table with safer string handling
           tableRows.push([
+            String(guest.type || 'Unknown'),
+            String(guest.id || 'Unknown'),
             String(guest.name || 'Unknown'),
             String(guest.status || 'Unknown'),
             String(formatPercentage(cpuUsage)),
@@ -1218,7 +1223,9 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
             guest.status === 'running' && networkMetrics ? 
               String(formatNetworkRate(networkMetrics.inRate || 0)) : '-',
             guest.status === 'running' && networkMetrics ? 
-              String(formatNetworkRate(networkMetrics.outRate || 0)) : '-'
+              String(formatNetworkRate(networkMetrics.outRate || 0)) : '-',
+            guest.status === 'running' && metrics?.metrics?.uptime ? 
+              String(formatUptime(metrics.metrics.uptime)) : '-'
           ]);
         } catch (rowError) {
           console.error('Error processing row for guest:', guest?.name, rowError);
@@ -1226,6 +1233,9 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
           tableRows.push([
             String(guest?.name || 'Unknown'),
             String(guest?.status || 'Unknown'),
+            'Error',
+            'Error',
+            'Error',
             'Error',
             'Error',
             'Error',
@@ -2204,7 +2214,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                                   console.log('CSV export started');
                                   
                                   // Create CSV content
-                                  const headers = ['Name', 'Status', 'CPU Usage', 'Memory Usage', 'Disk Usage', 'Download', 'Upload'];
+                                  const headers = ['Type', 'ID', 'Name', 'Status', 'CPU Usage', 'Memory Usage', 'Disk Usage', 'Download', 'Upload', 'Uptime'];
                                   const csvRows = [headers];
                                   
                                   // Helper function to escape CSV values properly
@@ -2239,6 +2249,8 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                                           (diskData.used / diskData.total) * 100 : 0);
                                       
                                       csvRows.push([
+                                        escapeCSV(guest.type || 'Unknown'),
+                                        escapeCSV(guest.id || 'Unknown'),
                                         escapeCSV(guest.name || 'Unknown'),
                                         escapeCSV(guest.status || 'Unknown'),
                                         escapeCSV(formatPercentage(cpuUsage)),
@@ -2247,7 +2259,9 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                                         escapeCSV(guest.status === 'running' && networkMetrics ? 
                                           formatNetworkRate(networkMetrics.inRate || 0) : '-'),
                                         escapeCSV(guest.status === 'running' && networkMetrics ? 
-                                          formatNetworkRate(networkMetrics.outRate || 0) : '-')
+                                          formatNetworkRate(networkMetrics.outRate || 0) : '-'),
+                                        escapeCSV(guest.status === 'running' && metrics?.metrics?.uptime ? 
+                                          formatUptime(metrics.metrics.uptime) : '-')
                                       ]);
                                     } catch (rowError) {
                                       console.error('Error processing CSV row for guest:', guest?.name, rowError);
@@ -2255,7 +2269,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                                       csvRows.push([
                                         escapeCSV(guest?.name || 'Unknown'),
                                         escapeCSV(guest?.status || 'Unknown'),
-                                        'Error', 'Error', 'Error', 'Error', 'Error'
+                                        'Error', 'Error', 'Error', 'Error', 'Error', 'Error', 'Error', 'Error', 'Error'
                                       ]);
                                     }
                                   });
