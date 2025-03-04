@@ -1,6 +1,6 @@
 services:
   pulse-app:
-    image: rcourtman/pulse:1.2.0
+    image: rcourtman/pulse:latest
     container_name: pulse-app
     ports:
       - "7654:7654"
