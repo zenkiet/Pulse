@@ -132,6 +132,23 @@ const formatPercentage = (value) => {
   return `${Math.round(value)}%`;
 };
 
+// Helper function to format uptime duration
+const formatUptime = (seconds) => {
+  if (seconds === undefined || seconds === null || isNaN(seconds) || seconds === 0) return '-';
+  
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  
+  if (days > 0) {
+    return `${days}d ${hours}h`;
+  } else if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  } else {
+    return `${minutes}m`;
+  }
+};
+
 // Helper function to format network rates for filter display
 const formatNetworkRateForFilter = (bytesPerSecond) => {
   if (bytesPerSecond === undefined || bytesPerSecond === null || isNaN(bytesPerSecond) || bytesPerSecond === 0) return '0 B/s';
@@ -917,6 +934,11 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
           const uploadA = getMetricsForGuest(a.id)?.metrics?.network?.outRate || 0;
           const uploadB = getMetricsForGuest(b.id)?.metrics?.network?.outRate || 0;
           return sortConfig.direction === 'asc' ? uploadA - uploadB : uploadB - uploadA;
+        
+        case 'uptime':
+          const uptimeA = getMetricsForGuest(a.id)?.metrics?.uptime || 0;
+          const uptimeB = getMetricsForGuest(b.id)?.metrics?.uptime || 0;
+          return sortConfig.direction === 'asc' ? uptimeA - uptimeB : uptimeB - uptimeA;
         
         case 'updated':
           const updatedA = getMetricsForGuest(a.id)?.timestamp || 0;
@@ -2661,6 +2683,59 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       </Box>
                     </Tooltip>
                   </TableCell>
+
+                  {/* Uptime Column */}
+                  <TableCell 
+                    width="12%" 
+                    onClick={() => requestSort('uptime')}
+                    sx={{ 
+                      fontWeight: 'bold', 
+                      minHeight: '48px', 
+                      position: 'relative',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                      },
+                      '&:focus-visible': {
+                        outline: '2px solid',
+                        outlineColor: 'primary.main',
+                        outlineOffset: -2,
+                      }
+                    }}
+                    aria-sort={sortConfig.key === 'uptime' ? sortConfig.direction : undefined}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <AllInclusiveIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                      Uptime
+                      <TableSortLabel
+                        active={sortConfig.key === 'uptime'}
+                        direction={sortConfig.key === 'uptime' ? sortConfig.direction : 'asc'}
+                        sx={{
+                          '& .MuiTableSortLabel-icon': {
+                            opacity: sortConfig.key === 'uptime' ? 1 : 0.3,
+                            marginLeft: '4px !important',
+                          },
+                          '&.Mui-active': {
+                            color: 'inherit',
+                          },
+                          '&:hover': {
+                            color: 'primary.main',
+                          }
+                        }}
+                        IconComponent={props => (
+                          <ArrowDropDownIcon
+                            {...props}
+                            sx={{
+                              fontSize: '1.2rem',
+                              transform: sortConfig.key === 'uptime' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                              transition: 'transform 0.2s'
+                            }}
+                          />
+                        )}
+                      />
+                    </Box>
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -2909,12 +2984,24 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                             </Typography>
                           )}
                         </TableCell>
+                        <TableCell>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              fontFamily: 'monospace',
+                              color: theme => darkMode ? 'text.secondary' : 'text.primary',
+                              opacity: isRunning ? 1 : 0.7
+                            }}
+                          >
+                            {isRunning ? formatUptime(metrics?.metrics?.uptime || 0) : '-'}
+                          </Typography>
+                        </TableCell>
                       </TableRow>
                     );
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={guestTypeFilter === 'all' ? 7 : 7} align="center" sx={{ py: 8 }}>
+                    <TableCell colSpan={guestTypeFilter === 'all' ? 8 : 8} align="center" sx={{ py: 8 }}>
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 2 }}>
                         <NetworkCheckIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2, opacity: 0.6 }} />
                         <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -2929,7 +3016,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                 )}
                 {guestData.length > 0 && sortedAndFilteredData.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={guestTypeFilter === 'all' ? 7 : 7} align="center" sx={{ py: 6 }}>
+                    <TableCell colSpan={guestTypeFilter === 'all' ? 8 : 8} align="center" sx={{ py: 6 }}>
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 2 }}>
                         <FilterAltIcon sx={{ fontSize: 40, color: 'primary.light', mb: 2, opacity: 0.7 }} />
                         <Typography variant="h6" color="text.secondary" gutterBottom>
