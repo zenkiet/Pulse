@@ -154,6 +154,7 @@ export const AppThemeProvider = ({ children }) => {
           head: {
             fontWeight: 600,
             color: darkMode ? '#e0e0e0' : '#424242',
+            userSelect: 'none',
           },
         },
       },
