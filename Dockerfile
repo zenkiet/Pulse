@@ -22,7 +22,7 @@ RUN cd frontend && npm run build
 FROM node:18-slim
 
 # Add version labels
-LABEL version="1.1.0"
+LABEL version="1.2.0"
 LABEL description="ProxMox Pulse - A lightweight monitoring application for ProxMox"
 LABEL maintainer="Richard Courtman"
 
