@@ -17,8 +17,7 @@
     "dev:start": "./start-dev.sh",
     "dev": "./start-mock-dev.sh",
     "dev:mock": "./start-mock-dev.sh",
-    "screenshots": "./scripts/update-screenshots.sh",
-    "screenshots:tool": "./tools/screenshot-automation/update-screenshots.sh"
+    "screenshots": "./scripts/update-screenshots-fixed.sh"
   },
   "keywords": [
     "proxmox",
