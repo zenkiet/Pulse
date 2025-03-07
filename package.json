@@ -14,7 +14,6 @@
     "dev:kill:frontend": "npx kill-port 9513",
     "dev:kill:all": "npm run dev:kill:backend && npm run dev:kill:frontend",
     "dev:frontend": "cd frontend && npm run dev",
-    "dev:start": "./start-dev.sh",
     "dev": "./start-dev.sh",
     "dev:mock": "./start-mock-dev.sh",
     "screenshots": "./scripts/update-screenshots.sh"
