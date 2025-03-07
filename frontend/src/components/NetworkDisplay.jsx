@@ -453,6 +453,17 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     return fullId;
   };
   
+  // Helper function to get the node name from the node ID
+  const getNodeName = (nodeId) => {
+    if (!nodeId || !nodeData || nodeData.length === 0) return nodeId;
+    
+    // Find the node in the nodeData array
+    const node = nodeData.find(node => node.id === nodeId);
+    
+    // Return the node name if found, otherwise return the node ID
+    return node ? node.name : nodeId;
+  };
+  
   // Sort state
   const [sortConfig, setSortConfig] = useState(() => {
     try {
@@ -938,6 +949,12 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
           bValue = b.type === 'qemu' ? 0 : 1;
           break;
           
+        case 'node':
+          // Sort by node name
+          aValue = getNodeName(String(a.node)).toLowerCase();
+          bValue = getNodeName(String(b.node)).toLowerCase();
+          break;
+          
         case 'name':
           aValue = a.name.toLowerCase();
           bValue = b.name.toLowerCase();
@@ -1174,23 +1191,25 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
       doc.text(nodeInfo, 14, 25);
       console.log('Node info added');
       
-      // Define the table columns and rows
-      const tableColumn = [
+      // Define the table headers
+      const tableHeaders = [
+        'Node',
         'Type',
         'ID',
-        'Name', 
-        'Status', 
-        'CPU Usage', 
-        'Memory Usage', 
-        'Disk Usage', 
-        'Download', 
+        'Name',
+        'Status',
+        'CPU (%)',
+        'Memory (%)',
+        'Disk (%)',
+        'Download',
         'Upload',
         'Uptime'
       ];
       
-      // Generate the rows from the filtered data - with safer data handling
+      // Create an array to hold the table rows
       const tableRows = [];
       
+      // Add data for each guest
       for (const guest of sortedAndFilteredData) {
         try {
           console.log('Processing guest:', guest.name);
@@ -1213,6 +1232,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
           
           // Format for the PDF table with safer string handling
           tableRows.push([
+            String(getNodeName(guest.node) || 'Unknown'),
             String(guest.type || 'Unknown'),
             String(guest.id || 'Unknown'),
             String(guest.name || 'Unknown'),
@@ -1251,7 +1271,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
       try {
         // Use autoTable directly with the doc object
         autoTable(doc, {
-          head: [tableColumn],
+          head: [tableHeaders],
           body: tableRows,
           startY: 30,
           theme: 'grid',
@@ -2206,7 +2226,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                                   console.log('CSV export started');
                                   
                                   // Create CSV content
-                                  const headers = ['Type', 'ID', 'Name', 'Status', 'CPU Usage', 'Memory Usage', 'Disk Usage', 'Download', 'Upload', 'Uptime'];
+                                  const headers = ['Node', 'Type', 'ID', 'Name', 'Status', 'CPU Usage', 'Memory Usage', 'Disk Usage', 'Download', 'Upload', 'Uptime'];
                                   const csvRows = [headers];
                                   
                                   // Helper function to escape CSV values properly
@@ -2241,6 +2261,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                                           (diskData.used / diskData.total) * 100 : 0);
                                       
                                       csvRows.push([
+                                        escapeCSV(getNodeName(guest.node) || 'Unknown'),
                                         escapeCSV(guest.type || 'Unknown'),
                                         escapeCSV(guest.id || 'Unknown'),
                                         escapeCSV(guest.name || 'Unknown'),
@@ -2259,10 +2280,12 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                                       console.error('Error processing CSV row for guest:', guest?.name, rowError);
                                       // Add a fallback row with error information
                                       csvRows.push([
-                                        escapeCSV(guest?.name || 'Unknown'),
-                                        escapeCSV(guest?.status || 'Unknown'),
-                                        'Error', 'Error', 'Error', 'Error', 'Error', 'Error', 'Error', 'Error', 'Error'
-                                      ]);
+                                          escapeCSV(getNodeName(guest?.node) || "Unknown"),
+                                          escapeCSV(guest?.type || "Unknown"),
+                                          escapeCSV(guest?.id || "Unknown"),
+                                          escapeCSV(guest?.name || "Unknown"),
+                                          escapeCSV(guest?.status || "Unknown"),
+                                          "Error", "Error", "Error", "Error", "Error", "Error"]);
                                     }
                                   });
                                   
@@ -2445,6 +2468,59 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                     transition: 'padding 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-height 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
                   }
                 }}>
+                  {/* Node Column */}
+                  <TableCell 
+                    width="10%" 
+                    onClick={() => requestSort('node')}
+                    sx={{ 
+                      fontWeight: 'bold', 
+                      minHeight: '48px',
+                      position: 'relative',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      pr: 3, // Add right padding for sort icon
+                      '&:hover': {
+                        backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                      },
+                      '&:focus-visible': {
+                        outline: '2px solid',
+                        outlineColor: 'primary.main',
+                        outlineOffset: -2,
+                      }
+                    }}
+                    aria-sort={sortConfig.key === 'node' ? sortConfig.direction : undefined}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                      Node
+                      <TableSortLabel
+                        active={sortConfig.key === 'node'}
+                        direction={sortConfig.key === 'node' ? sortConfig.direction : 'asc'}
+                        sx={{
+                          '& .MuiTableSortLabel-icon': {
+                            opacity: sortConfig.key === 'node' ? 1 : 0.3,
+                            marginLeft: '4px !important',
+                          },
+                          '&.Mui-active': {
+                            color: 'inherit',
+                          },
+                          '&:hover': {
+                            color: 'primary.main',
+                          }
+                        }}
+                        IconComponent={props => (
+                          <ArrowDropDownIcon
+                            {...props}
+                            sx={{
+                              fontSize: '1.2rem',
+                              transform: sortConfig.key === 'node' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                              transition: 'transform 0.2s'
+                            }}
+                          />
+                        )}
+                      />
+                    </Box>
+                  </TableCell>
+
                   {/* Type Column */}
                   <TableCell 
                     width="4%" 
@@ -3046,7 +3122,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         // Highlight rows that match active filters with subtle indicators
                         ...(filters.cpu > 0 && cpuUsage > filters.cpu && (
                           guestTypeFilter === 'all' ? {
-                            '& td:nth-of-type(4)': { 
+                            '& td:nth-of-type(9)': { 
                               backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
                               transition: 'background-color 0.2s ease',
                               '&:hover': {
@@ -3054,7 +3130,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                               }
                             }
                           } : {
-                            '& td:nth-of-type(3)': { 
+                            '& td:nth-of-type(9)': { 
                               backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
                               transition: 'background-color 0.2s ease',
                               '&:hover': {
@@ -3065,7 +3141,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         )),
                         ...(filters.memory > 0 && memoryUsage > filters.memory && (
                           guestTypeFilter === 'all' ? {
-                            '& td:nth-of-type(5)': { 
+                            '& td:nth-of-type(9)': { 
                               backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
                               transition: 'background-color 0.2s ease',
                               '&:hover': {
@@ -3073,7 +3149,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                               }
                             }
                           } : {
-                            '& td:nth-of-type(4)': { 
+                            '& td:nth-of-type(9)': { 
                               backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
                               transition: 'background-color 0.2s ease',
                               '&:hover': {
@@ -3084,7 +3160,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         )),
                         ...(filters.disk > 0 && diskUsage > filters.disk && (
                           guestTypeFilter === 'all' ? {
-                            '& td:nth-of-type(6)': { 
+                            '& td:nth-of-type(9)': { 
                               backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
                               transition: 'background-color 0.2s ease',
                               '&:hover': {
@@ -3092,7 +3168,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                               }
                             }
                           } : {
-                            '& td:nth-of-type(5)': { 
+                            '& td:nth-of-type(9)': { 
                               backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
                               transition: 'background-color 0.2s ease',
                               '&:hover': {
@@ -3103,34 +3179,15 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         )),
                         ...(filters.download > 0 && networkMetrics?.inRate >= sliderValueToNetworkRate(filters.download) && (
                           guestTypeFilter === 'all' ? {
-                            '& td:nth-of-type(7)': { 
+                            '& td:nth-of-type(9)': { 
                               backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
-                              transition: 'background-color 0.2s ease',
-                              '&:hover': {
-                                backgroundColor: theme => alpha(theme.palette.primary.main, 0.1)
-                              }
-                            }
-                          } : {
-                            '& td:nth-of-type(6)': { 
-                              backgroundColor: theme => alpha(theme.palette.primary.main, 0.06),
-                              transition: 'background-color 0.2s ease',
-                              '&:hover': {
-                                backgroundColor: theme => alpha(theme.palette.primary.main, 0.1)
-                              }
-                            }
-                          }
-                        )),
-                        ...(filters.upload > 0 && networkMetrics?.outRate >= sliderValueToNetworkRate(filters.upload) && (
-                          guestTypeFilter === 'all' ? {
-                            '& td:nth-of-type(8)': { 
-                              backgroundColor: theme => alpha(theme.palette.secondary.main, 0.06),
                               transition: 'background-color 0.2s ease',
                               '&:hover': {
                                 backgroundColor: theme => alpha(theme.palette.secondary.main, 0.1)
                               }
                             }
                           } : {
-                            '& td:nth-of-type(7)': { 
+                            '& td:nth-of-type(9)': { 
                               backgroundColor: theme => alpha(theme.palette.secondary.main, 0.06),
                               transition: 'background-color 0.2s ease',
                               '&:hover': {
@@ -3140,6 +3197,18 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                           }
                         ))
                       }}>
+                        <TableCell>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              fontWeight: 500,
+                              color: theme => darkMode ? 'text.secondary' : 'text.primary'
+                            }}
+                          >
+                            {getNodeName(guest.node)}
+                          </Typography>
+                        </TableCell>
+                        
                         <TableCell sx={{ padding: 0 }}>
                           <Box sx={{ 
                             display: 'flex', 
