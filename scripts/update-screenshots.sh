@@ -1,121 +1,94 @@
 #!/bin/bash
 
-# Update Screenshots Script for ProxMox Pulse
-# This script is a convenience wrapper for the screenshot automation tool
+# ProxMox Pulse Screenshot Generator
+# Automates the process of generating screenshots for documentation
+# by starting required servers with mock data and running the screenshot tool.
 
 # Get the project root directory
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
-# Flag to track if we started the server (so we know whether to stop it)
-SERVER_STARTED_BY_SCRIPT=false
+# Process tracking variables
+MOCK_SERVER_PID=""
+BACKEND_PID=""
+FRONTEND_PID=""
 
-# Function to check if mock data is enabled on the server
-check_mock_data() {
-  # Check if the server is running and if mock data is enabled
-  if curl -s http://localhost:7654/api/status | grep -q "mockDataEnabled\":true"; then
-    echo "✅ Server is running with mock data enabled"
-    return 0
-  else
-    echo "❌ Server is not running with mock data enabled"
-    return 1
-  fi
-}
-
-# Function to start the development server with mock data
-start_server() {
-  echo "🚀 Starting development server with mock data..."
-  cd "$PROJECT_ROOT" && npm run dev:mock &
-  SERVER_PID=$!
-  SERVER_STARTED_BY_SCRIPT=true
+# Cleanup function to ensure all processes are stopped
+cleanup() {
+  echo "🧹 Cleaning up processes..."
   
-  # Wait for the server to start
-  echo "⏳ Waiting for the server to start..."
-  for i in {1..15}; do
-    if curl -s http://localhost:3000 > /dev/null; then
-      echo "✅ Development server is running"
-      
-      # Wait a bit more for the backend to be ready
-      sleep 5
-      
-      # Check if mock data is enabled
-      if check_mock_data; then
-        return 0
-      else
-        echo "❌ Error: Server is running but mock data is not enabled"
-        echo "Stopping the server and exiting..."
-        stop_server
-        exit 1
-      fi
-    fi
-    
-    if [ "$i" -eq 15 ]; then
-      echo "❌ Error: Development server failed to start"
-      exit 1
-    fi
-    
-    echo "Waiting... ($i/15)"
-    sleep 2
-  done
-}
-
-# Function to stop the server
-stop_server() {
-  if [ "$SERVER_STARTED_BY_SCRIPT" = true ]; then
-    echo "🛑 Stopping development server..."
-    cd "$PROJECT_ROOT" && npm run dev:kill:all
-    SERVER_STARTED_BY_SCRIPT=false
+  if [ -n "$FRONTEND_PID" ]; then
+    echo "Stopping frontend server (PID: $FRONTEND_PID)..."
+    kill $FRONTEND_PID 2>/dev/null || true
   fi
+  
+  if [ -n "$BACKEND_PID" ]; then
+    echo "Stopping backend server (PID: $BACKEND_PID)..."
+    kill $BACKEND_PID 2>/dev/null || true
+  fi
+  
+  if [ -n "$MOCK_SERVER_PID" ]; then
+    echo "Stopping mock server (PID: $MOCK_SERVER_PID)..."
+    kill $MOCK_SERVER_PID 2>/dev/null || true
+  fi
+  
+  echo "Killing any remaining processes..."
+  cd "$PROJECT_ROOT" && npm run dev:kill:all 2>/dev/null || true
 }
 
-# Set up trap to ensure server is stopped on script exit
-trap stop_server EXIT
+# Set up cleanup trap
+trap cleanup EXIT INT TERM
 
-# Check if the development server is running
+# Ensure clean environment
+echo "🔪 Killing any existing servers..."
+cd "$PROJECT_ROOT" && npm run dev:kill:all
+
+# Start required services
+echo "🚀 Starting mock data server..."
+export NODE_ENV=development
+export USE_MOCK_DATA=true
+export MOCK_DATA_ENABLED=true
+cd "$PROJECT_ROOT" && ts-node src/mock/run-server.ts > /tmp/pulse-mock-server.log 2>&1 &
+MOCK_SERVER_PID=$!
+echo "Mock server started with PID: $MOCK_SERVER_PID"
+sleep 3
+
+echo "🚀 Starting backend server..."
+cd "$PROJECT_ROOT" && USE_MOCK_DATA=true MOCK_DATA_ENABLED=true npm run dev:server > /tmp/pulse-backend.log 2>&1 &
+BACKEND_PID=$!
+echo "Backend server started with PID: $BACKEND_PID"
+sleep 5
+
+echo "🚀 Starting frontend server..."
+cd "$PROJECT_ROOT/frontend" && USE_MOCK_DATA=true MOCK_DATA_ENABLED=true npm run dev -- --host "0.0.0.0" --port 3000 > /tmp/pulse-frontend.log 2>&1 &
+FRONTEND_PID=$!
+echo "Frontend server started with PID: $FRONTEND_PID"
+
+# Wait for services to be ready
+echo "⏳ Waiting for servers to start..."
+sleep 10
+
+# Verify services are running correctly
 if ! curl -s http://localhost:3000 > /dev/null; then
-  echo "❌ Development server is not running on port 3000"
-  echo "Starting development server automatically..."
-  start_server
-else
-  # Server is running, but check if mock data is enabled
-  if ! check_mock_data; then
-    echo "❌ Server is running but mock data is not enabled"
-    echo "Restarting server with mock data enabled..."
-    cd "$PROJECT_ROOT" && npm run dev:kill:all
-    start_server
-  fi
+  echo "❌ Error: Frontend server is not running on port 3000"
+  exit 1
 fi
 
-# Run the screenshot tool
+if ! curl -s http://localhost:7654/api/status | grep -q "mockDataEnabled\":true"; then
+  echo "❌ Error: Server is running but mock data is not enabled"
+  exit 1
+fi
+
+echo "✅ All servers are running with mock data enabled"
+
+# Generate screenshots
 echo "📸 Running screenshot tool..."
-cd "$PROJECT_ROOT/tools/screenshot-automation" && ./update-screenshots.sh "$@"
+cd "$PROJECT_ROOT/tools/screenshot-automation" && npm run build && npm start -- --config ../../screenshot-config.json
 SCREENSHOT_RESULT=$?
 
-# Stop the server if we started it
-stop_server
-
-# Check if screenshots were created successfully
+# Report results
 if [ $SCREENSHOT_RESULT -eq 0 ]; then
   echo "✅ Screenshots updated successfully!"
-  
-  # Ask if the user wants to see the updated screenshots
-  echo "Would you like to open the screenshots directory? (y/n)"
-  read -r answer
-  
-  if [[ "$answer" =~ ^[Yy]$ ]]; then
-    # Open the screenshots directory
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-      # macOS
-      open "$PROJECT_ROOT/docs/images"
-    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-      # Linux
-      xdg-open "$PROJECT_ROOT/docs/images"
-    elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
-      # Windows
-      start "$PROJECT_ROOT/docs/images"
-    else
-      echo "Could not open directory automatically. Please check: $PROJECT_ROOT/docs/images"
-    fi
-  fi
+  echo "Check the docs/images directory for the new screenshots."
 else
   echo "❌ Error: Failed to update screenshots"
   exit 1
