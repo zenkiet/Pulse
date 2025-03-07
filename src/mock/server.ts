@@ -90,20 +90,20 @@ interface MockVM {
   name: string;
   type: string;
   status: string;
-  os: string;
-  cpu: {
-    cores: number;
+  os?: string;
+  cpu: number | {
+    cores?: number;
     usage: number;
   };
-  memory: {
+  memory: number | {
     total: number;
     used: number;
   };
-  disk: {
+  disk?: {
     total: number;
     used: number;
   };
-  network: {
+  network?: {
     ip: string;
     mac: string;
     throughput: {
@@ -111,8 +111,9 @@ interface MockVM {
       out: number;
     };
   };
-  uptime: number;
-  nodeId: string;
+  uptime?: number;
+  nodeId?: string;
+  node?: string; // Add the node property to match our custom data
 }
 
 interface MockContainer extends MockVM {}
@@ -173,39 +174,54 @@ const generateMetrics = (guestList: MockVM[]): MockMetric[] => {
   
   guestList.forEach(guest => {
     if (guest.status === 'running') {
+      // Handle different CPU structures
+      const cpuUsage = typeof guest.cpu === 'number' ? guest.cpu : guest.cpu.usage;
+      
+      // Handle different memory structures
+      const memoryTotal = typeof guest.memory === 'number' ? guest.memory : guest.memory.total;
+      const memoryUsed = typeof guest.memory === 'number' ? Math.floor(guest.memory * 0.7) : guest.memory.used;
+      
+      // Default disk values if not present
+      const diskTotal = guest.disk?.total || 1073741824; // 1GB default
+      const diskUsed = guest.disk?.used || 536870912; // 512MB default
+      
+      // Default network values if not present
+      const networkIn = guest.network?.throughput?.in || 1024;
+      const networkOut = guest.network?.throughput?.out || 512;
+      
       generatedMetrics.push({
         guestId: guest.id,
         timestamp: Date.now(),
         metrics: {
-          cpu: guest.cpu.usage,
+          cpu: cpuUsage,
           memory: {
-            total: guest.memory.total,
-            used: guest.memory.used,
-            percentUsed: guest.memory.used
+            total: memoryTotal,
+            used: memoryUsed,
+            percentUsed: memoryUsed
           },
           disk: {
-            total: guest.disk.total,
-            used: guest.disk.used,
-            percentUsed: guest.disk.used
+            total: diskTotal,
+            used: diskUsed,
+            percentUsed: diskUsed
           },
           network: {
-            inRate: guest.network.throughput.in,
-            outRate: guest.network.throughput.out,
+            inRate: networkIn,
+            outRate: networkOut,
             history: Array(10).fill(0).map(() => ({
-              in: randomBetween(Math.max(0, guest.network.throughput.in * 0.8), guest.network.throughput.in * 1.2),
-              out: randomBetween(Math.max(0, guest.network.throughput.out * 0.8), guest.network.throughput.out * 1.2)
+              in: randomBetween(Math.max(0, networkIn * 0.8), networkIn * 1.2),
+              out: randomBetween(Math.max(0, networkOut * 0.8), networkOut * 1.2)
             }))
           }
         },
         history: {
           cpu: Array(10).fill(0).map(() => 
-            randomFloatBetween(Math.max(0, guest.cpu.usage - 20), Math.min(100, guest.cpu.usage + 20))
+            randomFloatBetween(Math.max(0, cpuUsage - 20), Math.min(100, cpuUsage + 20))
           ),
           memory: Array(10).fill(0).map(() => 
-            randomFloatBetween(Math.max(0, guest.memory.used - 15), Math.min(100, guest.memory.used + 15))
+            randomFloatBetween(Math.max(0, memoryUsed - 15), Math.min(100, memoryUsed + 15))
           ),
           disk: Array(10).fill(0).map(() => 
-            randomFloatBetween(Math.max(0, guest.disk.used - 5), Math.min(100, guest.disk.used + 5))
+            randomFloatBetween(Math.max(0, diskUsed - 5), Math.min(100, diskUsed + 5))
           )
         }
       });
@@ -215,161 +231,33 @@ const generateMetrics = (guestList: MockVM[]): MockMetric[] => {
   return generatedMetrics;
 };
 
-// Function to send initial data to a socket
+// Send initial data to the client
 const sendInitialData = (socket: Socket) => {
-  // Get client info
-  const clientInfo = clients.get(socket.id);
+  // Convert nodes map to array
+  const nodeArray = Array.from(nodes.values());
   
-  // If the client has registered for a specific node, use that node's data
-  // Otherwise, send data for all nodes
-  if (clientInfo?.nodeId) {
-    // Send data for the specific node
-    const nodeId = clientInfo.nodeId;
-    const node = nodes.get(nodeId);
+  // Send node data
+  socket.emit('nodes', { nodes: nodeArray });
+  
+  // Send guest data
+  const guestArray = Array.from(guests.values());
+  
+  // Process guest data to ensure it has the right format
+  const processedGuests = guestArray.map(guest => {
+    // Handle different memory structures
+    const memoryTotal = typeof guest.memory === 'number' ? guest.memory : guest.memory.total;
     
-    if (!node) {
-      logger.warn(`Node ${nodeId} not found in custom data`);
-      return;
-    }
-    
-    // Convert the simple guest data to full MockVM objects
-    const nodeGuests = node.guests.map(guest => {
-      const isVM = guest.type === 'vm';
-      
-      // Use the guest name directly instead of trying to match with templates
-      // This ensures each guest has its own unique identity
-      return {
-        id: guest.id,
-        name: guest.name,
-        type: isVM ? 'qemu' : 'lxc',
-        status: guest.status,
-        os: isVM 
-          ? (guest.name.includes('ubuntu') ? 'ubuntu' : 
-             guest.name.includes('debian') ? 'debian' : 
-             guest.name.includes('centos') ? 'centos' : 
-             guest.name.includes('windows') ? 'windows' : 
-             guest.name.includes('fedora') ? 'fedora' : 'linux')
-          : (guest.name.includes('alpine') ? 'alpine' : 
-             guest.name.includes('debian') ? 'debian' : 'linux'),
-        cpu: {
-          cores: randomBetween(2, 8),
-          usage: guest.status === 'running' ? guest.cpu * 100 : 0
-        },
-        memory: {
-          total: guest.memory,
-          used: guest.status === 'running' ? guest.memory * randomFloatBetween(0.1, 0.9) : 0
-        },
-        disk: {
-          total: randomBetween(20, 500),
-          used: randomFloatBetween(10, 90)
-        },
-        network: {
-          ip: randomIP(),
-          mac: randomMAC(),
-          throughput: {
-            in: guest.status === 'running' ? randomFloatBetween(0.1, 50) : 0,
-            out: guest.status === 'running' ? randomFloatBetween(0.1, 20) : 0
-          }
-        },
-        uptime: guest.status === 'running' ? randomBetween(3600, 2592000) : 0,
-        // Add a nodeId property to each guest to track which node it belongs to
-        nodeId: nodeId
-      };
-    });
-    
-    // Generate metrics for these guests
-    const nodeMetrics = generateMetrics(nodeGuests);
-    
-    // Store data
-    guests.set(nodeId, nodeGuests);
-    metrics.set(nodeId, nodeMetrics);
-    
-    // Send data for this node
-    socket.emit('guests', nodeGuests);
-    socket.emit('metrics', nodeMetrics);
-    
-    logger.info(`Sent data for node ${nodeId} to client ${socket.id}`);
-  } else {
-    // Client hasn't registered for a specific node, send data for all nodes
-    // This is useful for the dashboard view
-    
-    // Collect all guests from all nodes
-    const allGuests: MockVM[] = [];
-    const allNodeIds: string[] = [];
-    
-    // Process each node
-    customMockData.nodes.forEach(nodeData => {
-      const nodeId = nodeData.id;
-      allNodeIds.push(nodeId);
-      
-      // Convert the simple guest data to full MockVM objects
-      const nodeGuests = nodeData.guests.map(guest => {
-        const isVM = guest.type === 'vm';
-        
-        // Use the guest name directly instead of trying to match with templates
-        return {
-          id: guest.id,
-          name: guest.name,
-          type: isVM ? 'qemu' : 'lxc',
-          status: guest.status,
-          os: isVM 
-            ? (guest.name.includes('ubuntu') ? 'ubuntu' : 
-               guest.name.includes('debian') ? 'debian' : 
-               guest.name.includes('centos') ? 'centos' : 
-               guest.name.includes('windows') ? 'windows' : 
-               guest.name.includes('fedora') ? 'fedora' : 'linux')
-            : (guest.name.includes('alpine') ? 'alpine' : 
-               guest.name.includes('debian') ? 'debian' : 'linux'),
-          cpu: {
-            cores: randomBetween(2, 8),
-            usage: guest.status === 'running' ? guest.cpu * 100 : 0
-          },
-          memory: {
-            total: guest.memory,
-            used: guest.status === 'running' ? guest.memory * randomFloatBetween(0.1, 0.9) : 0
-          },
-          disk: {
-            total: randomBetween(20, 500),
-            used: randomFloatBetween(10, 90)
-          },
-          network: {
-            ip: randomIP(),
-            mac: randomMAC(),
-            throughput: {
-              in: guest.status === 'running' ? randomFloatBetween(0.1, 50) : 0,
-              out: guest.status === 'running' ? randomFloatBetween(0.1, 20) : 0
-            }
-          },
-          uptime: guest.status === 'running' ? randomBetween(3600, 2592000) : 0,
-          // Add a nodeId property to each guest to track which node it belongs to
-          nodeId: nodeId
-        };
-      });
-      
-      // Store node guests
-      guests.set(nodeId, nodeGuests);
-      
-      // Add to all guests
-      allGuests.push(...nodeGuests);
-    });
-    
-    // Generate metrics for all guests
-    const allMetrics = generateMetrics(allGuests);
-    
-    // Store metrics for each node
-    allNodeIds.forEach(nodeId => {
-      const nodeGuests = guests.get(nodeId) || [];
-      const nodeGuestIds = nodeGuests.map((g: MockVM) => g.id);
-      const nodeMetrics = allMetrics.filter(m => nodeGuestIds.includes(m.guestId));
-      metrics.set(nodeId, nodeMetrics);
-    });
-    
-    // Send all guests and metrics
-    socket.emit('guests', allGuests);
-    socket.emit('metrics', allMetrics);
-    
-    logger.info(`Sent data for all nodes to client ${socket.id}`);
-  }
+    return {
+      ...guest,
+      memory: typeof guest.memory === 'number' ? { total: guest.memory, used: Math.floor(guest.memory * 0.7) } : guest.memory
+    };
+  });
+  
+  socket.emit('guests', { guests: processedGuests });
+  
+  // Generate and send metrics
+  const metricArray = generateMetrics(guestArray);
+  socket.emit('metrics', { metrics: metricArray });
 };
 
 // Function to update metrics for a socket
