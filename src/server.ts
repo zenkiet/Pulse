@@ -9,7 +9,6 @@ import config from './config';
 import { createLogger } from './utils/logger';
 import { nodeManager } from './services/node-manager';
 import { metricsService } from './services/metrics-service';
-import { runStartupChecks } from './scripts/startup-check';
 
 const logger = createLogger('Server');
 
@@ -54,18 +53,6 @@ const wsServer = createWebSocketServer(server);
 
 // Start server
 const startServer = async () => {
-  // Run startup checks
-  logger.info('Running startup checks...');
-  const checksSuccessful = await runStartupChecks();
-  
-  if (!checksSuccessful && config.nodeEnv === 'production') {
-    logger.error('Startup checks failed. Exiting in production mode.');
-    process.exit(1);
-  } else if (!checksSuccessful) {
-    logger.warn('Startup checks failed. Continuing in development mode, but some features may not work correctly.');
-    logger.info('Run "npm run test:connection" for more detailed diagnostics.');
-  }
-  
   server.listen(config.port, '0.0.0.0', () => {
     logger.info(`Server started on port ${config.port} in ${config.nodeEnv} mode`);
     logger.info(`Access the application at http://[your-server-ip]:${config.port}`);
