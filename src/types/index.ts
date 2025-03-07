@@ -47,7 +47,6 @@ export interface ProxmoxVM {
   name: string;
   status: 'running' | 'stopped' | 'paused';
   node: string;
-  nodeId?: string;
   vmid: number;
   cpus: number;
   cpu?: number;
@@ -70,7 +69,6 @@ export interface ProxmoxContainer {
   name: string;
   status: 'running' | 'stopped' | 'paused' | 'unknown';
   node: string;
-  nodeId?: string;
   vmid: number;
   cpus: number;
   cpu?: number;

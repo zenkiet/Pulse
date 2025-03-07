@@ -311,8 +311,7 @@ export class ProxmoxClient extends EventEmitter {
             id: `${this.config.id}-vm-${vm.vmid}`,
             name: vm.name,
             status: vm.status,
-            node: nodeName, // Use the actual Proxmox node name
-            nodeId: this.config.id, // Keep the node config ID for reference
+            node: this.config.id,
             vmid: vm.vmid,
             cpus: vm.cpus,
             cpu: resourceData.cpu,
@@ -336,8 +335,7 @@ export class ProxmoxClient extends EventEmitter {
             id: `${this.config.id}-vm-${vm.vmid}`,
             name: vm.name,
             status: vm.status,
-            node: nodeName, // Use the actual Proxmox node name
-            nodeId: this.config.id, // Keep the node config ID for reference
+            node: this.config.id,
             vmid: vm.vmid,
             cpus: vm.cpus,
             memory: vm.mem,
@@ -355,13 +353,11 @@ export class ProxmoxClient extends EventEmitter {
         }
       });
       
-      // Wait for all VM promises to resolve
-      const resolvedVMs = await Promise.all(vmPromises);
-      
-      return resolvedVMs;
+      // Wait for all VM resource data to be fetched
+      return await Promise.all(vmPromises);
     } catch (error) {
       this.logger.error('Failed to get virtual machines', { error });
-      return [];
+      throw error;
     }
   }
 
@@ -408,8 +404,7 @@ export class ProxmoxClient extends EventEmitter {
               id: `${this.config.id}-ct-${container.vmid}`,
               name: container.name,
               status: status.status,
-              node: nodeName, // Use the actual Proxmox node name
-              nodeId: this.config.id, // Keep the node config ID for reference
+              node: this.config.id,
               vmid: container.vmid,
               cpus: status.cpus || container.cpus || 1,
               // Use CPU usage from detailed resource data or fallback to status
@@ -437,8 +432,7 @@ export class ProxmoxClient extends EventEmitter {
               id: `${this.config.id}-ct-${container.vmid}`,
               name: container.name,
               status: container.status,
-              node: nodeName, // Use the actual Proxmox node name
-              nodeId: this.config.id, // Keep the node config ID for reference
+              node: this.config.id,
               vmid: container.vmid,
               cpus: container.cpus || 1,
               memory: container.mem || 0,
