@@ -76,6 +76,7 @@ import DevicesOutlinedIcon from '@mui/icons-material/DevicesOutlined';
 import ComputerOutlinedIcon from '@mui/icons-material/ComputerOutlined';
 import StorageOutlinedIcon from '@mui/icons-material/StorageOutlined';
 import DevicesIcon from '@mui/icons-material/Devices';
+import ViewColumnIcon from '@mui/icons-material/ViewColumn';
 
 // Define pulse animation
 const pulseAnimation = keyframes`
@@ -108,6 +109,21 @@ const STORAGE_KEY_SORT = 'network_display_sort';
 const STORAGE_KEY_SHOW_STOPPED = 'network_display_show_stopped';
 const STORAGE_KEY_SHOW_FILTERS = 'network_display_show_filters';
 const STORAGE_KEY_SEARCH_TERMS = 'network_display_search_terms';
+const STORAGE_KEY_COLUMN_VISIBILITY = 'network_display_column_visibility';
+
+// Define default column configuration
+const DEFAULT_COLUMN_CONFIG = {
+  node: { id: 'node', label: 'Node', visible: true },
+  type: { id: 'type', label: 'Type', visible: true },
+  id: { id: 'id', label: 'ID', visible: true },
+  name: { id: 'name', label: 'Name', visible: true },
+  cpu: { id: 'cpu', label: 'CPU', visible: true },
+  memory: { id: 'memory', label: 'Memory', visible: true },
+  disk: { id: 'disk', label: 'Disk', visible: true },
+  download: { id: 'download', label: 'Download', visible: true },
+  upload: { id: 'upload', label: 'Upload', visible: true },
+  uptime: { id: 'uptime', label: 'Uptime', visible: true }
+};
 
 // Helper function to format bytes
 const formatBytes = (bytes, decimals = 2) => {
@@ -508,6 +524,86 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
       return [];
     }
   });
+  
+  // Column visibility state
+  const [columnVisibility, setColumnVisibility] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_COLUMN_VISIBILITY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Ensure all columns from DEFAULT_COLUMN_CONFIG exist in the saved config
+        const merged = { ...DEFAULT_COLUMN_CONFIG };
+        Object.keys(parsed).forEach(key => {
+          if (merged[key]) {
+            merged[key].visible = parsed[key].visible;
+          }
+        });
+        return merged;
+      }
+      return DEFAULT_COLUMN_CONFIG;
+    } catch (e) {
+      console.error('Error loading column visibility preferences:', e);
+      return DEFAULT_COLUMN_CONFIG;
+    }
+  });
+  
+  // Column settings menu state
+  const [columnMenuAnchorEl, setColumnMenuAnchorEl] = useState(null);
+  const openColumnMenu = Boolean(columnMenuAnchorEl);
+  
+  // Toggle column visibility
+  const toggleColumnVisibility = (columnId) => {
+    try {
+      setColumnVisibility(prev => {
+        if (!prev || !prev[columnId]) {
+          console.error('Invalid column configuration:', prev);
+          return prev;
+        }
+        
+        const updated = {
+          ...prev,
+          [columnId]: {
+            ...prev[columnId],
+            visible: !prev[columnId].visible
+          }
+        };
+        return updated;
+      });
+    } catch (error) {
+      console.error('Error toggling column visibility:', error);
+    }
+  };
+  
+  // Reset column visibility to defaults
+  const resetColumnVisibility = () => {
+    setColumnVisibility(JSON.parse(JSON.stringify(DEFAULT_COLUMN_CONFIG)));
+  };
+  
+  // Handle column menu open
+  const handleColumnMenuOpen = (event) => {
+    console.log('Opening column menu, current state:', columnVisibility);
+    setColumnMenuAnchorEl(event.currentTarget);
+  };
+  
+  // Handle column menu close
+  const handleColumnMenuClose = () => {
+    console.log('Closing column menu');
+    setColumnMenuAnchorEl(null);
+  };
+  
+  // Save column visibility preferences whenever they change
+  useEffect(() => {
+    try {
+      if (!columnVisibility || Object.keys(columnVisibility).length === 0) {
+        console.error('Invalid column visibility state, resetting to defaults');
+        setColumnVisibility(JSON.parse(JSON.stringify(DEFAULT_COLUMN_CONFIG)));
+        return;
+      }
+      localStorage.setItem(STORAGE_KEY_COLUMN_VISIBILITY, JSON.stringify(columnVisibility));
+    } catch (error) {
+      console.error('Error saving column visibility:', error);
+    }
+  }, [columnVisibility]);
   
   // UI state
   const [showStopped, setShowStopped] = useState(() => {
@@ -1495,105 +1591,153 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
               {/* Guest count bubble indicator - REMOVED FROM HERE */}
               
               {/* Filter button */}
-              <Button
-                ref={filterButtonRef}
-                size="small"
-                variant={showFilters || activeFilterCount > 0 ? "contained" : "outlined"}
-                color="primary"
+              <IconButton
                 onClick={handleFilterButtonClick}
+                color={showFilters || activeFilterCount > 0 ? 'primary' : 'default'}
+                aria-label="Toggle filters"
+                ref={filterButtonRef}
                 data-filter-button="true"
-                startIcon={<FilterAltIcon fontSize="small" sx={{ 
-                  color: (showFilters || activeFilterCount > 0) ? 'inherit' : 'text.secondary',
-                  opacity: (showFilters || activeFilterCount > 0) ? 1 : 0.7
-                }} />}
-                title="Toggle Filters Panel"
                 sx={{ 
-                  height: 32, 
-                  textTransform: 'none',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  borderRadius: '8px',
-                  transition: 'all 0.2s ease',
-                  boxShadow: (showFilters || activeFilterCount > 0) ? 1 : 0,
-                  px: 1.5,
-                  background: (showFilters || activeFilterCount > 0) ? 
-                    (theme => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`) : 
-                    (theme => alpha(theme.palette.background.paper, darkMode ? 0.4 : 0.7)),
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  color: (showFilters || activeFilterCount > 0) ? 'inherit' : 'text.secondary',
-                  '& .MuiButton-startIcon': {
-                    opacity: (showFilters || activeFilterCount > 0) ? 1 : 0.7
-                  },
+                  ml: 1,
+                  position: 'relative',
                   '&:hover': {
-                    background: (showFilters || activeFilterCount > 0) ? 
-                      (theme => `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`) : 
-                      (theme => alpha(theme.palette.primary.light, 0.1)),
-                    borderColor: 'primary.main',
-                    color: (showFilters || activeFilterCount > 0) ? 'inherit' : 'text.primary',
-                    '& .MuiButton-startIcon': {
-                      opacity: 1
-                    },
-                    boxShadow: 2,
-                    transform: 'translateY(-1px)'
-                  },
-                  '&:active': {
-                    transform: 'translateY(0px)',
-                    boxShadow: 1
-                  },
-                  '&:focus-visible': {
-                    outline: '2px solid',
-                    outlineColor: 'primary.main',
-                    outlineOffset: 2,
+                    backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
                   }
                 }}
               >
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  Filters
-                  {activeFilterCount > 0 && (
-                    <Box
-                      sx={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        ml: 1,
-                        bgcolor: (showFilters || activeFilterCount > 0) ? 'rgba(255, 255, 255, 0.25)' : 'error.main',
-                        color: (showFilters || activeFilterCount > 0) ? 'white' : 'error.contrastText',
-                        borderRadius: '12px',
-                        width: 20,
-                        height: 20,
+                <Tooltip title="Filter systems" arrow placement="top">
+                  <Badge 
+                    badgeContent={activeFilterCount} 
+                    color="primary"
+                    sx={{
+                      '& .MuiBadge-badge': {
                         fontSize: '0.7rem',
-                        fontWeight: 'bold',
-                        boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.2)'
+                        height: '18px',
+                        minWidth: '18px',
+                        padding: '0 4px'
+                      }
+                    }}
+                  >
+                    {showFilters ? <FilterAltIcon /> : <FilterListIcon />}
+                  </Badge>
+                </Tooltip>
+              </IconButton>
+              
+              {/* Column Settings Button */}
+              <IconButton
+                onClick={handleColumnMenuOpen}
+                color={openColumnMenu ? 'primary' : 'default'}
+                aria-label="Column settings"
+                aria-controls={openColumnMenu ? 'column-menu' : undefined}
+                aria-haspopup="true"
+                aria-expanded={openColumnMenu ? 'true' : undefined}
+                sx={{ 
+                  ml: 1,
+                  '&:hover': {
+                    backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                  }
+                }}
+              >
+                <Tooltip title="Column settings">
+                  <ViewColumnIcon />
+                </Tooltip>
+              </IconButton>
+              
+              {/* Column Settings Menu */}
+              <Menu
+                id="column-menu"
+                anchorEl={columnMenuAnchorEl}
+                open={openColumnMenu}
+                onClose={handleColumnMenuClose}
+                MenuListProps={{
+                  'aria-labelledby': 'column-settings-button',
+                  dense: true,
+                }}
+                PaperProps={{
+                  elevation: 3,
+                  sx: {
+                    mt: 1.5,
+                    minWidth: 200,
+                    maxHeight: 400,
+                    overflow: 'auto',
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                  }
+                }}
+              >
+                <Box sx={{ px: 2, py: 1 }}>
+                  <Typography variant="subtitle2" fontWeight="bold">
+                    Column Visibility
+                  </Typography>
+                </Box>
+                <Divider />
+                {columnVisibility && Object.values(columnVisibility).map((column) => (
+                  column && (
+                    <MenuItem 
+                      key={column.id}
+                      onClick={() => toggleColumnVisibility(column.id)}
+                      sx={{ 
+                        px: 2,
+                        '&:hover': {
+                          backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                        }
                       }}
                     >
-                      {activeFilterCount}
-                    </Box>
-                  )}
-                </Box>
-              </Button>
-            </Box>
-            
-            {/* Guest Type Filter - Removed from here and moved to filter panel */}
-            
-            {/* Node indicator */}
-            {/* Removing the Node indicator as it's redundant with the node selection dropdown at the top right */}
-            
-            {/* Filter indicator */}
-            <Box sx={{ flexGrow: 1, minHeight: { xs: 8, md: 0 } }} />
-            
-            {/* Controls section - Filter button removed from here */}
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: { xs: 1, sm: 1.5 },
-              ml: { xs: 0, md: 'auto' },
-              width: { xs: '100%', md: 'auto' },
-              justifyContent: { xs: 'space-between', md: 'flex-start' },
-              pr: { md: 5 }  // Add right padding to avoid overlap with dark mode toggle
-            }}>
-              {/* Remove the guest count indicator section */}
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={column.visible}
+                            size="small"
+                            color="primary"
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={() => toggleColumnVisibility(column.id)}
+                          />
+                        }
+                        label={
+                          <Typography variant="body2">{column.label}</Typography>
+                        }
+                        sx={{ mx: 0, width: '100%' }}
+                      />
+                    </MenuItem>
+                  )
+                ))}
+                <Divider />
+                <MenuItem 
+                  onClick={resetColumnVisibility}
+                  sx={{ 
+                    px: 2,
+                    '&:hover': {
+                      backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                    }
+                  }}
+                >
+                  <RestartAltIcon fontSize="small" sx={{ mr: 1 }} />
+                  <Typography variant="body2">Reset to Default</Typography>
+                </MenuItem>
+              </Menu>
+              
+              {/* Guest Type Filter - Removed from here and moved to filter panel */}
+              
+              {/* Node indicator */}
+              {/* Removing the Node indicator as it's redundant with the node selection dropdown at the top right */}
+              
+              {/* Filter indicator */}
+              <Box sx={{ flexGrow: 1, minHeight: { xs: 8, md: 0 } }} />
+              
+              {/* Controls section - Filter button removed from here */}
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: { xs: 1, sm: 1.5 },
+                ml: { xs: 0, md: 'auto' },
+                width: { xs: '100%', md: 'auto' },
+                justifyContent: { xs: 'space-between', md: 'flex-start' },
+                pr: { md: 5 }  // Add right padding to avoid overlap with dark mode toggle
+              }}>
+                {/* Remove the guest count indicator section */}
+              </Box>
             </Box>
           </Box>
           
@@ -2469,548 +2613,616 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                   }
                 }}>
                   {/* Node Column */}
-                  <TableCell 
-                    width="10%" 
-                    onClick={() => requestSort('node')}
-                    sx={{ 
-                      fontWeight: 'bold', 
-                      minHeight: '48px',
-                      position: 'relative',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      pr: 3, // Add right padding for sort icon
-                      '&:hover': {
-                        backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
-                      },
-                      '&:focus-visible': {
-                        outline: '2px solid',
-                        outlineColor: 'primary.main',
-                        outlineOffset: -2,
-                      }
-                    }}
-                    aria-sort={sortConfig.key === 'node' ? sortConfig.direction : undefined}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                      Node
-                      <TableSortLabel
-                        active={sortConfig.key === 'node'}
-                        direction={sortConfig.key === 'node' ? sortConfig.direction : 'asc'}
-                        sx={{
-                          '& .MuiTableSortLabel-icon': {
-                            opacity: sortConfig.key === 'node' ? 1 : 0.3,
-                            marginLeft: '4px !important',
-                          },
-                          '&.Mui-active': {
-                            color: 'inherit',
-                          },
-                          '&:hover': {
-                            color: 'primary.main',
-                          }
-                        }}
-                        IconComponent={props => (
-                          <ArrowDropDownIcon
-                            {...props}
-                            sx={{
-                              fontSize: '1.2rem',
-                              transform: sortConfig.key === 'node' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
-                              transition: 'transform 0.2s'
-                            }}
-                          />
-                        )}
-                      />
-                    </Box>
-                  </TableCell>
+                  {columnVisibility.node.visible && (
+                    <TableCell 
+                      width="10%" 
+                      onClick={() => requestSort('node')}
+                      sx={{ 
+                        fontWeight: 'bold', 
+                        minHeight: '48px',
+                        position: 'relative',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        pr: 3, // Add right padding for sort icon
+                        '&:hover': {
+                          backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                        },
+                        '&:focus-visible': {
+                          outline: '2px solid',
+                          outlineColor: 'primary.main',
+                          outlineOffset: -2,
+                        }
+                      }}
+                      aria-sort={sortConfig.key === 'node' ? sortConfig.direction : undefined}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                        Node
+                        <TableSortLabel
+                          active={sortConfig.key === 'node'}
+                          direction={sortConfig.key === 'node' ? sortConfig.direction : 'asc'}
+                          sx={{
+                            '& .MuiTableSortLabel-icon': {
+                              opacity: sortConfig.key === 'node' ? 1 : 0.3,
+                              marginLeft: '4px !important',
+                            },
+                            '&.Mui-active': {
+                              color: 'inherit',
+                            },
+                            '&:hover': {
+                              color: 'primary.main',
+                            }
+                          }}
+                          IconComponent={props => (
+                            <ArrowDropDownIcon
+                              {...props}
+                              sx={{
+                                fontSize: '1.2rem',
+                                transform: sortConfig.key === 'node' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                                transition: 'transform 0.2s'
+                              }}
+                            />
+                          )}
+                        />
+                      </Box>
+                    </TableCell>
+                  )}
 
                   {/* Type Column */}
-                  <TableCell 
-                    width="4%" 
-                    onClick={() => requestSort('type')}
-                    sx={{ 
-                      fontWeight: 'bold', 
-                      minHeight: '48px',
-                      position: 'relative',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      padding: 0,
-                      '&:hover': {
-                        backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
-                      },
-                      '&:focus-visible': {
-                        outline: '2px solid',
-                        outlineColor: 'primary.main',
-                        outlineOffset: -2,
-                      }
-                    }}
-                    aria-sort={sortConfig.key === 'type' ? sortConfig.direction : undefined}
-                  >
-                    <Box sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      width: '100%',
-                      height: '100%',
-                      position: 'relative'
-                    }}>
-                      <TableSortLabel
-                        active={sortConfig.key === 'type'}
-                        direction={sortConfig.key === 'type' ? sortConfig.direction : 'asc'}
-                        sx={{
-                          width: '100%',
-                          justifyContent: 'center',
-                          '& .MuiTableSortLabel-icon': {
-                            opacity: sortConfig.key === 'type' ? 1 : 0.3,
-                            position: 'absolute',
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            marginLeft: '0 !important'
-                          },
-                          '&.Mui-active': {
-                            color: 'inherit',
-                          },
-                          '&:hover': {
-                            color: 'primary.main',
-                          }
-                        }}
-                        IconComponent={props => (
-                          <ArrowDropDownIcon
-                            {...props}
-                            sx={{
-                              fontSize: '1.2rem',
-                              transform: sortConfig.key === 'type' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
-                              transition: 'transform 0.2s'
-                            }}
-                          />
-                        )}
-                      />
-                    </Box>
-                  </TableCell>
+                  {columnVisibility.type.visible && (
+                    <TableCell 
+                      width="5%" 
+                      onClick={() => requestSort('type')}
+                      sx={{ 
+                        fontWeight: 'bold', 
+                        minHeight: '48px', 
+                        position: 'relative',
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        '&:hover': {
+                          backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                        },
+                        '&:focus-visible': {
+                          outline: '2px solid',
+                          outlineColor: 'primary.main',
+                          outlineOffset: -2,
+                        }
+                      }}
+                      aria-sort={sortConfig.key === 'type' ? sortConfig.direction : undefined}
+                    >
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        width: '100%',
+                        height: '100%',
+                        position: 'relative'
+                      }}>
+                        <TableSortLabel
+                          active={sortConfig.key === 'type'}
+                          direction={sortConfig.key === 'type' ? sortConfig.direction : 'asc'}
+                          sx={{
+                            width: '100%',
+                            justifyContent: 'center',
+                            '& .MuiTableSortLabel-icon': {
+                              opacity: sortConfig.key === 'type' ? 1 : 0.3,
+                              position: 'absolute',
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              marginLeft: '0 !important'
+                            },
+                            '&.Mui-active': {
+                              color: 'inherit',
+                            },
+                            '&:hover': {
+                              color: 'primary.main',
+                            }
+                          }}
+                          IconComponent={props => (
+                            <ArrowDropDownIcon
+                              {...props}
+                              sx={{
+                                fontSize: '1.2rem',
+                                transform: sortConfig.key === 'type' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                                transition: 'transform 0.2s'
+                              }}
+                            />
+                          )}
+                        />
+                      </Box>
+                    </TableCell>
+                  )}
 
-                  <TableCell 
-                    width="7%" 
-                    onClick={() => requestSort('id')}
-                    sx={{ 
-                      fontWeight: 'bold', 
-                      minHeight: '48px',
-                      position: 'relative',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      pr: 3, // Add right padding for sort icon
-                      '&:hover': {
-                        backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
-                      },
-                      '&:focus-visible': {
-                        outline: '2px solid',
-                        outlineColor: 'primary.main',
-                        outlineOffset: -2,
-                      }
-                    }}
-                    aria-sort={sortConfig.key === 'id' ? sortConfig.direction : undefined}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                      ID
-                      <TableSortLabel
-                        active={sortConfig.key === 'id'}
-                        direction={sortConfig.key === 'id' ? sortConfig.direction : 'asc'}
-                        sx={{
-                          '& .MuiTableSortLabel-icon': {
-                            opacity: sortConfig.key === 'id' ? 1 : 0.3,
-                            marginLeft: '4px !important',
-                          },
-                          '&.Mui-active': {
-                            color: 'inherit',
-                          },
-                          '&:hover': {
-                            color: 'primary.main',
-                          }
-                        }}
-                        IconComponent={props => (
-                          <ArrowDropDownIcon
-                            {...props}
-                            sx={{
-                              fontSize: '1.2rem',
-                              transform: sortConfig.key === 'id' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
-                              transition: 'transform 0.2s'
-                            }}
-                          />
-                        )}
-                      />
-                    </Box>
-                  </TableCell>
+                  {/* ID Column */}
+                  {columnVisibility.id.visible && (
+                    <TableCell 
+                      width="5%" 
+                      onClick={() => requestSort('id')}
+                      sx={{ 
+                        fontWeight: 'bold', 
+                        minHeight: '48px', 
+                        position: 'relative',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                        },
+                        '&:focus-visible': {
+                          outline: '2px solid',
+                          outlineColor: 'primary.main',
+                          outlineOffset: -2,
+                        }
+                      }}
+                      aria-sort={sortConfig.key === 'id' ? sortConfig.direction : undefined}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                        ID
+                        <TableSortLabel
+                          active={sortConfig.key === 'id'}
+                          direction={sortConfig.key === 'id' ? sortConfig.direction : 'asc'}
+                          sx={{
+                            '& .MuiTableSortLabel-icon': {
+                              opacity: sortConfig.key === 'id' ? 1 : 0.3,
+                              marginLeft: '4px !important',
+                            },
+                            '&.Mui-active': {
+                              color: 'inherit',
+                            },
+                            '&:hover': {
+                              color: 'primary.main',
+                            }
+                          }}
+                          IconComponent={props => (
+                            <ArrowDropDownIcon
+                              {...props}
+                              sx={{
+                                fontSize: '1.2rem',
+                                transform: sortConfig.key === 'id' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                                transition: 'transform 0.2s'
+                              }}
+                            />
+                          )}
+                        />
+                      </Box>
+                    </TableCell>
+                  )}
 
                   {/* Name Column */}
-                  <TableCell 
-                    width="15%" 
-                    onClick={() => requestSort('name')}
-                    sx={{ 
-                      fontWeight: 'bold', 
-                      minHeight: '48px',
-                      position: 'relative',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      pr: 3, // Add right padding for sort icon
-                      '&:hover': {
-                        backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
-                      },
-                      '&:focus-visible': {
-                        outline: '2px solid',
-                        outlineColor: 'primary.main',
-                        outlineOffset: -2,
-                      }
-                    }}
-                    aria-sort={sortConfig.key === 'name' ? sortConfig.direction : undefined}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                      Name
-                      <TableSortLabel
-                        active={sortConfig.key === 'name'}
-                        direction={sortConfig.key === 'name' ? sortConfig.direction : 'asc'}
-                        sx={{
-                          '& .MuiTableSortLabel-icon': {
-                            opacity: sortConfig.key === 'name' ? 1 : 0.3,
-                            marginLeft: '4px !important',
-                          },
-                          '&.Mui-active': {
-                            color: 'inherit',
-                          },
-                          '&:hover': {
-                            color: 'primary.main',
-                          }
-                        }}
-                        IconComponent={props => (
-                          <ArrowDropDownIcon
-                            {...props}
-                            sx={{
-                              fontSize: '1.2rem',
-                              transform: sortConfig.key === 'name' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
-                              transition: 'transform 0.2s'
-                            }}
-                          />
-                        )}
-                      />
-                    </Box>
-                  </TableCell>
+                  {columnVisibility.name.visible && (
+                    <TableCell 
+                      width="18%" 
+                      onClick={() => requestSort('name')}
+                      sx={{ 
+                        fontWeight: 'bold', 
+                        minHeight: '48px', 
+                        position: 'relative',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                        },
+                        '&:focus-visible': {
+                          outline: '2px solid',
+                          outlineColor: 'primary.main',
+                          outlineOffset: -2,
+                        }
+                      }}
+                      aria-sort={sortConfig.key === 'name' ? sortConfig.direction : undefined}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                        Name
+                        <TableSortLabel
+                          active={sortConfig.key === 'name'}
+                          direction={sortConfig.key === 'name' ? sortConfig.direction : 'asc'}
+                          sx={{
+                            '& .MuiTableSortLabel-icon': {
+                              opacity: sortConfig.key === 'name' ? 1 : 0.3,
+                              marginLeft: '4px !important',
+                            },
+                            '&.Mui-active': {
+                              color: 'inherit',
+                            },
+                            '&:hover': {
+                              color: 'primary.main',
+                            }
+                          }}
+                          IconComponent={props => (
+                            <ArrowDropDownIcon
+                              {...props}
+                              sx={{
+                                fontSize: '1.2rem',
+                                transform: sortConfig.key === 'name' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                                transition: 'transform 0.2s'
+                              }}
+                            />
+                          )}
+                        />
+                      </Box>
+                    </TableCell>
+                  )}
                   
                   {/* CPU Column */}
-                  <TableCell 
-                    width="19%" 
-                    ref={cpuColumnRef} 
-                    onClick={() => requestSort('cpu')}
-                    sx={{ 
-                      fontWeight: 'bold', 
-                      minHeight: '48px', 
-                      position: 'relative',
-                      cursor: 'pointer',
-                      borderBottom: theme => filters.cpu > 0 ? 
-                        `2px solid ${theme.palette.primary.main}` : undefined,
-                      color: theme => filters.cpu > 0 ? 'primary.main' : 'inherit',
-                      backgroundColor: theme => filters.cpu > 0 ? 
-                        alpha(theme.palette.primary.main, 0.08) : 'transparent',
-                      transition: 'all 0.2s ease',
-                      '&::after': {},
-                      '&:hover': {
-                        backgroundColor: theme => filters.cpu > 0 
-                          ? alpha(theme.palette.primary.main, 0.12)
-                          : alpha(theme.palette.primary.main, 0.08)
-                      },
-                      '&:focus-visible': {
-                        outline: '2px solid',
-                        outlineColor: 'primary.main',
-                        outlineOffset: -2,
-                      }
-                    }}
-                    aria-sort={sortConfig.key === 'cpu' ? sortConfig.direction : undefined}
-                  >
-                    <Tooltip 
-                      title={filters.cpu > 0 ? `Filtering: CPU > ${filters.cpu}%` : ""}
-                      arrow
-                      placement="top"
-                      disableHoverListener={!filters.cpu}
+                  {columnVisibility.cpu.visible && (
+                    <TableCell 
+                      width="19%" 
+                      ref={cpuColumnRef} 
+                      onClick={() => requestSort('cpu')}
+                      sx={{ 
+                        fontWeight: 'bold', 
+                        minHeight: '48px', 
+                        position: 'relative',
+                        cursor: 'pointer',
+                        borderBottom: theme => filters.cpu > 0 ? 
+                          `2px solid ${theme.palette.primary.main}` : undefined,
+                        color: theme => filters.cpu > 0 ? 'primary.main' : 'inherit',
+                        backgroundColor: theme => filters.cpu > 0 ? 
+                          alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                        transition: 'all 0.2s ease',
+                        '&::after': {},
+                        '&:hover': {
+                          backgroundColor: theme => filters.cpu > 0 
+                            ? alpha(theme.palette.primary.main, 0.12)
+                            : alpha(theme.palette.primary.main, 0.08)
+                        },
+                        '&:focus-visible': {
+                          outline: '2px solid',
+                          outlineColor: 'primary.main',
+                          outlineOffset: -2,
+                        }
+                      }}
+                      aria-sort={sortConfig.key === 'cpu' ? sortConfig.direction : undefined}
                     >
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <SpeedIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                        CPU
-                        <TableSortLabel
-                          active={sortConfig.key === 'cpu'}
-                          direction={sortConfig.key === 'cpu' ? sortConfig.direction : 'asc'}
-                          sx={{
-                            '& .MuiTableSortLabel-icon': {
-                              opacity: sortConfig.key === 'cpu' ? 1 : 0.3,
-                              marginLeft: '4px !important',
-                            },
-                            '&.Mui-active': {
-                              color: 'inherit',
-                            },
-                            '&:hover': {
-                              color: 'primary.main',
-                            }
-                          }}
-                          IconComponent={props => (
-                            <ArrowDropDownIcon
-                              {...props}
-                              sx={{
-                                fontSize: '1.2rem',
-                                transform: sortConfig.key === 'cpu' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
-                                transition: 'transform 0.2s'
-                              }}
-                            />
-                          )}
-                        />
-                      </Box>
-                    </Tooltip>
-                  </TableCell>
+                      <Tooltip 
+                        title={filters.cpu > 0 ? `Filtering: CPU > ${filters.cpu}%` : ""}
+                        arrow
+                        placement="top"
+                        disableHoverListener={!filters.cpu}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <SpeedIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                          CPU
+                          <TableSortLabel
+                            active={sortConfig.key === 'cpu'}
+                            direction={sortConfig.key === 'cpu' ? sortConfig.direction : 'asc'}
+                            sx={{
+                              '& .MuiTableSortLabel-icon': {
+                                opacity: sortConfig.key === 'cpu' ? 1 : 0.3,
+                                marginLeft: '4px !important',
+                              },
+                              '&.Mui-active': {
+                                color: 'inherit',
+                              },
+                              '&:hover': {
+                                color: 'primary.main',
+                              }
+                            }}
+                            IconComponent={props => (
+                              <ArrowDropDownIcon
+                                {...props}
+                                sx={{
+                                  fontSize: '1.2rem',
+                                  transform: sortConfig.key === 'cpu' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                                  transition: 'transform 0.2s'
+                                }}
+                              />
+                            )}
+                          />
+                        </Box>
+                      </Tooltip>
+                    </TableCell>
+                  )}
                   
                   {/* Memory Column */}
-                  <TableCell 
-                    width="19%" 
-                    ref={memoryColumnRef}
-                    onClick={() => requestSort('memory')}
-                    sx={{ 
-                      fontWeight: 'bold', 
-                      minHeight: '48px', 
-                      position: 'relative',
-                      cursor: 'pointer',
-                      borderBottom: theme => filters.memory > 0 ? 
-                        `2px solid ${theme.palette.primary.main}` : undefined,
-                      color: theme => filters.memory > 0 ? 'primary.main' : 'inherit',
-                      backgroundColor: theme => filters.memory > 0 ? 
-                        alpha(theme.palette.primary.main, 0.08) : 'transparent',
-                      transition: 'all 0.2s ease',
-                      '&::after': {},
-                      '&:hover': {
-                        backgroundColor: theme => filters.memory > 0 
-                          ? alpha(theme.palette.primary.main, 0.12)
-                          : alpha(theme.palette.primary.main, 0.08)
-                      },
-                      '&:focus-visible': {
-                        outline: '2px solid',
-                        outlineColor: 'primary.main',
-                        outlineOffset: -2,
-                      }
-                    }}
-                    aria-sort={sortConfig.key === 'memory' ? sortConfig.direction : undefined}
-                  >
-                    <Tooltip 
-                      title={filters.memory > 0 ? `Filtering: Memory > ${filters.memory}%` : ""}
-                      arrow
-                      placement="top"
-                      disableHoverListener={!filters.memory}
+                  {columnVisibility.memory.visible && (
+                    <TableCell 
+                      width="19%" 
+                      ref={memoryColumnRef}
+                      onClick={() => requestSort('memory')}
+                      sx={{ 
+                        fontWeight: 'bold', 
+                        minHeight: '48px', 
+                        position: 'relative',
+                        cursor: 'pointer',
+                        borderBottom: theme => filters.memory > 0 ? 
+                          `2px solid ${theme.palette.primary.main}` : undefined,
+                        color: theme => filters.memory > 0 ? 'primary.main' : 'inherit',
+                        backgroundColor: theme => filters.memory > 0 ? 
+                          alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                        transition: 'all 0.2s ease',
+                        '&::after': {},
+                        '&:hover': {
+                          backgroundColor: theme => filters.memory > 0 
+                            ? alpha(theme.palette.primary.main, 0.12)
+                            : alpha(theme.palette.primary.main, 0.08)
+                        },
+                        '&:focus-visible': {
+                          outline: '2px solid',
+                          outlineColor: 'primary.main',
+                          outlineOffset: -2,
+                        }
+                      }}
+                      aria-sort={sortConfig.key === 'memory' ? sortConfig.direction : undefined}
                     >
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <MemoryIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                        Memory
-                        <TableSortLabel
-                          active={sortConfig.key === 'memory'}
-                          direction={sortConfig.key === 'memory' ? sortConfig.direction : 'asc'}
-                          sx={{
-                            '& .MuiTableSortLabel-icon': {
-                              opacity: sortConfig.key === 'memory' ? 1 : 0.3,
-                              marginLeft: '4px !important',
-                            },
-                            '&.Mui-active': {
-                              color: 'inherit',
-                            },
-                            '&:hover': {
-                              color: 'primary.main',
-                            }
-                          }}
-                          IconComponent={props => (
-                            <ArrowDropDownIcon
-                              {...props}
-                              sx={{
-                                fontSize: '1.2rem',
-                                transform: sortConfig.key === 'memory' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
-                                transition: 'transform 0.2s'
-                              }}
-                            />
-                          )}
-                        />
-                      </Box>
-                    </Tooltip>
-                  </TableCell>
+                      <Tooltip 
+                        title={filters.memory > 0 ? `Filtering: Memory > ${filters.memory}%` : ""}
+                        arrow
+                        placement="top"
+                        disableHoverListener={!filters.memory}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <MemoryIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                          Memory
+                          <TableSortLabel
+                            active={sortConfig.key === 'memory'}
+                            direction={sortConfig.key === 'memory' ? sortConfig.direction : 'asc'}
+                            sx={{
+                              '& .MuiTableSortLabel-icon': {
+                                opacity: sortConfig.key === 'memory' ? 1 : 0.3,
+                                marginLeft: '4px !important',
+                              },
+                              '&.Mui-active': {
+                                color: 'inherit',
+                              },
+                              '&:hover': {
+                                color: 'primary.main',
+                              }
+                            }}
+                            IconComponent={props => (
+                              <ArrowDropDownIcon
+                                {...props}
+                                sx={{
+                                  fontSize: '1.2rem',
+                                  transform: sortConfig.key === 'memory' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                                  transition: 'transform 0.2s'
+                                }}
+                              />
+                            )}
+                          />
+                        </Box>
+                      </Tooltip>
+                    </TableCell>
+                  )}
                   
                   {/* Disk Column */}
-                  <TableCell 
-                    width="19%" 
-                    ref={diskColumnRef}
-                    onClick={() => requestSort('disk')}
-                    sx={{ 
-                      fontWeight: 'bold', 
-                      minHeight: '48px', 
-                      position: 'relative',
-                      cursor: 'pointer',
-                      borderBottom: theme => filters.disk > 0 ? 
-                        `2px solid ${theme.palette.primary.main}` : undefined,
-                      color: theme => filters.disk > 0 ? 'primary.main' : 'inherit',
-                      backgroundColor: theme => filters.disk > 0 ? 
-                        alpha(theme.palette.primary.main, 0.08) : 'transparent',
-                      transition: 'all 0.2s ease',
-                      '&::after': {},
-                      '&:hover': {
-                        backgroundColor: theme => filters.disk > 0 
-                          ? alpha(theme.palette.primary.main, 0.12)
-                          : alpha(theme.palette.primary.main, 0.08)
-                      },
-                      '&:focus-visible': {
-                        outline: '2px solid',
-                        outlineColor: 'primary.main',
-                        outlineOffset: -2,
-                      }
-                    }}
-                    aria-sort={sortConfig.key === 'disk' ? sortConfig.direction : undefined}
-                  >
-                    <Tooltip 
-                      title={filters.disk > 0 ? `Filtering: Disk > ${filters.disk}%` : ""}
-                      arrow
-                      placement="top"
-                      disableHoverListener={!filters.disk}
+                  {columnVisibility.disk.visible && (
+                    <TableCell 
+                      width="19%" 
+                      ref={diskColumnRef}
+                      onClick={() => requestSort('disk')}
+                      sx={{ 
+                        fontWeight: 'bold', 
+                        minHeight: '48px', 
+                        position: 'relative',
+                        cursor: 'pointer',
+                        borderBottom: theme => filters.disk > 0 ? 
+                          `2px solid ${theme.palette.primary.main}` : undefined,
+                        color: theme => filters.disk > 0 ? 'primary.main' : 'inherit',
+                        backgroundColor: theme => filters.disk > 0 ? 
+                          alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                        transition: 'all 0.2s ease',
+                        '&::after': {},
+                        '&:hover': {
+                          backgroundColor: theme => filters.disk > 0 
+                            ? alpha(theme.palette.primary.main, 0.12)
+                            : alpha(theme.palette.primary.main, 0.08)
+                        },
+                        '&:focus-visible': {
+                          outline: '2px solid',
+                          outlineColor: 'primary.main',
+                          outlineOffset: -2,
+                        }
+                      }}
+                      aria-sort={sortConfig.key === 'disk' ? sortConfig.direction : undefined}
                     >
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <StorageIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                        Disk
-                        <TableSortLabel
-                          active={sortConfig.key === 'disk'}
-                          direction={sortConfig.key === 'disk' ? sortConfig.direction : 'asc'}
-                          sx={{
-                            '& .MuiTableSortLabel-icon': {
-                              opacity: sortConfig.key === 'disk' ? 1 : 0.3,
-                              marginLeft: '4px !important',
-                            },
-                            '&.Mui-active': {
-                              color: 'inherit',
-                            },
-                            '&:hover': {
-                              color: 'primary.main',
-                            }
-                          }}
-                          IconComponent={props => (
-                            <ArrowDropDownIcon
-                              {...props}
-                              sx={{
-                                fontSize: '1.2rem',
-                                transform: sortConfig.key === 'disk' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
-                                transition: 'transform 0.2s'
-                              }}
-                            />
-                          )}
-                        />
-                      </Box>
-                    </Tooltip>
-                  </TableCell>
+                      <Tooltip 
+                        title={filters.disk > 0 ? `Filtering: Disk > ${filters.disk}%` : ""}
+                        arrow
+                        placement="top"
+                        disableHoverListener={!filters.disk}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <StorageIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                          Disk
+                          <TableSortLabel
+                            active={sortConfig.key === 'disk'}
+                            direction={sortConfig.key === 'disk' ? sortConfig.direction : 'asc'}
+                            sx={{
+                              '& .MuiTableSortLabel-icon': {
+                                opacity: sortConfig.key === 'disk' ? 1 : 0.3,
+                                marginLeft: '4px !important',
+                              },
+                              '&.Mui-active': {
+                                color: 'inherit',
+                              },
+                              '&:hover': {
+                                color: 'primary.main',
+                              }
+                            }}
+                            IconComponent={props => (
+                              <ArrowDropDownIcon
+                                {...props}
+                                sx={{
+                                  fontSize: '1.2rem',
+                                  transform: sortConfig.key === 'disk' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                                  transition: 'transform 0.2s'
+                                }}
+                              />
+                            )}
+                          />
+                        </Box>
+                      </Tooltip>
+                    </TableCell>
+                  )}
                   
                   {/* Download Column */}
-                  <TableCell 
-                    width="12%" 
-                    ref={downloadColumnRef}
-                    onClick={() => requestSort('download')}
-                    sx={{ 
-                      fontWeight: 'bold', 
-                      minHeight: '48px', 
-                      position: 'relative',
-                      cursor: 'pointer',
-                      borderBottom: theme => filters.download > 0 ? 
-                        `2px solid ${theme.palette.primary.main}` : undefined,
-                      color: theme => filters.download > 0 ? 'primary.main' : 'inherit',
-                      backgroundColor: theme => filters.download > 0 ? 
-                        alpha(theme.palette.primary.main, 0.08) : 'transparent',
-                      transition: 'all 0.2s ease',
-                      '&::after': {},
-                      '&:hover': {
-                        backgroundColor: theme => filters.download > 0 
-                          ? alpha(theme.palette.primary.main, 0.12)
-                          : alpha(theme.palette.primary.main, 0.08)
-                      },
-                      '&:focus-visible': {
-                        outline: '2px solid',
-                        outlineColor: 'primary.main',
-                        outlineOffset: -2,
-                      }
-                    }}
-                    aria-sort={sortConfig.key === 'download' ? sortConfig.direction : undefined}
-                  >
-                    <Tooltip 
-                      title={filters.download > 0 ? `Filtering: Download > ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}` : ""}
-                      arrow
-                      placement="top"
-                      disableHoverListener={!filters.download}
+                  {columnVisibility.download.visible && (
+                    <TableCell 
+                      width="12%" 
+                      ref={downloadColumnRef}
+                      onClick={() => requestSort('download')}
+                      sx={{ 
+                        fontWeight: 'bold', 
+                        minHeight: '48px', 
+                        position: 'relative',
+                        cursor: 'pointer',
+                        borderBottom: theme => filters.download > 0 ? 
+                          `2px solid ${theme.palette.primary.main}` : undefined,
+                        color: theme => filters.download > 0 ? 'primary.main' : 'inherit',
+                        backgroundColor: theme => filters.download > 0 ? 
+                          alpha(theme.palette.primary.main, 0.08) : 'transparent',
+                        transition: 'all 0.2s ease',
+                        '&::after': {},
+                        '&:hover': {
+                          backgroundColor: theme => filters.download > 0 
+                            ? alpha(theme.palette.primary.main, 0.12)
+                            : alpha(theme.palette.primary.main, 0.08)
+                        },
+                        '&:focus-visible': {
+                          outline: '2px solid',
+                          outlineColor: 'primary.main',
+                          outlineOffset: -2,
+                        }
+                      }}
+                      aria-sort={sortConfig.key === 'download' ? sortConfig.direction : undefined}
                     >
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <DownloadIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                        Download
-                        <TableSortLabel
-                          active={sortConfig.key === 'download'}
-                          direction={sortConfig.key === 'download' ? sortConfig.direction : 'asc'}
-                          sx={{
-                            '& .MuiTableSortLabel-icon': {
-                              opacity: sortConfig.key === 'download' ? 1 : 0.3,
-                              marginLeft: '4px !important',
-                            },
-                            '&.Mui-active': {
-                              color: 'inherit',
-                            },
-                            '&:hover': {
-                              color: 'primary.main',
-                            }
-                          }}
-                          IconComponent={props => (
-                            <ArrowDropDownIcon
-                              {...props}
-                              sx={{
-                                fontSize: '1.2rem',
-                                transform: sortConfig.key === 'download' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
-                                transition: 'transform 0.2s'
-                              }}
-                            />
-                          )}
-                        />
-                      </Box>
-                    </Tooltip>
-                  </TableCell>
+                      <Tooltip 
+                        title={filters.download > 0 ? `Filtering: Download > ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}` : ""}
+                        arrow
+                        placement="top"
+                        disableHoverListener={!filters.download}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <DownloadIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                          Download
+                          <TableSortLabel
+                            active={sortConfig.key === 'download'}
+                            direction={sortConfig.key === 'download' ? sortConfig.direction : 'asc'}
+                            sx={{
+                              '& .MuiTableSortLabel-icon': {
+                                opacity: sortConfig.key === 'download' ? 1 : 0.3,
+                                marginLeft: '4px !important',
+                              },
+                              '&.Mui-active': {
+                                color: 'inherit',
+                              },
+                              '&:hover': {
+                                color: 'primary.main',
+                              }
+                            }}
+                            IconComponent={props => (
+                              <ArrowDropDownIcon
+                                {...props}
+                                sx={{
+                                  fontSize: '1.2rem',
+                                  transform: sortConfig.key === 'download' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                                  transition: 'transform 0.2s'
+                                }}
+                              />
+                            )}
+                          />
+                        </Box>
+                      </Tooltip>
+                    </TableCell>
+                  )}
                   
                   {/* Upload Column */}
-                  <TableCell 
-                    width="12%" 
-                    ref={uploadColumnRef}
-                    onClick={() => requestSort('upload')}
-                    sx={{ 
-                      fontWeight: 'bold', 
-                      minHeight: '48px', 
-                      position: 'relative',
-                      cursor: 'pointer',
-                      borderBottom: theme => filters.upload > 0 ? 
-                        `2px solid ${theme.palette.secondary.main}` : undefined,
-                      color: theme => filters.upload > 0 ? 'secondary.main' : 'inherit',
-                      backgroundColor: theme => filters.upload > 0 ? 
-                        alpha(theme.palette.secondary.main, 0.08) : 'transparent',
-                      transition: 'all 0.2s ease',
-                      '&::after': {},
-                      '&:hover': {
-                        backgroundColor: theme => filters.upload > 0 
-                          ? alpha(theme.palette.secondary.main, 0.12)
-                          : alpha(theme.palette.primary.main, 0.08)
-                      },
-                      '&:focus-visible': {
-                        outline: '2px solid',
-                        outlineColor: 'primary.main',
-                        outlineOffset: -2,
-                      }
-                    }}
-                    aria-sort={sortConfig.key === 'upload' ? sortConfig.direction : undefined}
-                  >
-                    <Tooltip 
-                      title={filters.upload > 0 ? `Filtering: Upload > ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}` : ""}
-                      arrow
-                      placement="top"
-                      disableHoverListener={!filters.upload}
+                  {columnVisibility.upload.visible && (
+                    <TableCell 
+                      width="12%" 
+                      ref={uploadColumnRef}
+                      onClick={() => requestSort('upload')}
+                      sx={{ 
+                        fontWeight: 'bold', 
+                        minHeight: '48px', 
+                        position: 'relative',
+                        cursor: 'pointer',
+                        borderBottom: theme => filters.upload > 0 ? 
+                          `2px solid ${theme.palette.secondary.main}` : undefined,
+                        color: theme => filters.upload > 0 ? 'secondary.main' : 'inherit',
+                        backgroundColor: theme => filters.upload > 0 ? 
+                          alpha(theme.palette.secondary.main, 0.08) : 'transparent',
+                        transition: 'all 0.2s ease',
+                        '&::after': {},
+                        '&:hover': {
+                          backgroundColor: theme => filters.upload > 0 
+                            ? alpha(theme.palette.secondary.main, 0.12)
+                            : alpha(theme.palette.primary.main, 0.08)
+                        },
+                        '&:focus-visible': {
+                          outline: '2px solid',
+                          outlineColor: 'primary.main',
+                          outlineOffset: -2,
+                        }
+                      }}
+                      aria-sort={sortConfig.key === 'upload' ? sortConfig.direction : undefined}
+                    >
+                      <Tooltip 
+                        title={filters.upload > 0 ? `Filtering: Upload > ${formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}` : ""}
+                        arrow
+                        placement="top"
+                        disableHoverListener={!filters.upload}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <UploadIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                          Upload
+                          <TableSortLabel
+                            active={sortConfig.key === 'upload'}
+                            direction={sortConfig.key === 'upload' ? sortConfig.direction : 'asc'}
+                            sx={{
+                              '& .MuiTableSortLabel-icon': {
+                                opacity: sortConfig.key === 'upload' ? 1 : 0.3,
+                                marginLeft: '4px !important',
+                              },
+                              '&.Mui-active': {
+                                color: 'inherit',
+                              },
+                              '&:hover': {
+                                color: 'primary.main',
+                              }
+                            }}
+                            IconComponent={props => (
+                              <ArrowDropDownIcon
+                                {...props}
+                                sx={{
+                                  fontSize: '1.2rem',
+                                  transform: sortConfig.key === 'upload' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                                  transition: 'transform 0.2s'
+                                }}
+                              />
+                            )}
+                          />
+                        </Box>
+                      </Tooltip>
+                    </TableCell>
+                  )}
+
+                  {/* Uptime Column */}
+                  {columnVisibility.uptime.visible && (
+                    <TableCell 
+                      width="10%" 
+                      onClick={() => requestSort('uptime')}
+                      sx={{ 
+                        fontWeight: 'bold', 
+                        minHeight: '48px', 
+                        position: 'relative',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
+                        },
+                        '&:focus-visible': {
+                          outline: '2px solid',
+                          outlineColor: 'primary.main',
+                          outlineOffset: -2,
+                        }
+                      }}
+                      aria-sort={sortConfig.key === 'uptime' ? sortConfig.direction : undefined}
                     >
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <UploadIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                        Upload
+                        <AllInclusiveIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
+                        Uptime
                         <TableSortLabel
-                          active={sortConfig.key === 'upload'}
-                          direction={sortConfig.key === 'upload' ? sortConfig.direction : 'asc'}
+                          active={sortConfig.key === 'uptime'}
+                          direction={sortConfig.key === 'uptime' ? sortConfig.direction : 'asc'}
                           sx={{
                             '& .MuiTableSortLabel-icon': {
-                              opacity: sortConfig.key === 'upload' ? 1 : 0.3,
+                              opacity: sortConfig.key === 'uptime' ? 1 : 0.3,
                               marginLeft: '4px !important',
                             },
                             '&.Mui-active': {
@@ -3025,68 +3237,15 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                               {...props}
                               sx={{
                                 fontSize: '1.2rem',
-                                transform: sortConfig.key === 'upload' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                                transform: sortConfig.key === 'uptime' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
                                 transition: 'transform 0.2s'
                               }}
                             />
                           )}
                         />
                       </Box>
-                    </Tooltip>
-                  </TableCell>
-
-                  {/* Uptime Column */}
-                  <TableCell 
-                    width="12%" 
-                    onClick={() => requestSort('uptime')}
-                    sx={{ 
-                      fontWeight: 'bold', 
-                      minHeight: '48px', 
-                      position: 'relative',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        backgroundColor: theme => alpha(theme.palette.primary.main, 0.08)
-                      },
-                      '&:focus-visible': {
-                        outline: '2px solid',
-                        outlineColor: 'primary.main',
-                        outlineOffset: -2,
-                      }
-                    }}
-                    aria-sort={sortConfig.key === 'uptime' ? sortConfig.direction : undefined}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <AllInclusiveIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
-                      Uptime
-                      <TableSortLabel
-                        active={sortConfig.key === 'uptime'}
-                        direction={sortConfig.key === 'uptime' ? sortConfig.direction : 'asc'}
-                        sx={{
-                          '& .MuiTableSortLabel-icon': {
-                            opacity: sortConfig.key === 'uptime' ? 1 : 0.3,
-                            marginLeft: '4px !important',
-                          },
-                          '&.Mui-active': {
-                            color: 'inherit',
-                          },
-                          '&:hover': {
-                            color: 'primary.main',
-                          }
-                        }}
-                        IconComponent={props => (
-                          <ArrowDropDownIcon
-                            {...props}
-                            sx={{
-                              fontSize: '1.2rem',
-                              transform: sortConfig.key === 'uptime' && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
-                              transition: 'transform 0.2s'
-                            }}
-                          />
-                        )}
-                      />
-                    </Box>
-                  </TableCell>
+                    </TableCell>
+                  )}
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -3197,158 +3356,192 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                           }
                         ))
                       }}>
-                        <TableCell>
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              fontWeight: 500,
-                              color: theme => darkMode ? 'text.secondary' : 'text.primary'
-                            }}
-                          >
-                            {getNodeName(guest.node)}
-                          </Typography>
-                        </TableCell>
-                        
-                        <TableCell sx={{ padding: 0 }}>
-                          <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            width: '100%',
-                            height: '100%',
-                            py: 1
-                          }}>
-                            {guest.type === 'qemu' ? (
-                              <Tooltip title="Virtual Machine">
-                                <Box
-                                  sx={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    color: 'info.main',
-                                    fontSize: '0.7rem',
-                                    opacity: 0.8,
-                                    minWidth: '20px'
-                                  }}
-                                >
-                                  <ComputerIcon sx={{ fontSize: '0.8rem' }} />
-                                </Box>
-                              </Tooltip>
-                            ) : (
-                              <Tooltip title="LXC Container">
-                                <Box
-                                  sx={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    color: 'success.main',
-                                    fontSize: '0.7rem',
-                                    opacity: 0.8,
-                                    minWidth: '20px'
-                                  }}
-                                >
-                                  <StorageOutlinedIcon sx={{ fontSize: '0.8rem' }} />
-                                </Box>
-                              </Tooltip>
-                            )}
-                          </Box>
-                        </TableCell>
-                        
-                        <TableCell>
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              fontWeight: 500,
-                              fontFamily: 'monospace',
-                              color: theme => darkMode ? 'text.secondary' : 'text.primary'
-                            }}
-                            title={guest.id} // Show full ID on hover
-                          >
-                            {extractNumericId(guest.id)}
-                          </Typography>
-                        </TableCell>
-                        
-                        <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
-                            <StatusIndicator status={guest.status} />
+                        {/* Node Column */}
+                        {columnVisibility.node.visible && (
+                          <TableCell>
                             <Typography 
-                              noWrap 
+                              variant="body2" 
                               sx={{ 
-                                maxWidth: 150,
-                                fontWeight: isRunning ? 500 : 400
+                                fontWeight: 500,
+                                color: theme => darkMode ? 'text.secondary' : 'text.primary'
                               }}
                             >
-                              {guest.name}
+                              {getNodeName(guest.node)}
                             </Typography>
-                          </Box>
-                        </TableCell>
+                          </TableCell>
+                        )}
                         
-                        <TableCell>
-                          <ProgressWithLabel 
-                            value={cpuUsage} 
-                            color={cpuUsage > 80 ? "error" : cpuUsage > 60 ? "warning" : "primary"}
-                            disabled={!isRunning}
-                            tooltipText={isRunning ? `CPU: ${formatPercentage(cpuUsage)} utilized` : "System is not running"}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <ProgressWithLabel 
-                            value={memoryUsage} 
-                            color={memoryUsage > 80 ? "error" : memoryUsage > 60 ? "warning" : "primary"}
-                            disabled={!isRunning}
-                            tooltipText={isRunning ? 
-                              memoryData.total ? 
-                                `Memory: ${formatBytes(memoryData.used || 0)} / ${formatBytes(memoryData.total)} (${formatPercentage(memoryUsage)})` : 
-                                `Memory: ${formatPercentage(memoryUsage)} utilized` : 
-                              "System is not running"}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <ProgressWithLabel 
-                            value={diskUsage} 
-                            color={diskUsage > 80 ? "error" : diskUsage > 60 ? "warning" : "primary"}
-                            disabled={!isRunning}
-                            tooltipText={isRunning ? 
-                              diskData.total ? 
-                                `Disk: ${formatBytes(diskData.used || 0)} / ${formatBytes(diskData.total)} (${formatPercentage(diskUsage)})` : 
-                                `Disk: ${formatPercentage(diskUsage)} utilized` : 
-                              "System is not running"}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          {isRunning && networkMetrics ? (
-                            <Typography variant="body2" color="primary" noWrap fontWeight="medium">
-                              ↓ {formatNetworkRate(networkMetrics.inRate ?? 0)}
+                        {/* Type Column */}
+                        {columnVisibility.type.visible && (
+                          <TableCell sx={{ padding: 0 }}>
+                            <Box sx={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center',
+                              width: '100%',
+                              height: '100%',
+                              py: 1
+                            }}>
+                              {guest.type === 'qemu' ? (
+                                <Tooltip title="Virtual Machine">
+                                  <Box
+                                    sx={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      color: 'info.main',
+                                      fontSize: '0.7rem',
+                                      opacity: 0.8,
+                                      minWidth: '20px'
+                                    }}
+                                  >
+                                    <ComputerIcon sx={{ fontSize: '0.8rem' }} />
+                                  </Box>
+                                </Tooltip>
+                              ) : (
+                                <Tooltip title="LXC Container">
+                                  <Box
+                                    sx={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      color: 'success.main',
+                                      fontSize: '0.7rem',
+                                      opacity: 0.8,
+                                      minWidth: '20px'
+                                    }}
+                                  >
+                                    <StorageOutlinedIcon sx={{ fontSize: '0.8rem' }} />
+                                  </Box>
+                                </Tooltip>
+                              )}
+                            </Box>
+                          </TableCell>
+                        )}
+                        
+                        {/* ID Column */}
+                        {columnVisibility.id.visible && (
+                          <TableCell>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                fontWeight: 500,
+                                fontFamily: 'monospace',
+                                color: theme => darkMode ? 'text.secondary' : 'text.primary'
+                              }}
+                              title={guest.id} // Show full ID on hover
+                            >
+                              {extractNumericId(guest.id)}
                             </Typography>
-                          ) : (
-                            <Typography variant="body2" color="text.disabled" noWrap>
-                              ↓ -
+                          </TableCell>
+                        )}
+                        
+                        {/* Name Column */}
+                        {columnVisibility.name.visible && (
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+                              <StatusIndicator status={guest.status} />
+                              <Typography 
+                                noWrap 
+                                sx={{ 
+                                  maxWidth: 150,
+                                  fontWeight: isRunning ? 500 : 400
+                                }}
+                              >
+                                {guest.name}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                        )}
+                        
+                        {/* CPU Column */}
+                        {columnVisibility.cpu.visible && (
+                          <TableCell>
+                            <ProgressWithLabel 
+                              value={cpuUsage} 
+                              color={cpuUsage > 80 ? "error" : cpuUsage > 60 ? "warning" : "primary"}
+                              disabled={!isRunning}
+                              tooltipText={isRunning ? 
+                                `CPU: ${formatPercentage(cpuUsage)} utilized` : 
+                                "System is not running"}
+                            />
+                          </TableCell>
+                        )}
+                        
+                        {/* Memory Column */}
+                        {columnVisibility.memory.visible && (
+                          <TableCell>
+                            <ProgressWithLabel 
+                              value={memoryUsage} 
+                              color={memoryUsage > 80 ? "error" : memoryUsage > 60 ? "warning" : "primary"}
+                              disabled={!isRunning}
+                              tooltipText={isRunning ? 
+                                memoryData.total ? 
+                                  `Memory: ${formatBytes(memoryData.used || 0)} / ${formatBytes(memoryData.total)} (${formatPercentage(memoryUsage)})` : 
+                                  `Memory: ${formatPercentage(memoryUsage)} utilized` : 
+                                "System is not running"}
+                            />
+                          </TableCell>
+                        )}
+                        
+                        {/* Disk Column */}
+                        {columnVisibility.disk.visible && (
+                          <TableCell>
+                            <ProgressWithLabel 
+                              value={diskUsage} 
+                              color={diskUsage > 80 ? "error" : diskUsage > 60 ? "warning" : "primary"}
+                              disabled={!isRunning}
+                              tooltipText={isRunning ? 
+                                diskData.total ? 
+                                  `Disk: ${formatBytes(diskData.used || 0)} / ${formatBytes(diskData.total)} (${formatPercentage(diskUsage)})` : 
+                                  `Disk: ${formatPercentage(diskUsage)} utilized` : 
+                                "System is not running"}
+                            />
+                          </TableCell>
+                        )}
+                        
+                        {/* Download Column */}
+                        {columnVisibility.download.visible && (
+                          <TableCell>
+                            {isRunning && networkMetrics ? (
+                              <Typography variant="body2" color="primary" noWrap fontWeight="medium">
+                                ↓ {formatNetworkRate(networkMetrics.inRate ?? 0)}
+                              </Typography>
+                            ) : (
+                              <Typography variant="body2" color="text.disabled" noWrap>
+                                ↓ -
+                              </Typography>
+                            )}
+                          </TableCell>
+                        )}
+                        
+                        {/* Upload Column */}
+                        {columnVisibility.upload.visible && (
+                          <TableCell>
+                            {isRunning && networkMetrics ? (
+                              <Typography variant="body2" color="secondary" noWrap fontWeight="medium">
+                                ↑ {formatNetworkRate(networkMetrics.outRate ?? 0)}
+                              </Typography>
+                            ) : (
+                              <Typography variant="body2" color="text.disabled" noWrap>
+                                ↑ -
+                              </Typography>
+                            )}
+                          </TableCell>
+                        )}
+                        
+                        {/* Uptime Column */}
+                        {columnVisibility.uptime.visible && (
+                          <TableCell>
+                            <Typography 
+                              variant="body2" 
+                              color={isRunning ? "text.primary" : "text.disabled"}
+                              noWrap
+                            >
+                              {isRunning ? formatUptime(guest.uptime) : "-"}
                             </Typography>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {isRunning && networkMetrics ? (
-                            <Typography variant="body2" color="secondary" noWrap fontWeight="medium">
-                              ↑ {formatNetworkRate(networkMetrics.outRate ?? 0)}
-                            </Typography>
-                          ) : (
-                            <Typography variant="body2" color="text.disabled" noWrap>
-                              ↑ -
-                            </Typography>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              fontFamily: 'monospace',
-                              color: theme => darkMode ? 'text.secondary' : 'text.primary',
-                              opacity: isRunning ? 1 : 0.7
-                            }}
-                          >
-                            {isRunning ? formatUptime(metrics?.metrics?.uptime || 0) : '-'}
-                          </Typography>
-                        </TableCell>
+                          </TableCell>
+                        )}
                       </TableRow>
                     );
                   })
