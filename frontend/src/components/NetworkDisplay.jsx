@@ -2876,7 +2876,6 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         disableHoverListener={!filters.cpu}
                       >
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <SpeedIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
                           CPU
                           <TableSortLabel
                             active={sortConfig.key === 'cpu'}
@@ -2947,7 +2946,6 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         disableHoverListener={!filters.memory}
                       >
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <MemoryIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
                           Memory
                           <TableSortLabel
                             active={sortConfig.key === 'memory'}
@@ -3018,7 +3016,6 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         disableHoverListener={!filters.disk}
                       >
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <StorageIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
                           Disk
                           <TableSortLabel
                             active={sortConfig.key === 'disk'}
@@ -3089,7 +3086,6 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         disableHoverListener={!filters.download}
                       >
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <DownloadIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
                           Download
                           <TableSortLabel
                             active={sortConfig.key === 'download'}
@@ -3160,7 +3156,6 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                         disableHoverListener={!filters.upload}
                       >
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <UploadIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
                           Upload
                           <TableSortLabel
                             active={sortConfig.key === 'upload'}
@@ -3215,7 +3210,6 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                       aria-sort={sortConfig.key === 'uptime' ? sortConfig.direction : undefined}
                     >
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <AllInclusiveIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.6, fontSize: '0.9rem' }} />
                         Uptime
                         <TableSortLabel
                           active={sortConfig.key === 'uptime'}
