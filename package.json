@@ -8,8 +8,6 @@
     "build": "tsc",
     "lint": "eslint . --ext .ts",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "test:startup": "ts-node src/scripts/startup-check.ts",
-    "test:api": "ts-node src/scripts/proxmox-api-test.ts",
     "dev:kill:backend": "npx kill-port 7654 7655",
     "dev:kill:frontend": "npx kill-port 9513",
     "dev:kill:all": "npm run dev:kill:backend && npm run dev:kill:frontend",
