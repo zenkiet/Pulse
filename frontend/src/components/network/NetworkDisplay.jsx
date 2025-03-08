@@ -78,12 +78,20 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
   // Use the formatted metrics hook
   const formattedMetrics = useFormattedMetrics(metricsData);
   
-  // Use mock metrics for testing
+  // Use mock metrics for testing - but only if we're not using real mock data from the server
   const mockMetrics = useMockMetrics(guestData);
   
   // Combine real and mock metrics, preferring real metrics if available
   const combinedMetrics = useMemo(() => {
-    // Check if real metrics has any data
+    // When using the mock data server, always use the real metrics
+    const useMockData = localStorage.getItem('use_mock_data') === 'true' || 
+                        localStorage.getItem('MOCK_DATA_ENABLED') === 'true';
+    
+    if (useMockData) {
+      return formattedMetrics;
+    }
+    
+    // Otherwise, fall back to the previous behavior
     const hasRealCpuMetrics = formattedMetrics?.cpu && Object.keys(formattedMetrics.cpu).length > 0;
     const hasRealMemoryMetrics = formattedMetrics?.memory && Object.keys(formattedMetrics.memory).length > 0;
     const hasRealDiskMetrics = formattedMetrics?.disk && Object.keys(formattedMetrics.disk).length > 0;

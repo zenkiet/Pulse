@@ -153,6 +153,58 @@ class ScreenshotTool {
       await this.setLightMode(page);
     }
     
+    // Wait for data to load - look for elements that indicate data is loaded
+    try {
+      // Wait for any loading indicators to disappear
+      await page.evaluate(() => {
+        return new Promise((resolve) => {
+          // Check if there are any loading indicators
+          const checkForLoadingIndicators = () => {
+            const loadingElements = document.querySelectorAll('.loading-indicator, [data-loading="true"], .MuiCircularProgress-root');
+            if (loadingElements.length === 0) {
+              resolve(true);
+            } else {
+              setTimeout(checkForLoadingIndicators, 500);
+            }
+          };
+          
+          // Start checking
+          checkForLoadingIndicators();
+          
+          // Resolve anyway after a timeout to prevent hanging
+          setTimeout(() => resolve(true), 5000);
+        });
+      });
+      
+      // Wait for data elements to appear
+      await page.evaluate(() => {
+        return new Promise((resolve) => {
+          // Check if there are data elements
+          const checkForDataElements = () => {
+            // Look for elements that would indicate data is loaded
+            const dataElements = document.querySelectorAll('.resource-card, .vm-card, .container-card, .guest-row, [data-testid="resource-item"]');
+            if (dataElements.length > 0) {
+              console.log(`Found ${dataElements.length} data elements`);
+              resolve(true);
+            } else {
+              setTimeout(checkForDataElements, 500);
+            }
+          };
+          
+          // Start checking
+          checkForDataElements();
+          
+          // Resolve anyway after a timeout to prevent hanging
+          setTimeout(() => {
+            console.log('Timed out waiting for data elements');
+            resolve(true);
+          }, 5000);
+        });
+      });
+    } catch (error) {
+      logger.warn(`Error waiting for data to load: ${error}`);
+    }
+    
     // Check if we should toggle filters or use the saved state
     if (enableFilters) {
       // Check if we have a saved filter state
@@ -764,11 +816,13 @@ class ScreenshotTool {
           localStorage.setItem('use_mock_data', 'true');
           localStorage.setItem('MOCK_DATA_ENABLED', 'true');
           localStorage.setItem('mock_enabled', 'true');
+          localStorage.setItem('MOCK_SERVER_URL', 'http://localhost:7655');
           
           // Set a global flag that the app might check
           if (typeof window !== 'undefined') {
             (window as any).USE_MOCK_DATA = true;
             (window as any).MOCK_DATA_ENABLED = true;
+            (window as any).MOCK_SERVER_URL = 'http://localhost:7655';
           }
           
           // Execute any custom setup script if provided
@@ -781,6 +835,34 @@ class ScreenshotTool {
           console.error('Error setting up mock data:', error);
         }
       }, this.config.mockData?.setupScript);
+      
+      // Also set up mock data in the page context after navigation
+      await page.evaluate(() => {
+        try {
+          // Enable mock data mode using various possible keys
+          localStorage.setItem('use_mock_data', 'true');
+          localStorage.setItem('MOCK_DATA_ENABLED', 'true');
+          localStorage.setItem('mock_enabled', 'true');
+          localStorage.setItem('MOCK_SERVER_URL', 'http://localhost:7655');
+          
+          // Set a global flag that the app might check
+          if (typeof window !== 'undefined') {
+            (window as any).USE_MOCK_DATA = true;
+            (window as any).MOCK_DATA_ENABLED = true;
+            (window as any).MOCK_SERVER_URL = 'http://localhost:7655';
+          }
+          
+          console.log('Mock data mode enabled in page context');
+          
+          // Force a reload if needed
+          if (!(window as any).__MOCK_DATA_INITIALIZED) {
+            (window as any).__MOCK_DATA_INITIALIZED = true;
+            // Don't reload here as it would break the page flow
+          }
+        } catch (error) {
+          console.error('Error setting up mock data in page context:', error);
+        }
+      });
       
       logger.info('Mock data setup completed');
     } catch (error) {

@@ -184,6 +184,7 @@ const generateMetrics = (guestList: MockVM[]): MockMetric[] => {
       // Default disk values if not present
       const diskTotal = guest.disk?.total || 1073741824; // 1GB default
       const diskUsed = guest.disk?.used || 536870912; // 512MB default
+      const diskPercentUsed = (diskUsed / diskTotal) * 100;
       
       // Default network values if not present
       const networkIn = guest.network?.throughput?.in || 1024;
@@ -197,12 +198,12 @@ const generateMetrics = (guestList: MockVM[]): MockMetric[] => {
           memory: {
             total: memoryTotal,
             used: memoryUsed,
-            percentUsed: memoryUsed
+            percentUsed: (memoryUsed / memoryTotal) * 100
           },
           disk: {
             total: diskTotal,
             used: diskUsed,
-            percentUsed: diskUsed
+            percentUsed: diskPercentUsed
           },
           network: {
             inRate: networkIn,
@@ -297,7 +298,18 @@ const updateMetrics = (socket: Socket) => {
       const currentMemoryPercent = metric.metrics.memory.percentUsed;
       const memoryDelta = randomFloatBetween(-2, 2);
       const newMemoryPercent = Math.max(5, Math.min(95, currentMemoryPercent + memoryDelta));
-      const newMemoryUsed = (guest.memory.total * newMemoryPercent) / 100;
+      
+      // Check if memory is a number or an object
+      const memoryTotal = typeof guest.memory === 'number' ? guest.memory : guest.memory.total;
+      const newMemoryUsed = (memoryTotal * newMemoryPercent) / 100;
+      
+      // Update disk usage (slight variation from previous value)
+      const diskTotal = guest.disk?.total || 1073741824; // 1GB default
+      const diskUsed = guest.disk?.used || 536870912; // 512MB default
+      const currentDiskPercent = diskUsed / diskTotal * 100;
+      const diskDelta = randomFloatBetween(-1, 1);
+      const newDiskPercent = Math.max(1, Math.min(99, currentDiskPercent + diskDelta));
+      const newDiskUsed = (diskTotal * newDiskPercent) / 100;
       
       // Update network throughput
       const newInRate = randomFloatBetween(0.1, 50);
@@ -306,6 +318,7 @@ const updateMetrics = (socket: Socket) => {
       // Update history
       const newCpuHistory = [...metric.history.cpu.slice(1), newCpu];
       const newMemoryHistory = [...metric.history.memory.slice(1), newMemoryPercent];
+      const newDiskHistory = [...(metric.history.disk || Array(10).fill(0)), newDiskPercent].slice(-10);
       
       return {
         ...metric,
@@ -318,6 +331,11 @@ const updateMetrics = (socket: Socket) => {
             used: newMemoryUsed,
             percentUsed: newMemoryPercent
           },
+          disk: {
+            ...metric.metrics.disk,
+            used: newDiskUsed,
+            percentUsed: newDiskPercent
+          },
           network: {
             ...metric.metrics.network,
             inRate: newInRate,
@@ -328,7 +346,8 @@ const updateMetrics = (socket: Socket) => {
         history: {
           ...metric.history,
           cpu: newCpuHistory,
-          memory: newMemoryHistory
+          memory: newMemoryHistory,
+          disk: newDiskHistory
         }
       };
     });
@@ -379,7 +398,18 @@ const updateMetrics = (socket: Socket) => {
       const currentMemoryPercent = metric.metrics.memory.percentUsed;
       const memoryDelta = randomFloatBetween(-2, 2);
       const newMemoryPercent = Math.max(5, Math.min(95, currentMemoryPercent + memoryDelta));
-      const newMemoryUsed = (guest.memory.total * newMemoryPercent) / 100;
+      
+      // Check if memory is a number or an object
+      const memoryTotal = typeof guest.memory === 'number' ? guest.memory : guest.memory.total;
+      const newMemoryUsed = (memoryTotal * newMemoryPercent) / 100;
+      
+      // Update disk usage (slight variation from previous value)
+      const diskTotal = guest.disk?.total || 1073741824; // 1GB default
+      const diskUsed = guest.disk?.used || 536870912; // 512MB default
+      const currentDiskPercent = diskUsed / diskTotal * 100;
+      const diskDelta = randomFloatBetween(-1, 1);
+      const newDiskPercent = Math.max(1, Math.min(99, currentDiskPercent + diskDelta));
+      const newDiskUsed = (diskTotal * newDiskPercent) / 100;
       
       // Update network throughput
       const newInRate = randomFloatBetween(0.1, 50);
@@ -388,6 +418,7 @@ const updateMetrics = (socket: Socket) => {
       // Update history
       const newCpuHistory = [...metric.history.cpu.slice(1), newCpu];
       const newMemoryHistory = [...metric.history.memory.slice(1), newMemoryPercent];
+      const newDiskHistory = [...(metric.history.disk || Array(10).fill(0)), newDiskPercent].slice(-10);
       
       return {
         ...metric,
@@ -400,6 +431,11 @@ const updateMetrics = (socket: Socket) => {
             used: newMemoryUsed,
             percentUsed: newMemoryPercent
           },
+          disk: {
+            ...metric.metrics.disk,
+            used: newDiskUsed,
+            percentUsed: newDiskPercent
+          },
           network: {
             ...metric.metrics.network,
             inRate: newInRate,
@@ -410,7 +446,8 @@ const updateMetrics = (socket: Socket) => {
         history: {
           ...metric.history,
           cpu: newCpuHistory,
-          memory: newMemoryHistory
+          memory: newMemoryHistory,
+          disk: newDiskHistory
         }
       };
     });

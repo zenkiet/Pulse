@@ -4,7 +4,7 @@ A lightweight, responsive ProxMox monitoring application that displays real-time
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/rcourtman)
 
-![Dashboard](docs/images/dashboard-light.png)
+![Dashboard](docs/images/dashboard.png)
 *Main dashboard showing node overview and resource usage*
 
 ## 📑 Table of Contents
@@ -172,9 +172,6 @@ docker compose up -d  # Restart with new image
 - Dashboard with summary cards for nodes, guests, and resources
 - Responsive design that works on desktop and mobile
 - WebSocket connection for live updates
-
-![Filters](docs/images/filters.png)
-*Resource view with filtering options for VMs and containers*
 
 ## ❓ Troubleshooting
 
