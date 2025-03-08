@@ -418,7 +418,7 @@ const getMinWidthForColumn = (columnId) => {
     node: 70,     // Reduced from 80px
     type: 45,     // Reduced from 50px
     id: 60,       // Reduced from 70px
-    status: 90,   // Reduced from 100px
+    status: 40,   // Reduced from 90px since we're only showing the icon now
     name: 130,    // Reduced from 150px
     cpu: 100,     // Reduced from 120px
     memory: 100,  // Reduced from 120px

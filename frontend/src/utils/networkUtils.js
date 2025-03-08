@@ -263,6 +263,7 @@ export const calculateDynamicColumnWidths = (columnVisibility) => {
     node: 7,     // Reduced from 8%
     type: 4,     // Reduced from 5%
     id: 6,       // Reduced from 7%
+    status: 3,   // Small width since it's only an icon now
     name: 14,    // Reduced from 15%
     cpu: 13,     // Reduced from 15%
     memory: 13,  // Reduced from 15%

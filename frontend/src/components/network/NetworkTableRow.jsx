@@ -4,7 +4,8 @@ import {
   TableCell,
   Typography,
   Box,
-  Chip
+  Chip,
+  Tooltip
 } from '@mui/material';
 import { StatusIndicator, ProgressWithLabel } from './UIComponents';
 import { formatBytes, formatNetworkRate, formatUptime, formatPercentage, formatBytesWithUnit } from '../../utils/formatters';
@@ -112,10 +113,11 @@ const NetworkTableRow = ({
       case 'status':
         return (
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <StatusIndicator status={isRunning ? 'running' : 'stopped'} />
-            <Typography variant="body2" sx={{ ml: 1, color: isRunning ? 'success.main' : 'text.disabled' }}>
-              {isRunning ? 'Running' : 'Stopped'}
-            </Typography>
+            <Tooltip title={isRunning ? 'Running' : 'Stopped'}>
+              <Box>
+                <StatusIndicator status={isRunning ? 'running' : 'stopped'} />
+              </Box>
+            </Tooltip>
           </Box>
         );
       case 'name':
@@ -210,6 +212,7 @@ const getMinWidthForColumn = (columnId) => {
     node: 70,
     type: 45,
     id: 60,
+    status: 40,   // Reduced from 90px since we're only showing the icon now
     name: 130,
     cpu: 100,
     memory: 100,
