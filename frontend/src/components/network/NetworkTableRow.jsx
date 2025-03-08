@@ -7,7 +7,7 @@ import {
   Chip
 } from '@mui/material';
 import { StatusIndicator, ProgressWithLabel } from './UIComponents';
-import { formatBytes, formatNetworkRate, formatUptime, formatPercentage } from '../../utils/formatters';
+import { formatBytes, formatNetworkRate, formatUptime, formatPercentage, formatBytesWithUnit } from '../../utils/formatters';
 import { calculateDynamicColumnWidths } from '../../utils/networkUtils';
 
 const NetworkTableRow = ({ 
@@ -35,15 +35,22 @@ const NetworkTableRow = ({
   // Get the CPU usage value
   const cpuUsage = cpuMetrics?.usage ?? 0;
   
-  // Get memory usage
+  // Get memory usage with unit awareness
   const memoryUsage = memoryMetrics?.usagePercent ?? 0;
+  const memoryUnit = memoryMetrics?.unit || 'bytes';
+  const memoryTotal = memoryMetrics?.total ?? 0;
+  const memoryUsed = memoryMetrics?.used ?? 0;
   
-  // Get disk usage
+  // Get disk usage with unit awareness
   const diskUsage = diskMetrics?.usagePercent ?? 0;
+  const diskUnit = diskMetrics?.unit || 'bytes';
+  const diskTotal = diskMetrics?.total ?? 0;
+  const diskUsed = diskMetrics?.used ?? 0;
   
-  // Get network rates
+  // Get network rates with unit awareness
   const networkInRate = networkMetrics?.inRate ?? 0;
   const networkOutRate = networkMetrics?.outRate ?? 0;
+  const networkUnit = networkMetrics?.unit || 'bytes';
   
   // Check if any columns are visible
   const hasVisibleColumns = Object.values(columnVisibility).some(col => col.visible);
@@ -149,8 +156,8 @@ const NetworkTableRow = ({
             color={memoryUsage > 80 ? "error" : memoryUsage > 60 ? "warning" : "primary"}
             disabled={!isRunning}
             tooltipText={isRunning ? 
-              memoryMetrics?.total ? 
-                `Memory: ${formatBytes(memoryMetrics.used || 0)} / ${formatBytes(memoryMetrics.total)} (${formatPercentage(memoryUsage)})` :
+              memoryTotal ? 
+                `Memory: ${formatBytesWithUnit(memoryUsed, memoryUnit)} / ${formatBytesWithUnit(memoryTotal, memoryUnit)} (${formatPercentage(memoryUsage)})` :
                 `Memory: ${formatPercentage(memoryUsage)} utilized` : 
               "System is not running"}
           />
@@ -165,8 +172,8 @@ const NetworkTableRow = ({
             color={diskUsage > 80 ? "error" : diskUsage > 60 ? "warning" : "primary"}
             disabled={!isRunning}
             tooltipText={isRunning ? 
-              diskMetrics?.total ? 
-                `Disk: ${formatBytes(diskMetrics.used || 0)} / ${formatBytes(diskMetrics.total)} (${formatPercentage(diskUsage)})` :
+              diskTotal ? 
+                `Disk: ${formatBytesWithUnit(diskUsed, diskUnit)} / ${formatBytesWithUnit(diskTotal, diskUnit)} (${formatPercentage(diskUsage)})` :
                 `Disk: ${formatPercentage(diskUsage)} utilized` : 
               "System is not running"}
           />
@@ -178,7 +185,7 @@ const NetworkTableRow = ({
         <TableCell sx={{ width: columnWidths.download, minWidth: 100 }}>
           {isRunning && networkMetrics ? (
             <Typography variant="body2" color="primary" noWrap fontWeight="medium">
-              ↓ {formatNetworkRate(networkInRate)}
+              ↓ {formatNetworkRate(networkInRate, networkUnit)}
             </Typography>
           ) : (
             <Typography variant="body2" color="text.disabled" noWrap>
@@ -193,7 +200,7 @@ const NetworkTableRow = ({
         <TableCell sx={{ width: columnWidths.upload, minWidth: 100 }}>
           {isRunning && networkMetrics ? (
             <Typography variant="body2" color="secondary" noWrap fontWeight="medium">
-              ↑ {formatNetworkRate(networkOutRate)}
+              ↑ {formatNetworkRate(networkOutRate, networkUnit)}
             </Typography>
           ) : (
             <Typography variant="body2" color="text.disabled" noWrap>

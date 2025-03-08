@@ -270,22 +270,118 @@ export class MetricsService extends EventEmitter {
   }
 
   /**
-   * Add metrics to history
+   * Optimize metrics data for storage efficiency
+   * @param metrics The metrics data to optimize
+   * @returns Optimized metrics data
+   */
+  private optimizeMetricsForStorage(metrics: MetricsData): MetricsData {
+    // Create a copy to avoid modifying the original
+    const optimized: MetricsData = {
+      timestamp: metrics.timestamp,
+      nodeId: metrics.nodeId,
+      guestId: metrics.guestId,
+      type: metrics.type,
+      metrics: { ...metrics.metrics }
+    };
+    
+    // Optimize CPU - store as integer percentage (0-100)
+    if (typeof optimized.metrics.cpu === 'number') {
+      optimized.metrics.cpu = Math.round(optimized.metrics.cpu);
+    }
+    
+    // Optimize memory metrics
+    if (optimized.metrics.memory) {
+      // Store percentage as integer (0-100)
+      if (typeof optimized.metrics.memory.usedPercentage === 'number') {
+        optimized.metrics.memory.usedPercentage = Math.round(optimized.metrics.memory.usedPercentage);
+      }
+      
+      // Optionally convert bytes to MB for storage efficiency if values are large
+      // This reduces precision but saves space for large values
+      if (optimized.metrics.memory.total > 1024 * 1024 * 10) { // If greater than 10MB
+        // Store in MB instead of bytes
+        optimized.metrics.memory.total = Math.round(optimized.metrics.memory.total / (1024 * 1024));
+        optimized.metrics.memory.used = Math.round(optimized.metrics.memory.used / (1024 * 1024));
+        // Add a flag to indicate the unit is now MB
+        (optimized.metrics.memory as any).unit = 'MB';
+      }
+    }
+    
+    // Optimize disk metrics
+    if (optimized.metrics.disk) {
+      // Store percentage as integer (0-100)
+      if (typeof optimized.metrics.disk.usedPercentage === 'number') {
+        optimized.metrics.disk.usedPercentage = Math.round(optimized.metrics.disk.usedPercentage);
+      }
+      
+      // Optionally convert bytes to MB or GB for storage efficiency
+      if (optimized.metrics.disk.total > 1024 * 1024 * 1024) { // If greater than 1GB
+        // Store in GB instead of bytes
+        optimized.metrics.disk.total = Math.round(optimized.metrics.disk.total / (1024 * 1024 * 1024));
+        optimized.metrics.disk.used = Math.round(optimized.metrics.disk.used / (1024 * 1024 * 1024));
+        // Add a flag to indicate the unit is now GB
+        (optimized.metrics.disk as any).unit = 'GB';
+      } else if (optimized.metrics.disk.total > 1024 * 1024 * 10) { // If greater than 10MB
+        // Store in MB instead of bytes
+        optimized.metrics.disk.total = Math.round(optimized.metrics.disk.total / (1024 * 1024));
+        optimized.metrics.disk.used = Math.round(optimized.metrics.disk.used / (1024 * 1024));
+        // Add a flag to indicate the unit is now MB
+        (optimized.metrics.disk as any).unit = 'MB';
+      }
+      
+      // Round rate values to integers if they're small
+      if (typeof optimized.metrics.disk.readRate === 'number') {
+        optimized.metrics.disk.readRate = Math.round(optimized.metrics.disk.readRate);
+      }
+      if (typeof optimized.metrics.disk.writeRate === 'number') {
+        optimized.metrics.disk.writeRate = Math.round(optimized.metrics.disk.writeRate);
+      }
+    }
+    
+    // Optimize network metrics
+    if (optimized.metrics.network) {
+      // Round cumulative values
+      if (typeof optimized.metrics.network.in === 'number') {
+        optimized.metrics.network.in = Math.round(optimized.metrics.network.in);
+      }
+      if (typeof optimized.metrics.network.out === 'number') {
+        optimized.metrics.network.out = Math.round(optimized.metrics.network.out);
+      }
+      
+      // Round rate values to integers if they're small
+      if (typeof optimized.metrics.network.inRate === 'number') {
+        optimized.metrics.network.inRate = Math.round(optimized.metrics.network.inRate);
+      }
+      if (typeof optimized.metrics.network.outRate === 'number') {
+        optimized.metrics.network.outRate = Math.round(optimized.metrics.network.outRate);
+      }
+    }
+    
+    return optimized;
+  }
+
+  /**
+   * Add metrics to history with optimization
    */
   private addToHistory(id: string, metrics: MetricsData): void {
-    // Get existing history or create new array
-    const history = this.metricsHistory.get(id) || [];
+    // Optimize metrics before storing
+    const optimizedMetrics = this.optimizeMetricsForStorage(metrics);
     
-    // Add new metrics
-    history.push(metrics);
+    // Store the optimized metrics
+    if (!this.metricsHistory.has(id)) {
+      this.metricsHistory.set(id, []);
+    }
     
-    // Trim history if needed
+    const history = this.metricsHistory.get(id)!;
+    history.push(optimizedMetrics);
+    
+    // Trim history if it exceeds the maximum length
     if (history.length > this.historyMaxLength) {
       history.shift();
     }
     
-    // Update history
-    this.metricsHistory.set(id, history);
+    // Update last metrics
+    this.lastMetrics.set(id, optimizedMetrics);
   }
 
   /**

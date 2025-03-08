@@ -106,24 +106,41 @@ export interface MetricsData {
   guestId?: string;
   type: 'node' | 'vm' | 'container';
   metrics: {
+    // For CPU, we could use a Uint8 (0-255) if we store as percentage
+    // or a fixed-point number with 2 decimal places multiplied by 100
     cpu?: number;
     memory?: {
+      // For large values like total/used memory, consider using
+      // compression techniques or storing in KB/MB instead of bytes
       total: number;
       used: number;
+      // For percentages, we could use Uint8 (0-255) values
+      // where 255 represents 100%
       usedPercentage: number;
+      // Unit for memory values (bytes, KB, MB, GB)
+      unit?: 'bytes' | 'KB' | 'MB' | 'GB';
     };
     network?: {
+      // For cumulative values, consider delta encoding
       in: number;
       out: number;
+      // For rates, consider appropriate units (KB/s vs MB/s)
+      // based on typical values to reduce size
       inRate?: number;
       outRate?: number;
+      // Unit for network values (bytes, KB, MB, GB)
+      unit?: 'bytes' | 'KB' | 'MB' | 'GB';
     };
     disk?: {
+      // Similar to memory, use appropriate units
       total: number;
       used: number;
+      // For percentages, use Uint8 (0-255)
       usedPercentage: number;
       readRate?: number;
       writeRate?: number;
+      // Unit for disk values (bytes, KB, MB, GB)
+      unit?: 'bytes' | 'KB' | 'MB' | 'GB';
     };
     uptime?: number;
     status?: string;

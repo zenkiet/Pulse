@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 
 /**
  * Custom hook to transform metrics data from the useSocket hook into the format expected by the components
+ * Uses space-efficient data representations for important metrics
  * @param {Array} metricsData - The metrics data from the useSocket hook
  * @returns {Object} The transformed metrics data
  */
@@ -29,46 +30,64 @@ const useFormattedMetrics = (metricsData) => {
       const guestId = metric.guestId;
       
       // Extract metrics from the metrics object structure
-      // In the original code, metrics were accessed as metrics.metrics.cpu, etc.
       const metricData = metric.metrics || {};
       
-      // CPU metrics
+      // CPU metrics - store as integer percentage (0-100)
       if (typeof metricData.cpu === 'number') {
+        const cpuValue = metricData.cpu;
+        // Convert to integer percentage if needed (assuming it's already a percentage)
+        const cpuPercentage = Math.round(cpuValue);
+        
         result.cpu[guestId] = {
-          usage: metricData.cpu
+          usage: cpuPercentage
         };
       }
       
-      // Memory metrics
+      // Memory metrics - store values in appropriate units
       const memoryData = metricData.memory || {};
       if (memoryData) {
+        // Store percentage as integer (0-100)
+        const memoryPercentage = memoryData.usedPercentage !== undefined 
+          ? Math.round(memoryData.usedPercentage)
+          : (memoryData.total && memoryData.used 
+              ? Math.round((memoryData.used / memoryData.total) * 100) 
+              : 0);
+        
         result.memory[guestId] = {
           used: memoryData.used,
           total: memoryData.total,
-          usagePercent: memoryData.percentUsed || 
-            (memoryData.total && memoryData.used ? 
-              (memoryData.used / memoryData.total) * 100 : 0)
+          usagePercent: memoryPercentage
         };
       }
       
-      // Disk metrics
+      // Disk metrics - store values in appropriate units
       const diskData = metricData.disk || {};
       if (diskData) {
+        // Store percentage as integer (0-100)
+        const diskPercentage = diskData.usedPercentage !== undefined
+          ? Math.round(diskData.usedPercentage)
+          : (diskData.total && diskData.used 
+              ? Math.round((diskData.used / diskData.total) * 100) 
+              : 0);
+        
         result.disk[guestId] = {
           used: diskData.used,
           total: diskData.total,
-          usagePercent: diskData.percentUsed || 
-            (diskData.total && diskData.used ? 
-              (diskData.used / diskData.total) * 100 : 0)
+          usagePercent: diskPercentage
         };
       }
       
-      // Network metrics
+      // Network metrics - round to appropriate precision
       const networkData = metricData.network || {};
       if (networkData) {
+        // Round network rates to integers if they're small, or to 2 decimal places if large
+        const inRate = networkData.inRate || 0;
+        const outRate = networkData.outRate || 0;
+        
         result.network[guestId] = {
-          inRate: networkData.inRate || 0,
-          outRate: networkData.outRate || 0
+          // Use appropriate precision based on value size
+          inRate: inRate < 1000 ? Math.round(inRate) : inRate,
+          outRate: outRate < 1000 ? Math.round(outRate) : outRate
         };
       }
     });

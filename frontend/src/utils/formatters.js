@@ -21,26 +21,40 @@ export const formatBytes = (bytes, decimals = 2) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 };
 
-// Helper function specifically for network rates
-export const formatNetworkRate = (bytesPerSecond) => {
-  if (bytesPerSecond === undefined || bytesPerSecond === null || isNaN(bytesPerSecond) || bytesPerSecond === 0) return '0 B/s';
-  
-  try {
-    // Check if the value is unreasonably high (might be in bits instead of bytes)
-    const maxReasonableRate = 125 * 1024 * 1024; // 125 MB/s
-    let adjustedRate = bytesPerSecond;
-    
-    if (bytesPerSecond > maxReasonableRate) {
-      // Might be in bits, convert to bytes
-      adjustedRate = bytesPerSecond / 8;
-    }
-    
-    // No minimum threshold - show actual values
-    return formatBytes(adjustedRate) + '/s';
-  } catch (error) {
-    console.error('Error formatting network rate:', error, 'Value:', bytesPerSecond);
-    return '0 B/s'; // Fallback to zero if there's an error
+/**
+ * Format network rate with unit information
+ * @param {number} bytesPerSecond - The network rate in bytes per second
+ * @param {string} unit - Optional unit information ('bytes', 'KB', 'MB', 'GB')
+ * @returns {string} Formatted string with appropriate unit
+ */
+export const formatNetworkRate = (bytesPerSecond, unit = 'bytes') => {
+  if (bytesPerSecond === null || bytesPerSecond === undefined) {
+    return 'N/A';
   }
+  
+  // If the unit is specified, convert the value back to bytes for consistent formatting
+  let bytesValue = bytesPerSecond;
+  if (unit === 'KB') {
+    bytesValue = bytesPerSecond * 1024;
+  } else if (unit === 'MB') {
+    bytesValue = bytesPerSecond * 1024 * 1024;
+  } else if (unit === 'GB') {
+    bytesValue = bytesPerSecond * 1024 * 1024 * 1024;
+  }
+  
+  const units = ['B/s', 'KB/s', 'MB/s', 'GB/s', 'TB/s'];
+  let value = bytesValue;
+  let unitIndex = 0;
+  
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex++;
+  }
+  
+  // Format with appropriate precision
+  return value < 10 ? 
+    `${value.toFixed(1)} ${units[unitIndex]}` : 
+    `${Math.round(value)} ${units[unitIndex]}`;
 };
 
 // Helper function to format percentage
@@ -88,4 +102,29 @@ export const sliderValueToNetworkRate = (value) => {
 // Convert network rate to slider value (0-100)
 export const networkRateToSliderValue = (bytesPerSecond) => {
   return Math.min(100, Math.round(bytesPerSecond / 104858));
+};
+
+/**
+ * Format bytes with unit information
+ * @param {number} bytes - The bytes value to format
+ * @param {string} unit - Optional unit information ('bytes', 'KB', 'MB', 'GB')
+ * @returns {string} Formatted string with appropriate unit
+ */
+export const formatBytesWithUnit = (bytes, unit = 'bytes') => {
+  if (bytes === null || bytes === undefined) {
+    return 'N/A';
+  }
+  
+  // If the unit is specified, convert the value back to bytes for consistent formatting
+  let bytesValue = bytes;
+  if (unit === 'KB') {
+    bytesValue = bytes * 1024;
+  } else if (unit === 'MB') {
+    bytesValue = bytes * 1024 * 1024;
+  } else if (unit === 'GB') {
+    bytesValue = bytes * 1024 * 1024 * 1024;
+  }
+  
+  // Now format using the standard formatter
+  return formatBytes(bytesValue);
 }; 
