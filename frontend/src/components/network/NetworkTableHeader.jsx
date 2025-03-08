@@ -277,8 +277,16 @@ const NetworkTableHeader = ({
             vertical: 'top',
             horizontal: 'right',
           }}
+          PaperProps={{
+            elevation: 3,
+            sx: { 
+              borderRadius: 2,
+              overflow: 'hidden',
+              width: 300
+            }
+          }}
         >
-          <Box sx={{ px: 2, py: 1 }}>
+          <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
             <Typography variant="subtitle2" gutterBottom>
               Column Visibility
             </Typography>
@@ -287,137 +295,135 @@ const NetworkTableHeader = ({
             </Typography>
           </Box>
           
-          <Divider />
-          
-          {/* Column visibility and order controls */}
-          {displayOrder.map((columnId) => {
-            const config = columnVisibility[columnId];
-            if (!config) return null;
-            
-            return (
-              <MenuItem 
-                key={columnId}
-                onClick={() => toggleColumnVisibility(columnId)}
-                dense
-                className="column-menu-item"
-                data-column-id={columnId}
-                draggable={false}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  handleDragOver(e, columnId);
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  console.log('Drop on column:', columnId);
-                  handleDrop(e, columnId);
-                }}
-                onDragEnd={(e) => {
-                  console.log('Drag end');
-                  handleDragEnd();
-                }}
-                sx={{ 
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  backgroundColor: dragOverColumn === columnId 
-                    ? 'rgba(25, 118, 210, 0.08)' 
-                    : draggedColumn === columnId 
-                      ? 'rgba(0, 0, 0, 0.04)' 
-                      : 'transparent',
-                  borderLeft: config.visible ? '3px solid' : 'none',
-                  borderLeftColor: 'primary.main',
-                  pl: config.visible ? 1 : 2,
-                  cursor: draggedColumn === columnId ? 'grabbing' : 'pointer',
-                  transition: 'all 0.2s ease',
-                  position: 'relative',
-                  transform: draggedColumn === columnId ? 'scale(1.02)' : 'scale(1)',
-                  zIndex: draggedColumn === columnId ? 1200 : 1,
-                  boxShadow: draggedColumn === columnId ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
-                  '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                  },
-                  '&:hover .drag-handle': {
-                    opacity: 1
-                  },
-                  '&::before': dragOverColumn === columnId && draggedColumn !== columnId ? {
-                    content: '""',
-                    position: 'absolute',
-                    left: 0,
-                    right: 0,
-                    height: '2px',
-                    backgroundColor: 'primary.main',
-                    top: getDropPosition(draggedColumn, columnId) === 'before' ? 0 : 'auto',
-                    bottom: getDropPosition(draggedColumn, columnId) === 'after' ? 0 : 'auto',
-                  } : {}
-                }}
-              >
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  width: '100%',
-                  justifyContent: 'space-between'
-                }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ maxHeight: '60vh', overflow: 'auto' }}>
+            {/* Column visibility and order controls */}
+            {displayOrder.map((columnId) => {
+              const config = columnVisibility[columnId];
+              if (!config) return null;
+              
+              return (
+                <MenuItem 
+                  key={columnId}
+                  onClick={() => toggleColumnVisibility(columnId)}
+                  dense
+                  className="column-menu-item"
+                  data-column-id={columnId}
+                  draggable={false}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    handleDragOver(e, columnId);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    handleDrop(e, columnId);
+                  }}
+                  onDragEnd={(e) => {
+                    handleDragEnd();
+                  }}
+                  sx={{ 
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    backgroundColor: dragOverColumn === columnId 
+                      ? 'rgba(25, 118, 210, 0.08)' 
+                      : draggedColumn === columnId 
+                        ? 'rgba(0, 0, 0, 0.04)' 
+                        : 'transparent',
+                    borderLeft: config.visible ? '3px solid' : 'none',
+                    borderLeftColor: 'primary.main',
+                    pl: config.visible ? 1 : 2,
+                    cursor: draggedColumn === columnId ? 'grabbing' : 'pointer',
+                    transition: 'all 0.2s ease',
+                    position: 'relative',
+                    transform: draggedColumn === columnId ? 'scale(1.02)' : 'scale(1)',
+                    zIndex: draggedColumn === columnId ? 1200 : 1,
+                    boxShadow: draggedColumn === columnId ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                    },
+                    '&:hover .drag-handle': {
+                      opacity: 1
+                    },
+                    '&::before': dragOverColumn === columnId && draggedColumn !== columnId ? {
+                      content: '""',
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      height: '2px',
+                      backgroundColor: 'primary.main',
+                      top: getDropPosition(draggedColumn, columnId) === 'before' ? 0 : 'auto',
+                      bottom: getDropPosition(draggedColumn, columnId) === 'after' ? 0 : 'auto',
+                    } : {}
+                  }}
+                >
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    width: '100%',
+                    justifyContent: 'space-between'
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Box 
+                        className="drag-handle"
+                        draggable="true"
+                        onDragStart={(e) => {
+                          e.stopPropagation();
+                          handleDragStart(e, columnId);
+                        }}
+                        sx={{ 
+                          opacity: draggedColumn === columnId ? 1 : 0.3,
+                          mr: 1,
+                          cursor: draggedColumn === columnId ? 'grabbing' : 'grab',
+                          display: 'flex',
+                          alignItems: 'center',
+                          color: draggedColumn === columnId ? 'primary.main' : 'text.secondary',
+                          '&:hover': {
+                            opacity: 1,
+                            color: 'primary.main'
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <DragIndicatorIcon fontSize="small" />
+                      </Box>
+                      <Typography 
+                        variant="body2"
+                        sx={{
+                          fontWeight: draggedColumn === columnId ? 500 : 400
+                        }}
+                      >
+                        {config.label}
+                      </Typography>
+                    </Box>
                     <Box 
-                      className="drag-handle"
-                      draggable="true"
-                      onDragStart={(e) => {
-                        e.stopPropagation();
-                        handleDragStart(e, columnId);
-                      }}
+                      component="span" 
                       sx={{ 
-                        opacity: draggedColumn === columnId ? 1 : 0.3,
-                        mr: 1,
-                        cursor: draggedColumn === columnId ? 'grabbing' : 'grab',
+                        width: 16, 
+                        height: 16, 
+                        borderRadius: '50%',
+                        border: '1px solid',
+                        borderColor: 'divider',
                         display: 'flex',
                         alignItems: 'center',
-                        color: draggedColumn === columnId ? 'primary.main' : 'text.secondary',
-                        '&:hover': {
-                          opacity: 1,
-                          color: 'primary.main'
-                        }
+                        justifyContent: 'center',
+                        bgcolor: config.visible ? 'primary.main' : 'transparent',
+                        color: config.visible ? 'primary.contrastText' : 'transparent',
                       }}
-                      onClick={(e) => e.stopPropagation()}
                     >
-                      <DragIndicatorIcon fontSize="small" />
+                      {config.visible && <CheckIcon fontSize="small" sx={{ fontSize: 12 }} />}
                     </Box>
-                    <Typography 
-                      variant="body2"
-                      sx={{
-                        fontWeight: draggedColumn === columnId ? 500 : 400
-                      }}
-                    >
-                      {config.label}
-                    </Typography>
                   </Box>
-                  <Box 
-                    component="span" 
-                    sx={{ 
-                      width: 16, 
-                      height: 16, 
-                      borderRadius: '50%',
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      bgcolor: config.visible ? 'primary.main' : 'transparent',
-                      color: config.visible ? 'primary.contrastText' : 'transparent',
-                    }}
-                  >
-                    {config.visible && <CheckIcon fontSize="small" sx={{ fontSize: 12 }} />}
-                  </Box>
-                </Box>
-              </MenuItem>
-            );
-          })}
-          
-          <Divider />
-          <MenuItem onClick={resetColumnVisibility}>
-            <Typography variant="body2" color="primary">
-              Reset to Default
-            </Typography>
-          </MenuItem>
+                </MenuItem>
+              );
+            })}
+            
+            <Divider />
+            <MenuItem onClick={resetColumnVisibility} sx={{ justifyContent: 'center' }}>
+              <Typography variant="body2" color="primary">
+                Reset to Default
+              </Typography>
+            </MenuItem>
+          </Box>
         </Menu>
       </TableRow>
     </TableHead>

@@ -160,19 +160,61 @@ const NetworkFilters = ({
           onChange={handleGuestTypeChange}
           aria-label="system type filter"
           size="small"
-          sx={{ width: '100%' }}
+          sx={{ 
+            width: '100%',
+            '& .MuiToggleButton-root': {
+              borderRadius: 1.5,
+              py: 1,
+              textTransform: 'none',
+              fontWeight: 500,
+              '&.Mui-selected': {
+                backgroundColor: 'primary.main',
+                color: 'primary.contrastText',
+                '&:hover': {
+                  backgroundColor: 'primary.dark',
+                },
+                '& .MuiSvgIcon-root': {
+                  color: 'primary.contrastText'
+                }
+              },
+              '&:hover': {
+                backgroundColor: 'action.hover'
+              }
+            },
+            '& .MuiToggleButtonGroup-grouped': {
+              mx: 0.5,
+              border: '1px solid',
+              borderColor: 'divider',
+              '&:not(:first-of-type)': {
+                borderLeft: '1px solid',
+                borderLeftColor: 'divider',
+              },
+              '&:first-of-type': {
+                ml: 0
+              },
+              '&:last-of-type': {
+                mr: 0
+              }
+            }
+          }}
         >
           <ToggleButton value="all" aria-label="all systems" sx={{ flex: 1 }}>
-            <ViewListIcon fontSize="small" sx={{ mr: 0.5 }} />
-            All
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ViewListIcon fontSize="small" sx={{ mr: 0.5 }} />
+              All
+            </Box>
           </ToggleButton>
           <ToggleButton value="vm" aria-label="virtual machines only" sx={{ flex: 1 }}>
-            <ComputerIcon fontSize="small" sx={{ mr: 0.5 }} />
-            VMs
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ComputerIcon fontSize="small" sx={{ mr: 0.5 }} />
+              VMs
+            </Box>
           </ToggleButton>
           <ToggleButton value="ct" aria-label="containers only" sx={{ flex: 1 }}>
-            <DnsIcon fontSize="small" sx={{ mr: 0.5 }} />
-            CTs
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <DnsIcon fontSize="small" sx={{ mr: 0.5 }} />
+              CTs
+            </Box>
           </ToggleButton>
         </ToggleButtonGroup>
       </Box>

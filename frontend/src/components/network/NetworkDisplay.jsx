@@ -966,89 +966,100 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
             vertical: 'top',
             horizontal: 'right',
           }}
+          PaperProps={{
+            elevation: 3,
+            sx: { 
+              borderRadius: 2,
+              overflow: 'hidden'
+            }
+          }}
         >
-          <Paper sx={{ width: 350, p: 2 }}>
-            <Typography variant="subtitle2" gutterBottom>
-              Search Systems
-            </Typography>
-            <Typography variant="caption" color="text.secondary" gutterBottom>
-              Search for specific systems by name, ID, or other properties.
-            </Typography>
+          <Paper sx={{ width: 350, p: 0, overflow: 'hidden' }}>
+            <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Search Systems
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Search for specific systems by name, ID, or other properties.
+              </Typography>
+            </Box>
             
-            <Box
-              component="form"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (searchTerm.trim()) {
-                  addSearchTerm(searchTerm.trim());
-                  setSearchTerm('');
-                }
-              }}
-              sx={{ mt: 2, display: 'flex', alignItems: 'center' }}
-            >
-              <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
-              <TextField
-                fullWidth
-                size="small"
-                placeholder="Search systems..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && searchTerm.trim()) {
-                    e.preventDefault();
+            <Box sx={{ p: 2 }}>
+              <Box
+                component="form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (searchTerm.trim()) {
                     addSearchTerm(searchTerm.trim());
                     setSearchTerm('');
                   }
                 }}
-                inputRef={searchInputRef}
-                autoFocus
-                variant="standard"
-                InputProps={{
-                  disableUnderline: true,
-                  endAdornment: searchTerm ? (
-                    <IconButton
-                      size="small"
-                      aria-label="clear search"
-                      onClick={() => setSearchTerm('')}
-                      sx={{ p: 0.5 }}
-                    >
-                      <ClearIcon fontSize="small" />
-                    </IconButton>
-                  ) : null
-                }}
-                sx={{ flex: 1 }}
-              />
-            </Box>
-            
-            {activeSearchTerms.length > 0 && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="body2" gutterBottom>
-                  Active Search Terms
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                  {activeSearchTerms.map((term) => (
-                    <Chip
-                      key={term}
-                      label={term}
-                      size="small"
-                      onDelete={() => removeSearchTerm(term)}
-                    />
-                  ))}
-                </Box>
-              </Box>
-            )}
-            
-            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-              <Button 
-                size="small" 
-                onClick={() => {
-                  setActiveSearchTerms([]);
-                  setSearchTerm('');
-                  handleCloseSearchPopover();
-                }}
+                sx={{ display: 'flex', alignItems: 'center' }}
               >
-                Clear All
-              </Button>
+                <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
+                <TextField
+                  fullWidth
+                  size="small"
+                  placeholder="Search systems..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && searchTerm.trim()) {
+                      e.preventDefault();
+                      addSearchTerm(searchTerm.trim());
+                      setSearchTerm('');
+                    }
+                  }}
+                  inputRef={searchInputRef}
+                  autoFocus
+                  variant="standard"
+                  InputProps={{
+                    disableUnderline: true,
+                    endAdornment: searchTerm ? (
+                      <IconButton
+                        size="small"
+                        aria-label="clear search"
+                        onClick={() => setSearchTerm('')}
+                        sx={{ p: 0.5 }}
+                      >
+                        <ClearIcon fontSize="small" />
+                      </IconButton>
+                    ) : null
+                  }}
+                  sx={{ flex: 1 }}
+                />
+              </Box>
+            
+              {activeSearchTerms.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="body2" gutterBottom>
+                    Active Search Terms
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {activeSearchTerms.map((term) => (
+                      <Chip
+                        key={term}
+                        label={term}
+                        size="small"
+                        onDelete={() => removeSearchTerm(term)}
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              )}
+              
+              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                <Button 
+                  size="small" 
+                  onClick={() => {
+                    setActiveSearchTerms([]);
+                    setSearchTerm('');
+                    handleCloseSearchPopover();
+                  }}
+                >
+                  Clear All
+                </Button>
+              </Box>
             </Box>
           </Paper>
         </Popover>
@@ -1067,16 +1078,25 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
             vertical: 'top',
             horizontal: 'right',
           }}
+          PaperProps={{
+            elevation: 3,
+            sx: { 
+              borderRadius: 2,
+              overflow: 'hidden'
+            }
+          }}
         >
-          <Paper sx={{ width: 300, p: 2 }}>
-            <Typography variant="subtitle2" gutterBottom>
-              System Type
-            </Typography>
-            <Typography variant="caption" color="text.secondary" gutterBottom>
-              Filter systems by their type.
-            </Typography>
+          <Paper sx={{ width: 300, p: 0, overflow: 'hidden' }}>
+            <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="subtitle2" gutterBottom>
+                System Type
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Filter systems by their type.
+              </Typography>
+            </Box>
             
-            <Box sx={{ mt: 2 }}>
+            <Box sx={{ p: 2 }}>
               <ToggleButtonGroup
                 value={guestTypeFilter}
                 exclusive
@@ -1088,22 +1108,58 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                 }}
                 aria-label="system type filter"
                 size="small"
-                sx={{ width: '100%' }}
+                sx={{ 
+                  width: '100%',
+                  '& .MuiToggleButton-root': {
+                    borderRadius: 1.5,
+                    py: 1,
+                    textTransform: 'none',
+                    fontWeight: 500,
+                    '&.Mui-selected': {
+                      backgroundColor: 'primary.main',
+                      color: 'primary.contrastText',
+                      '&:hover': {
+                        backgroundColor: 'primary.dark',
+                      },
+                      '& .MuiSvgIcon-root': {
+                        color: 'primary.contrastText'
+                      }
+                    },
+                    '&:hover': {
+                      backgroundColor: 'action.hover'
+                    }
+                  },
+                  '& .MuiToggleButtonGroup-grouped': {
+                    mx: 0.5,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    '&:not(:first-of-type)': {
+                      borderLeft: '1px solid',
+                      borderLeftColor: 'divider',
+                    },
+                    '&:first-of-type': {
+                      ml: 0
+                    },
+                    '&:last-of-type': {
+                      mr: 0
+                    }
+                  }
+                }}
               >
                 <ToggleButton value="all" aria-label="all systems" sx={{ flex: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <ViewListIcon fontSize="small" sx={{ mr: 1 }} />
                     All Systems
                   </Box>
                 </ToggleButton>
                 <ToggleButton value="vm" aria-label="virtual machines only" sx={{ flex: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <ComputerIcon fontSize="small" sx={{ mr: 1 }} />
                     VMs Only
                   </Box>
                 </ToggleButton>
                 <ToggleButton value="ct" aria-label="containers only" sx={{ flex: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <DnsIcon fontSize="small" sx={{ mr: 1 }} />
                     CTs Only
                   </Box>
@@ -1127,19 +1183,34 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
             vertical: 'top',
             horizontal: 'right',
           }}
+          PaperProps={{
+            elevation: 3,
+            sx: { 
+              borderRadius: 2,
+              overflow: 'hidden'
+            }
+          }}
         >
-          <Paper sx={{ width: 300, p: 2 }}>
-            <Typography variant="subtitle2" gutterBottom>
-              System Visibility
-            </Typography>
-            <Typography variant="caption" color="text.secondary" gutterBottom>
-              Control which systems are visible.
-            </Typography>
+          <Paper sx={{ width: 300, p: 0, overflow: 'hidden' }}>
+            <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="subtitle2" gutterBottom>
+                System Visibility
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Control which systems are visible.
+              </Typography>
+            </Box>
             
-            <Box sx={{ mt: 2 }}>
+            <Box sx={{ p: 2 }}>
               <MenuItem dense onClick={() => {
                 setShowStopped(!showStopped);
                 handleCloseVisibilityPopover();
+              }}
+              sx={{
+                borderRadius: 1.5,
+                '&:hover': {
+                  backgroundColor: 'action.hover'
+                }
               }}>
                 <Box sx={{ 
                   display: 'flex', 
@@ -1185,16 +1256,25 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
             vertical: 'top',
             horizontal: 'right',
           }}
+          PaperProps={{
+            elevation: 3,
+            sx: { 
+              borderRadius: 2,
+              overflow: 'hidden'
+            }
+          }}
         >
-          <Paper sx={{ width: 350, p: 2 }}>
-            <Typography variant="subtitle2" gutterBottom>
-              Resource Thresholds
-            </Typography>
-            <Typography variant="caption" color="text.secondary" gutterBottom>
-              Filter systems by resource usage thresholds.
-            </Typography>
+          <Paper sx={{ width: 350, p: 0, overflow: 'hidden' }}>
+            <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Resource Thresholds
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Filter systems by resource usage thresholds.
+              </Typography>
+            </Box>
             
-            <Box sx={{ mt: 2 }}>
+            <Box sx={{ p: 2 }}>
               {/* CPU Filter */}
               <Box sx={{ mb: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
