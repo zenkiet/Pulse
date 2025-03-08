@@ -112,9 +112,15 @@ const NetworkTableRow = ({
         );
       case 'status':
         return (
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            width: '100%',
+            height: '100%'
+          }}>
             <Tooltip title={isRunning ? 'Running' : 'Stopped'}>
-              <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                 <StatusIndicator status={isRunning ? 'running' : 'stopped'} />
               </Box>
             </Tooltip>
@@ -192,7 +198,11 @@ const NetworkTableRow = ({
               sx={{ 
                 width: columnWidths?.[column.id] || 'auto',
                 minWidth: getMinWidthForColumn(column.id),
-                backgroundColor: activeFilteredColumns[column.id] ? 'rgba(25, 118, 210, 0.04)' : 'inherit'
+                backgroundColor: activeFilteredColumns[column.id] ? 'rgba(25, 118, 210, 0.04)' : 'inherit',
+                ...(column.id === 'status' && {
+                  textAlign: 'center',
+                  padding: '0px 8px'
+                })
               }}
             >
               {renderCellContent(column.id)}
