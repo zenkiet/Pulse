@@ -1425,7 +1425,13 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
       <Card>
         <CardContent sx={{ p: 0 }}>
           <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 200px)', overflow: 'auto' }}>
-            <Table stickyHeader size="small">
+            <Table stickyHeader size="small" sx={{
+              '& .MuiTableCell-stickyHeader': {
+                borderBottom: '2px solid',
+                borderBottomColor: 'divider',
+                zIndex: 3 // Ensure the header stays above other elements
+              }
+            }}>
               <NetworkTableHeader
                 sortConfig={sortConfig}
                 requestSort={requestSort}
