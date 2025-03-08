@@ -16,6 +16,8 @@ import {
 } from '@mui/material';
 import ViewColumnIcon from '@mui/icons-material/ViewColumn';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import CheckIcon from '@mui/icons-material/Check';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import { DEFAULT_COLUMN_CONFIG } from '../../constants/networkConstants';
 import { calculateDynamicColumnWidths } from '../../utils/networkUtils';
 
@@ -29,7 +31,10 @@ const NetworkTableHeader = ({
   handleColumnMenuOpen,
   handleColumnMenuClose,
   openColumnMenu,
-  forceUpdateCounter
+  forceUpdateCounter,
+  columnOrder,
+  setColumnOrder,
+  activeFilteredColumns = {}
 }) => {
   // Helper function to get sort direction
   const getSortDirection = (key) => {
@@ -48,11 +53,154 @@ const NetworkTableHeader = ({
     return calculateDynamicColumnWidths(columnVisibility);
   }, [columnVisibility, forceUpdateCounter]);
 
+  // Get visible columns in the correct order
+  const visibleColumns = useMemo(() => {
+    if (!columnOrder || !Array.isArray(columnOrder) || columnOrder.length === 0) {
+      return [];
+    }
+    
+    // Filter visible columns
+    const visible = Object.entries(columnVisibility || {})
+      .filter(([_, config]) => config?.visible)
+      .map(([id, config]) => ({ id, ...config }));
+    
+    // Sort them according to columnOrder
+    return columnOrder
+      .filter(id => columnVisibility?.[id]?.visible)
+      .map(id => {
+        const column = visible.find(col => col.id === id);
+        return column || null;
+      })
+      .filter(Boolean); // Remove any null values
+  }, [columnVisibility, columnOrder]);
+
+  // Move a column up in the order
+  const moveColumnUp = (columnId) => {
+    const currentIndex = columnOrder.indexOf(columnId);
+    if (currentIndex > 0) {
+      const newOrder = [...columnOrder];
+      [newOrder[currentIndex - 1], newOrder[currentIndex]] = [newOrder[currentIndex], newOrder[currentIndex - 1]];
+      setColumnOrder(newOrder);
+    }
+  };
+
+  // Move a column down in the order
+  const moveColumnDown = (columnId) => {
+    const currentIndex = columnOrder.indexOf(columnId);
+    if (currentIndex < columnOrder.length - 1) {
+      const newOrder = [...columnOrder];
+      [newOrder[currentIndex], newOrder[currentIndex + 1]] = [newOrder[currentIndex + 1], newOrder[currentIndex]];
+      setColumnOrder(newOrder);
+    }
+  };
+
+  // Handle drag start for a column
+  const [draggedColumn, setDraggedColumn] = React.useState(null);
+  const [dragOverColumn, setDragOverColumn] = React.useState(null);
+  const [previewOrder, setPreviewOrder] = React.useState(null);
+  const dragHandleRef = React.useRef(null);
+
+  // Let's go back to the HTML5 drag and drop, but fix the image issue properly
+  const handleDragStart = (e, columnId) => {
+    console.log('Drag start:', columnId);
+    setDraggedColumn(columnId);
+    setPreviewOrder([...columnOrder]);
+    
+    // Create a completely transparent drag image
+    const dragImage = document.createElement('div');
+    dragImage.style.position = 'absolute';
+    dragImage.style.width = '1px';
+    dragImage.style.height = '1px';
+    dragImage.style.top = '-1000px';
+    document.body.appendChild(dragImage);
+    
+    // Set the drag image to our transparent div
+    // The key is to set the offset far away from the cursor
+    e.dataTransfer.setDragImage(dragImage, 0, 0);
+    
+    // This is needed for Firefox
+    e.dataTransfer.setData('text/plain', columnId);
+    
+    // Clean up
+    setTimeout(() => {
+      document.body.removeChild(dragImage);
+    }, 0);
+  };
+
+  const handleDragOver = (e, columnId) => {
+    e.preventDefault();
+    if (draggedColumn !== columnId) {
+      setDragOverColumn(columnId);
+      
+      // Update preview order for live feedback
+      if (previewOrder && draggedColumn && columnId) {
+        const newPreviewOrder = [...previewOrder];
+        const sourceIndex = newPreviewOrder.indexOf(draggedColumn);
+        const targetIndex = newPreviewOrder.indexOf(columnId);
+        
+        if (sourceIndex !== -1 && targetIndex !== -1) {
+          // Remove the dragged item
+          newPreviewOrder.splice(sourceIndex, 1);
+          // Insert it at the new position
+          newPreviewOrder.splice(targetIndex, 0, draggedColumn);
+          console.log('Preview order updated:', newPreviewOrder);
+          setPreviewOrder(newPreviewOrder);
+        }
+      }
+    } else {
+      setDragOverColumn(null);
+    }
+  };
+
+  const handleDrop = (e, targetColumnId) => {
+    e.preventDefault();
+    
+    // If we have a preview order, use that directly since it already shows the correct order
+    if (previewOrder && draggedColumn) {
+      console.log('Setting column order from preview:', previewOrder);
+      setColumnOrder([...previewOrder]);
+    } 
+    // Fallback to the old logic if preview order isn't available for some reason
+    else if (draggedColumn && targetColumnId && draggedColumn !== targetColumnId) {
+      console.log('Using fallback drop logic');
+      const sourceIndex = columnOrder.indexOf(draggedColumn);
+      const targetIndex = columnOrder.indexOf(targetColumnId);
+      
+      if (sourceIndex !== -1 && targetIndex !== -1) {
+        const newOrder = [...columnOrder];
+        newOrder.splice(sourceIndex, 1);
+        newOrder.splice(targetIndex, 0, draggedColumn);
+        setColumnOrder(newOrder);
+      }
+    }
+    
+    // Reset states
+    setDraggedColumn(null);
+    setDragOverColumn(null);
+    setPreviewOrder(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedColumn(null);
+    setDragOverColumn(null);
+    setPreviewOrder(null);
+  };
+
+  const getDropPosition = (draggedId, targetId) => {
+    if (!draggedId || !targetId || draggedId === targetId) return null;
+    const draggedIndex = columnOrder.indexOf(draggedId);
+    const targetIndex = columnOrder.indexOf(targetId);
+    return draggedIndex < targetIndex ? 'after' : 'before';
+  };
+  
+  // Get the display order (either the preview during drag or the actual order)
+  const displayOrder = previewOrder || columnOrder;
+
   return (
     <TableHead>
       <TableRow>
         {/* If no columns are visible, show a message in the header */}
-        {!hasVisibleColumns && (
+        {!hasVisibleColumns ? (
           <TableCell colSpan={12} align="center">
             <Box sx={{ 
               display: 'flex', 
@@ -69,17 +217,6 @@ const NetworkTableHeader = ({
                 variant="outlined" 
                 onClick={() => {
                   console.log('Reset button clicked in NetworkTableHeader');
-                  
-                  // Direct reset - create a new configuration with all columns visible
-                  const allVisibleConfig = {};
-                  Object.keys(columnVisibility).forEach(key => {
-                    allVisibleConfig[key] = {
-                      ...columnVisibility[key],
-                      visible: true // Force all columns to be visible
-                    };
-                  });
-                  
-                  // Call the resetColumnVisibility function from the parent
                   resetColumnVisibility();
                 }}
               >
@@ -87,235 +224,211 @@ const NetworkTableHeader = ({
               </Button>
             </Box>
           </TableCell>
+        ) : (
+          <>
+            {/* Render column headers */}
+            {visibleColumns.map(column => (
+              <TableCell 
+                key={column.id}
+                sx={{ 
+                  width: columnWidths[column.id] || 'auto',
+                  minWidth: getMinWidthForColumn(column.id),
+                  backgroundColor: activeFilteredColumns[column.id] ? 'rgba(25, 118, 210, 0.08)' : 'inherit'
+                }}
+              >
+                <TableSortLabel
+                  active={sortConfig?.key === column.id}
+                  direction={getSortDirection(column.id)}
+                  onClick={() => requestSort(column.id)}
+                >
+                  {column.label || column.id}
+                </TableSortLabel>
+              </TableCell>
+            ))}
+          </>
         )}
         
-        {/* Node Column */}
-        {columnVisibility.node.visible && (
-          <TableCell sx={{ width: columnWidths.node, minWidth: 80 }}>
-            <TableSortLabel
-              active={sortConfig.key === 'node'}
-              direction={getSortDirection('node')}
-              onClick={() => requestSort('node')}
-            >
-              Node
-            </TableSortLabel>
-          </TableCell>
-        )}
-
-        {/* Type Column */}
-        {columnVisibility.type.visible && (
-          <TableCell sx={{ width: columnWidths.type, minWidth: 50 }}>
-            <TableSortLabel
-              active={sortConfig.key === 'type'}
-              direction={getSortDirection('type')}
-              onClick={() => requestSort('type')}
-            >
-              Type
-            </TableSortLabel>
-          </TableCell>
-        )}
-
-        {/* ID Column */}
-        {columnVisibility.id.visible && (
-          <TableCell sx={{ width: columnWidths.id, minWidth: 70 }}>
-            <TableSortLabel
-              active={sortConfig.key === 'id'}
-              direction={getSortDirection('id')}
-              onClick={() => requestSort('id')}
-            >
-              ID
-            </TableSortLabel>
-          </TableCell>
-        )}
-
-        {/* Name Column */}
-        {columnVisibility.name.visible && (
-          <TableCell sx={{ width: columnWidths.name, minWidth: 150 }}>
-            <TableSortLabel
-              active={sortConfig.key === 'name'}
-              direction={getSortDirection('name')}
-              onClick={() => requestSort('name')}
-            >
-              Name
-            </TableSortLabel>
-          </TableCell>
-        )}
-
-        {/* CPU Column */}
-        {columnVisibility.cpu.visible && (
-          <TableCell sx={{ width: columnWidths.cpu, minWidth: 120 }}>
-            <TableSortLabel
-              active={sortConfig.key === 'cpu'}
-              direction={getSortDirection('cpu')}
-              onClick={() => requestSort('cpu')}
-            >
-              CPU
-            </TableSortLabel>
-          </TableCell>
-        )}
-
-        {/* Memory Column */}
-        {columnVisibility.memory.visible && (
-          <TableCell sx={{ width: columnWidths.memory, minWidth: 120 }}>
-            <TableSortLabel
-              active={sortConfig.key === 'memory'}
-              direction={getSortDirection('memory')}
-              onClick={() => requestSort('memory')}
-            >
-              Memory
-            </TableSortLabel>
-          </TableCell>
-        )}
-
-        {/* Disk Column */}
-        {columnVisibility.disk.visible && (
-          <TableCell sx={{ width: columnWidths.disk, minWidth: 120 }}>
-            <TableSortLabel
-              active={sortConfig.key === 'disk'}
-              direction={getSortDirection('disk')}
-              onClick={() => requestSort('disk')}
-            >
-              Disk
-            </TableSortLabel>
-          </TableCell>
-        )}
-
-        {/* Download Column */}
-        {columnVisibility.download.visible && (
-          <TableCell sx={{ width: columnWidths.download, minWidth: 100 }}>
-            <TableSortLabel
-              active={sortConfig.key === 'download'}
-              direction={getSortDirection('download')}
-              onClick={() => requestSort('download')}
-            >
-              Download
-            </TableSortLabel>
-          </TableCell>
-        )}
-
-        {/* Upload Column */}
-        {columnVisibility.upload.visible && (
-          <TableCell sx={{ width: columnWidths.upload, minWidth: 100 }}>
-            <TableSortLabel
-              active={sortConfig.key === 'upload'}
-              direction={getSortDirection('upload')}
-              onClick={() => requestSort('upload')}
-            >
-              Upload
-            </TableSortLabel>
-          </TableCell>
-        )}
-
-        {/* Uptime Column */}
-        {columnVisibility.uptime.visible && (
-          <TableCell sx={{ width: columnWidths.uptime, minWidth: 80 }}>
-            <TableSortLabel
-              active={sortConfig.key === 'uptime'}
-              direction={getSortDirection('uptime')}
-              onClick={() => requestSort('uptime')}
-            >
-              Uptime
-            </TableSortLabel>
-          </TableCell>
-        )}
-
-        {/* Column visibility menu button - always show this */}
-        <TableCell padding="checkbox">
-          <Tooltip title="Customize columns">
-            <IconButton
-              size="small"
-              onClick={handleColumnMenuOpen}
-              aria-controls={openColumnMenu ? 'column-menu' : undefined}
-              aria-haspopup="true"
-              aria-expanded={openColumnMenu ? 'true' : undefined}
-            >
-              <Badge
-                badgeContent={Object.keys(DEFAULT_COLUMN_CONFIG).length - visibleColumnCount}
-                color="primary"
-                invisible={visibleColumnCount === Object.keys(DEFAULT_COLUMN_CONFIG).length}
-              >
-                <ViewColumnIcon fontSize="small" />
-              </Badge>
-            </IconButton>
-          </Tooltip>
-          <Menu
-            id="column-menu"
-            anchorEl={columnMenuAnchorEl}
-            open={openColumnMenu}
-            onClose={handleColumnMenuClose}
-            MenuListProps={{
-              'aria-labelledby': 'column-visibility-button',
-            }}
-            anchorOrigin={{
-              vertical: 'bottom',
-              horizontal: 'right',
-            }}
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
-            }}
-          >
-            <Box sx={{ px: 2, py: 1 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Show/Hide Columns
-              </Typography>
-            </Box>
-            <Divider />
-            {Object.values(columnVisibility).map((column) => (
-              <MenuItem
-                key={column.id}
-                onClick={() => toggleColumnVisibility(column.id)}
+        {/* Column menu */}
+        <Menu
+          id="column-menu"
+          anchorEl={columnMenuAnchorEl}
+          open={openColumnMenu}
+          onClose={handleColumnMenuClose}
+          MenuListProps={{
+            'aria-labelledby': 'column-visibility-button',
+          }}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'right',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+        >
+          <Box sx={{ px: 2, py: 1 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Column Visibility
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Click to toggle visibility. Drag to reorder.
+            </Typography>
+          </Box>
+          
+          <Divider />
+          
+          {/* Column visibility and order controls */}
+          {displayOrder.map((columnId) => {
+            const config = columnVisibility[columnId];
+            if (!config) return null;
+            
+            return (
+              <MenuItem 
+                key={columnId}
+                onClick={() => toggleColumnVisibility(columnId)}
                 dense
+                className="column-menu-item"
+                data-column-id={columnId}
+                draggable={false}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  handleDragOver(e, columnId);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  console.log('Drop on column:', columnId);
+                  handleDrop(e, columnId);
+                }}
+                onDragEnd={(e) => {
+                  console.log('Drag end');
+                  handleDragEnd();
+                }}
+                sx={{ 
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  backgroundColor: dragOverColumn === columnId 
+                    ? 'rgba(25, 118, 210, 0.08)' 
+                    : draggedColumn === columnId 
+                      ? 'rgba(0, 0, 0, 0.04)' 
+                      : 'transparent',
+                  borderLeft: config.visible ? '3px solid' : 'none',
+                  borderLeftColor: 'primary.main',
+                  pl: config.visible ? 1 : 2,
+                  cursor: draggedColumn === columnId ? 'grabbing' : 'pointer',
+                  transition: 'all 0.2s ease',
+                  position: 'relative',
+                  transform: draggedColumn === columnId ? 'scale(1.02)' : 'scale(1)',
+                  zIndex: draggedColumn === columnId ? 1200 : 1,
+                  boxShadow: draggedColumn === columnId ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                  },
+                  '&:hover .drag-handle': {
+                    opacity: 1
+                  },
+                  '&::before': dragOverColumn === columnId && draggedColumn !== columnId ? {
+                    content: '""',
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    height: '2px',
+                    backgroundColor: 'primary.main',
+                    top: getDropPosition(draggedColumn, columnId) === 'before' ? 0 : 'auto',
+                    bottom: getDropPosition(draggedColumn, columnId) === 'after' ? 0 : 'auto',
+                  } : {}
+                }}
               >
-                <Box
-                  component="span"
-                  sx={{
-                    width: 20,
-                    height: 20,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    borderRadius: 0.5,
-                    mr: 1,
-                    bgcolor: column.visible ? 'primary.main' : 'transparent',
-                    color: column.visible ? 'white' : 'transparent',
-                  }}
-                >
-                  {column.visible && '✓'}
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  width: '100%',
+                  justifyContent: 'space-between'
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Box 
+                      className="drag-handle"
+                      draggable="true"
+                      onDragStart={(e) => {
+                        e.stopPropagation();
+                        handleDragStart(e, columnId);
+                      }}
+                      sx={{ 
+                        opacity: draggedColumn === columnId ? 1 : 0.3,
+                        mr: 1,
+                        cursor: draggedColumn === columnId ? 'grabbing' : 'grab',
+                        display: 'flex',
+                        alignItems: 'center',
+                        color: draggedColumn === columnId ? 'primary.main' : 'text.secondary',
+                        '&:hover': {
+                          opacity: 1,
+                          color: 'primary.main'
+                        }
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <DragIndicatorIcon fontSize="small" />
+                    </Box>
+                    <Typography 
+                      variant="body2"
+                      sx={{
+                        fontWeight: draggedColumn === columnId ? 500 : 400
+                      }}
+                    >
+                      {config.label}
+                    </Typography>
+                  </Box>
+                  <Box 
+                    component="span" 
+                    sx={{ 
+                      width: 16, 
+                      height: 16, 
+                      borderRadius: '50%',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: config.visible ? 'primary.main' : 'transparent',
+                      color: config.visible ? 'primary.contrastText' : 'transparent',
+                    }}
+                  >
+                    {config.visible && <CheckIcon fontSize="small" sx={{ fontSize: 12 }} />}
+                  </Box>
                 </Box>
-                {column.label}
               </MenuItem>
-            ))}
-            <Divider />
-            <MenuItem 
-              onClick={() => {
-                console.log('Reset menu item clicked in NetworkTableHeader');
-                
-                // Direct reset - create a new configuration with all columns visible
-                const allVisibleConfig = {};
-                Object.keys(columnVisibility).forEach(key => {
-                  allVisibleConfig[key] = {
-                    ...columnVisibility[key],
-                    visible: true // Force all columns to be visible
-                  };
-                });
-                
-                // Call the resetColumnVisibility function from the parent
-                resetColumnVisibility();
-              }} 
-              dense
-            >
-              <Typography variant="body2" color="primary">
-                Reset to Default
-              </Typography>
-            </MenuItem>
-          </Menu>
-        </TableCell>
+            );
+          })}
+          
+          <Divider />
+          <MenuItem onClick={resetColumnVisibility}>
+            <Typography variant="body2" color="primary">
+              Reset to Default
+            </Typography>
+          </MenuItem>
+        </Menu>
       </TableRow>
     </TableHead>
   );
+};
+
+// Helper function to get minimum width for each column
+const getMinWidthForColumn = (columnId) => {
+  const minWidths = {
+    node: 80,
+    type: 50,
+    id: 70,
+    status: 100,
+    name: 150,
+    cpu: 120,
+    memory: 120,
+    disk: 120,
+    download: 100,
+    upload: 100,
+    uptime: 80
+  };
+  
+  return minWidths[columnId] || 100;
 };
 
 export default NetworkTableHeader; 

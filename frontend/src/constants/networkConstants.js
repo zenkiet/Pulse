@@ -32,12 +32,16 @@ export const STORAGE_KEY_SHOW_STOPPED = 'network_display_show_stopped';
 export const STORAGE_KEY_SHOW_FILTERS = 'network_display_show_filters';
 export const STORAGE_KEY_SEARCH_TERMS = 'network_display_search_terms';
 export const STORAGE_KEY_COLUMN_VISIBILITY = 'network_display_column_visibility';
+export const STORAGE_KEY_COLUMN_ORDER = 'network_display_column_order';
+export const STORAGE_KEY_COLUMN_DRAG_ENABLED = 'network_display_column_drag_enabled';
+export const STORAGE_KEY_GUEST_TYPE_FILTER = 'network_display_guest_type_filter';
 
 // Define default column configuration
 export const DEFAULT_COLUMN_CONFIG = {
   node: { id: 'node', label: 'Node', visible: true },
   type: { id: 'type', label: 'Type', visible: true },
   id: { id: 'id', label: 'ID', visible: true },
+  status: { id: 'status', label: 'Status', visible: true },
   name: { id: 'name', label: 'Name', visible: true },
   cpu: { id: 'cpu', label: 'CPU', visible: true },
   memory: { id: 'memory', label: 'Memory', visible: true },

@@ -70,7 +70,8 @@ export const getSortedAndFilteredData = (
   activeSearchTerms,
   searchTerm,
   metricsData,
-  guestTypeFilter
+  guestTypeFilter,
+  nodeData
 ) => {
   if (!data || !Array.isArray(data) || data.length === 0) {
     return [];
@@ -101,15 +102,22 @@ export const getSortedAndFilteredData = (
       filteredData = filteredData.filter(guest => {
         // Convert all guest properties to lowercase strings for searching
         const searchableText = [
-          guest.name,
-          guest.id,
-          guest.status,
-          guest.type,
-          guest.node
+          guest.name || '',
+          guest.id || '',
+          guest.status || '',
+          guest.type || '',
+          guest.node || '',
+          // Include friendly node name
+          getNodeName(guest.node, nodeData) || '',
+          // Include type labels for better searching
+          guest.type === 'qemu' ? 'vm virtual machine' : '',
+          guest.type === 'lxc' ? 'ct container' : '',
+          // Include status labels for better searching
+          guest.status?.toLowerCase() === 'running' ? 'online active' : 'offline inactive stopped'
         ].map(val => String(val).toLowerCase()).join(' ');
         
-        // Check if all search terms are found in the searchable text
-        return terms.every(term => 
+        // Check if any search term is found in the searchable text
+        return terms.some(term => 
           searchableText.includes(term.toLowerCase())
         );
       });

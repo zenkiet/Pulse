@@ -12,14 +12,28 @@ import {
   InputBase,
   Tooltip,
   Badge,
-  alpha
+  alpha,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  ToggleButtonGroup,
+  ToggleButton,
+  Divider,
+  Button
 } from '@mui/material';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import FilterAltOffIcon from '@mui/icons-material/FilterAltOff';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
+import ComputerIcon from '@mui/icons-material/Computer';
+import DnsIcon from '@mui/icons-material/Dns';
+import ViewListIcon from '@mui/icons-material/ViewList';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { formatPercentage, formatNetworkRateForFilter, sliderValueToNetworkRate } from '../../utils/formatters';
 import { KeyboardShortcut } from './UIComponents';
+import { useTheme } from '@mui/material/styles';
 
 const NetworkFilters = ({
   filters,
@@ -39,8 +53,11 @@ const NetworkFilters = ({
   handleSliderDragEnd,
   searchInputRef,
   guestTypeFilter,
-  setGuestTypeFilter
+  setGuestTypeFilter,
+  handleClose
 }) => {
+  const theme = useTheme();
+
   // Handle search input submission
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -50,257 +67,291 @@ const NetworkFilters = ({
     }
   };
 
+  // Handle guest type filter change
+  const handleGuestTypeChange = (event, newValue) => {
+    if (newValue !== null) {
+      setGuestTypeFilter(newValue);
+    }
+  };
+
   return (
-    <Collapse in={showFilters} timeout={300}>
-      <Paper
-        elevation={0}
+    <Paper
+      elevation={0}
+      sx={{
+        width: 350,
+        maxWidth: '100vw',
+        maxHeight: '80vh',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column'
+      }}
+    >
+      {/* Header */}
+      <Box sx={{ px: 2, py: 1, bgcolor: 'background.paper' }}>
+        <Typography variant="subtitle2" gutterBottom>
+          Filter Systems
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Filter by properties or search for specific systems.
+        </Typography>
+      </Box>
+      
+      <Divider />
+      
+      {/* Search input */}
+      <Box
+        component="form"
+        onSubmit={handleSearchSubmit}
         sx={{
-          p: 2,
-          mb: 2,
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'divider',
-          bgcolor: theme => alpha(theme.palette.background.paper, 0.8),
+          display: 'flex',
+          alignItems: 'center',
+          px: 2,
+          py: 1,
+          bgcolor: 'background.paper',
         }}
       >
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* Search and filter chips row */}
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
-            {/* Search input */}
-            <Box
-              component="form"
-              onSubmit={handleSearchSubmit}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                flex: '1 1 auto',
-                minWidth: 200,
-                maxWidth: 400,
-                border: '1px solid',
-                borderColor: 'divider',
-                borderRadius: 1,
-                px: 1,
-                py: 0.5,
-                mr: 1,
-              }}
-            >
-              <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
-              <InputBase
-                placeholder="Search systems..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                sx={{ ml: 1, flex: 1 }}
-                inputRef={searchInputRef}
-                inputProps={{ 'aria-label': 'search systems' }}
-                endAdornment={
-                  searchTerm ? (
-                    <IconButton
-                      size="small"
-                      aria-label="clear search"
-                      onClick={() => setSearchTerm('')}
-                      sx={{ p: 0.5 }}
-                    >
-                      <ClearIcon fontSize="small" />
-                    </IconButton>
-                  ) : null
-                }
-              />
-              <Tooltip title="Press Enter to add search term">
-                <KeyboardShortcut shortcut="↵" />
-              </Tooltip>
-            </Box>
-
-            {/* Active search term chips */}
-            {activeSearchTerms.map((term) => (
-              <Chip
-                key={term}
-                label={term}
-                onDelete={() => removeSearchTerm(term)}
-                color="primary"
-                variant="outlined"
+        <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
+        <InputBase
+          placeholder="Search systems..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          sx={{ flex: 1 }}
+          inputRef={searchInputRef}
+          inputProps={{ 'aria-label': 'search systems' }}
+          endAdornment={
+            searchTerm ? (
+              <IconButton
                 size="small"
-              />
-            ))}
-
-            {/* Show stopped systems toggle */}
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={showStopped}
-                  onChange={(e) => setShowStopped(e.target.checked)}
-                  color="primary"
-                  size="small"
-                />
-              }
-              label="Show Stopped"
-              sx={{ ml: 'auto' }}
+                aria-label="clear search"
+                onClick={() => setSearchTerm('')}
+                sx={{ p: 0.5 }}
+              >
+                <ClearIcon fontSize="small" />
+              </IconButton>
+            ) : null
+          }
+        />
+      </Box>
+      
+      {/* Active search terms */}
+      {activeSearchTerms.length > 0 && (
+        <Box sx={{ px: 2, py: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+          {activeSearchTerms.map((term) => (
+            <Chip
+              key={term}
+              label={term}
+              size="small"
+              onDelete={() => removeSearchTerm(term)}
             />
-
-            {/* Reset filters button */}
-            {activeFilterCount > 0 && (
-              <Tooltip title="Reset all filters">
-                <IconButton
-                  onClick={resetFilters}
-                  size="small"
-                  color="primary"
-                  sx={{ ml: 1 }}
-                >
-                  <FilterAltOffIcon />
-                </IconButton>
-              </Tooltip>
-            )}
-          </Box>
-
-          {/* Filter sliders */}
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-            {/* CPU Filter */}
-            <Box sx={{ flex: '1 1 200px', maxWidth: 300 }}>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mb: 1, display: 'flex', justifyContent: 'space-between' }}
-              >
-                <span>CPU Usage: {formatPercentage(filters.cpu)}</span>
-                {filters.cpu > 0 && (
-                  <IconButton
-                    onClick={() => clearFilter('cpu')}
-                    size="small"
-                    sx={{ p: 0, ml: 1 }}
-                  >
-                    <ClearIcon fontSize="small" />
-                  </IconButton>
-                )}
-              </Typography>
-              <Slider
-                value={filters.cpu}
-                onChange={(e, newValue) => updateFilter('cpu', newValue)}
-                onMouseDown={() => handleSliderDragStart('cpu')}
-                onMouseUp={handleSliderDragEnd}
-                aria-labelledby="cpu-filter-slider"
-                valueLabelDisplay="auto"
-                valueLabelFormat={formatPercentage}
-              />
-            </Box>
-
-            {/* Memory Filter */}
-            <Box sx={{ flex: '1 1 200px', maxWidth: 300 }}>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mb: 1, display: 'flex', justifyContent: 'space-between' }}
-              >
-                <span>Memory Usage: {formatPercentage(filters.memory)}</span>
-                {filters.memory > 0 && (
-                  <IconButton
-                    onClick={() => clearFilter('memory')}
-                    size="small"
-                    sx={{ p: 0, ml: 1 }}
-                  >
-                    <ClearIcon fontSize="small" />
-                  </IconButton>
-                )}
-              </Typography>
-              <Slider
-                value={filters.memory}
-                onChange={(e, newValue) => updateFilter('memory', newValue)}
-                onMouseDown={() => handleSliderDragStart('memory')}
-                onMouseUp={handleSliderDragEnd}
-                aria-labelledby="memory-filter-slider"
-                valueLabelDisplay="auto"
-                valueLabelFormat={formatPercentage}
-              />
-            </Box>
-
-            {/* Disk Filter */}
-            <Box sx={{ flex: '1 1 200px', maxWidth: 300 }}>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mb: 1, display: 'flex', justifyContent: 'space-between' }}
-              >
-                <span>Disk Usage: {formatPercentage(filters.disk)}</span>
-                {filters.disk > 0 && (
-                  <IconButton
-                    onClick={() => clearFilter('disk')}
-                    size="small"
-                    sx={{ p: 0, ml: 1 }}
-                  >
-                    <ClearIcon fontSize="small" />
-                  </IconButton>
-                )}
-              </Typography>
-              <Slider
-                value={filters.disk}
-                onChange={(e, newValue) => updateFilter('disk', newValue)}
-                onMouseDown={() => handleSliderDragStart('disk')}
-                onMouseUp={handleSliderDragEnd}
-                aria-labelledby="disk-filter-slider"
-                valueLabelDisplay="auto"
-                valueLabelFormat={formatPercentage}
-              />
-            </Box>
-
-            {/* Download Filter */}
-            <Box sx={{ flex: '1 1 200px', maxWidth: 300 }}>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mb: 1, display: 'flex', justifyContent: 'space-between' }}
-              >
-                <span>Download: {formatNetworkRateForFilter(sliderValueToNetworkRate(filters.download))}</span>
-                {filters.download > 0 && (
-                  <IconButton
-                    onClick={() => clearFilter('download')}
-                    size="small"
-                    sx={{ p: 0, ml: 1 }}
-                  >
-                    <ClearIcon fontSize="small" />
-                  </IconButton>
-                )}
-              </Typography>
-              <Slider
-                value={filters.download}
-                onChange={(e, newValue) => updateFilter('download', newValue)}
-                onMouseDown={() => handleSliderDragStart('download')}
-                onMouseUp={handleSliderDragEnd}
-                aria-labelledby="download-filter-slider"
-                valueLabelDisplay="auto"
-                valueLabelFormat={(value) => formatNetworkRateForFilter(sliderValueToNetworkRate(value))}
-              />
-            </Box>
-
-            {/* Upload Filter */}
-            <Box sx={{ flex: '1 1 200px', maxWidth: 300 }}>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mb: 1, display: 'flex', justifyContent: 'space-between' }}
-              >
-                <span>Upload: {formatNetworkRateForFilter(sliderValueToNetworkRate(filters.upload))}</span>
-                {filters.upload > 0 && (
-                  <IconButton
-                    onClick={() => clearFilter('upload')}
-                    size="small"
-                    sx={{ p: 0, ml: 1 }}
-                  >
-                    <ClearIcon fontSize="small" />
-                  </IconButton>
-                )}
-              </Typography>
-              <Slider
-                value={filters.upload}
-                onChange={(e, newValue) => updateFilter('upload', newValue)}
-                onMouseDown={() => handleSliderDragStart('upload')}
-                onMouseUp={handleSliderDragEnd}
-                aria-labelledby="upload-filter-slider"
-                valueLabelDisplay="auto"
-                valueLabelFormat={(value) => formatNetworkRateForFilter(sliderValueToNetworkRate(value))}
-              />
-            </Box>
-          </Box>
+          ))}
         </Box>
-      </Paper>
-    </Collapse>
+      )}
+      
+      <Divider />
+      
+      {/* Guest type filter */}
+      <Box sx={{ px: 2, py: 1 }}>
+        <Typography variant="body2" gutterBottom>
+          System Type
+        </Typography>
+        <ToggleButtonGroup
+          value={guestTypeFilter}
+          exclusive
+          onChange={handleGuestTypeChange}
+          aria-label="system type filter"
+          size="small"
+          sx={{ width: '100%' }}
+        >
+          <ToggleButton value="all" aria-label="all systems" sx={{ flex: 1 }}>
+            <ViewListIcon fontSize="small" sx={{ mr: 0.5 }} />
+            All
+          </ToggleButton>
+          <ToggleButton value="vm" aria-label="virtual machines only" sx={{ flex: 1 }}>
+            <ComputerIcon fontSize="small" sx={{ mr: 0.5 }} />
+            VMs
+          </ToggleButton>
+          <ToggleButton value="ct" aria-label="containers only" sx={{ flex: 1 }}>
+            <DnsIcon fontSize="small" sx={{ mr: 0.5 }} />
+            CTs
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
+      
+      <Divider />
+      
+      {/* Show stopped systems toggle */}
+      <MenuItem dense onClick={() => setShowStopped(!showStopped)}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          width: '100%',
+          justifyContent: 'space-between'
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            {showStopped ? (
+              <VisibilityIcon fontSize="small" color="primary" sx={{ mr: 1 }} />
+            ) : (
+              <VisibilityOffIcon fontSize="small" color="action" sx={{ mr: 1 }} />
+            )}
+            <Typography variant="body2">
+              {showStopped ? 'Hide Stopped Systems' : 'Show Stopped Systems'}
+            </Typography>
+          </Box>
+          <Switch
+            checked={showStopped}
+            onChange={(e) => setShowStopped(e.target.checked)}
+            size="small"
+          />
+        </Box>
+      </MenuItem>
+      
+      <Divider />
+      
+      {/* Sliders for numeric filters */}
+      <Box sx={{ px: 2, py: 1, maxHeight: 300, overflow: 'auto' }}>
+        <Typography variant="body2" gutterBottom>
+          Resource Filters
+        </Typography>
+        
+        {/* CPU Filter */}
+        <Box sx={{ mb: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+            <Typography variant="body2" color="text.secondary">
+              CPU Usage
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {formatPercentage(filters.cpu)}+
+            </Typography>
+          </Box>
+          <Slider
+            value={filters.cpu}
+            onChange={(e, newValue) => updateFilter('cpu', newValue)}
+            onMouseDown={() => handleSliderDragStart('cpu')}
+            onMouseUp={handleSliderDragEnd}
+            aria-labelledby="cpu-filter-slider"
+            valueLabelDisplay="auto"
+            valueLabelFormat={formatPercentage}
+            min={0}
+            max={100}
+            size="small"
+          />
+        </Box>
+        
+        {/* Memory Filter */}
+        <Box sx={{ mb: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+            <Typography variant="body2" color="text.secondary">
+              Memory Usage
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {formatPercentage(filters.memory)}+
+            </Typography>
+          </Box>
+          <Slider
+            value={filters.memory}
+            onChange={(e, newValue) => updateFilter('memory', newValue)}
+            onMouseDown={() => handleSliderDragStart('memory')}
+            onMouseUp={handleSliderDragEnd}
+            aria-labelledby="memory-filter-slider"
+            valueLabelDisplay="auto"
+            valueLabelFormat={formatPercentage}
+            min={0}
+            max={100}
+            size="small"
+          />
+        </Box>
+        
+        {/* Disk Filter */}
+        <Box sx={{ mb: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+            <Typography variant="body2" color="text.secondary">
+              Disk Usage
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {formatPercentage(filters.disk)}+
+            </Typography>
+          </Box>
+          <Slider
+            value={filters.disk}
+            onChange={(e, newValue) => updateFilter('disk', newValue)}
+            onMouseDown={() => handleSliderDragStart('disk')}
+            onMouseUp={handleSliderDragEnd}
+            aria-labelledby="disk-filter-slider"
+            valueLabelDisplay="auto"
+            valueLabelFormat={formatPercentage}
+            min={0}
+            max={100}
+            size="small"
+          />
+        </Box>
+        
+        {/* Network Download Filter */}
+        <Box sx={{ mb: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+            <Typography variant="body2" color="text.secondary">
+              Download Rate
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {formatNetworkRateForFilter(filters.download)}+
+            </Typography>
+          </Box>
+          <Slider
+            value={filters.download}
+            onChange={(e, newValue) => updateFilter('download', newValue)}
+            onMouseDown={() => handleSliderDragStart('download')}
+            onMouseUp={handleSliderDragEnd}
+            aria-labelledby="download-filter-slider"
+            valueLabelDisplay="auto"
+            valueLabelFormat={formatNetworkRateForFilter}
+            min={0}
+            max={100}
+            size="small"
+          />
+        </Box>
+        
+        {/* Network Upload Filter */}
+        <Box sx={{ mb: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+            <Typography variant="body2" color="text.secondary">
+              Upload Rate
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {formatNetworkRateForFilter(filters.upload)}+
+            </Typography>
+          </Box>
+          <Slider
+            value={filters.upload}
+            onChange={(e, newValue) => updateFilter('upload', newValue)}
+            onMouseDown={() => handleSliderDragStart('upload')}
+            onMouseUp={handleSliderDragEnd}
+            aria-labelledby="upload-filter-slider"
+            valueLabelDisplay="auto"
+            valueLabelFormat={formatNetworkRateForFilter}
+            min={0}
+            max={100}
+            size="small"
+          />
+        </Box>
+      </Box>
+      
+      <Divider />
+      
+      {/* Reset button */}
+      <Box sx={{ px: 2, py: 1 }}>
+        <Button 
+          size="small" 
+          fullWidth 
+          variant="outlined" 
+          onClick={() => {
+            resetFilters();
+            handleClose && handleClose();
+          }}
+          startIcon={<FilterAltOffIcon />}
+        >
+          Reset All Filters
+        </Button>
+      </Box>
+    </Paper>
   );
 };
 

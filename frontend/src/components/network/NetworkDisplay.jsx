@@ -17,9 +17,29 @@ import {
   ClickAwayListener,
   useTheme,
   Snackbar,
-  Alert
+  Alert,
+  Popover,
+  InputBase,
+  Chip,
+  Button,
+  ToggleButtonGroup,
+  ToggleButton,
+  MenuItem,
+  Switch,
+  Slider,
+  TextField
 } from '@mui/material';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
+import FilterAltOffIcon from '@mui/icons-material/FilterAltOff';
+import ViewColumnIcon from '@mui/icons-material/ViewColumn';
+import SearchIcon from '@mui/icons-material/Search';
+import ComputerIcon from '@mui/icons-material/Computer';
+import DnsIcon from '@mui/icons-material/Dns';
+import ViewListIcon from '@mui/icons-material/ViewList';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import TuneIcon from '@mui/icons-material/Tune';
+import ClearIcon from '@mui/icons-material/Clear';
 
 // Import constants
 import {
@@ -29,7 +49,10 @@ import {
   STORAGE_KEY_SHOW_FILTERS,
   STORAGE_KEY_SEARCH_TERMS,
   STORAGE_KEY_COLUMN_VISIBILITY,
-  DEFAULT_COLUMN_CONFIG
+  STORAGE_KEY_GUEST_TYPE_FILTER,
+  DEFAULT_COLUMN_CONFIG,
+  STORAGE_KEY_COLUMN_ORDER,
+  STORAGE_KEY_COLUMN_DRAG_ENABLED
 } from '../../constants/networkConstants';
 
 // Import components
@@ -78,13 +101,35 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
   const theme = useTheme();
   const { darkMode } = useThemeContext();
   
-  // Search state
-  const [searchTerm, setSearchTerm] = useState('');
-  const searchInputRef = React.useRef(null);
-  
-  // Filter popover state - for displaying the filter panel
+  // State for filter menu
   const [filterAnchorEl, setFilterAnchorEl] = useState(null);
-  const openFiltersPopover = Boolean(filterAnchorEl);
+  const openFilters = Boolean(filterAnchorEl);
+  
+  // State for search popover
+  const [searchAnchorEl, setSearchAnchorEl] = useState(null);
+  const openSearch = Boolean(searchAnchorEl);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeSearchTerms, setActiveSearchTerms] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_SEARCH_TERMS);
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error('Error loading active search terms:', e);
+      return [];
+    }
+  });
+  const searchInputRef = useRef(null);
+  
+  // State for type popover
+  const [typeAnchorEl, setTypeAnchorEl] = useState(null);
+  const openType = Boolean(typeAnchorEl);
+  
+  // State for visibility popover
+  const [visibilityAnchorEl, setVisibilityAnchorEl] = useState(null);
+  const openVisibility = Boolean(visibilityAnchorEl);
+  
+  // State for tracking which slider is being dragged
+  const [sliderDragging, setSliderDragging] = useState(null);
   
   // Helper function to extract numeric ID from strings like "node-1-ct-105"
   const extractNumericId = useCallback((fullId) => {
@@ -130,17 +175,6 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     }
   });
   
-  // Search terms array for active search filters
-  const [activeSearchTerms, setActiveSearchTerms] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_SEARCH_TERMS);
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error('Error loading active search terms:', e);
-      return [];
-    }
-  });
-  
   // Column visibility state
   const [columnVisibility, setColumnVisibility] = useState(() => {
     try {
@@ -172,6 +206,45 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     } catch (e) {
       console.error('Error loading column visibility preferences:', e);
       return JSON.parse(JSON.stringify(DEFAULT_COLUMN_CONFIG));
+    }
+  });
+  
+  // Column order state
+  const [columnOrder, setColumnOrder] = useState(() => {
+    try {
+      console.log('Initializing column order state');
+      const defaultOrder = Object.keys(DEFAULT_COLUMN_CONFIG);
+      
+      const saved = localStorage.getItem(STORAGE_KEY_COLUMN_ORDER);
+      if (saved) {
+        console.log('Found saved column order:', saved);
+        try {
+          const parsed = JSON.parse(saved);
+          
+          // Validate the saved order - it should contain all columns from DEFAULT_COLUMN_CONFIG
+          const isValid = 
+            Array.isArray(parsed) && 
+            parsed.length === defaultOrder.length && 
+            defaultOrder.every(col => parsed.includes(col));
+          
+          if (isValid) {
+            console.log('Using saved column order:', parsed);
+            return parsed;
+          } else {
+            console.warn('Invalid saved column order, using default order');
+          }
+        } catch (parseError) {
+          console.error('Error parsing saved column order:', parseError);
+        }
+      }
+      
+      console.log('Using default column order:', defaultOrder);
+      return defaultOrder;
+    } catch (e) {
+      console.error('Error loading column order preferences:', e);
+      const fallbackOrder = Object.keys(DEFAULT_COLUMN_CONFIG || {});
+      console.log('Using fallback column order:', fallbackOrder);
+      return fallbackOrder;
     }
   });
   
@@ -253,25 +326,33 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     
     // Create a new configuration with all columns set to visible
     const allVisibleConfig = {};
-    Object.keys(DEFAULT_COLUMN_CONFIG).forEach(key => {
-      allVisibleConfig[key] = {
-        ...DEFAULT_COLUMN_CONFIG[key],
-        visible: true // Force all columns to be visible
-      };
-    });
+    if (DEFAULT_COLUMN_CONFIG) {
+      Object.keys(DEFAULT_COLUMN_CONFIG).forEach(key => {
+        allVisibleConfig[key] = {
+          ...DEFAULT_COLUMN_CONFIG[key],
+          visible: true // Force all columns to be visible
+        };
+      });
+    }
     
     console.log('New config with all columns visible:', allVisibleConfig);
     
-    // Clear the localStorage entry to ensure a clean state
+    // Clear the localStorage entries to ensure a clean state
     try {
       localStorage.removeItem(STORAGE_KEY_COLUMN_VISIBILITY);
-      console.log('Cleared column visibility from localStorage');
+      localStorage.removeItem(STORAGE_KEY_COLUMN_ORDER);
+      console.log('Cleared column preferences from localStorage');
     } catch (error) {
-      console.error('Error clearing column visibility from localStorage:', error);
+      console.error('Error clearing column preferences from localStorage:', error);
     }
     
     // Set the state with the new config where all columns are visible
     setColumnVisibility(allVisibleConfig);
+    
+    // Reset column order to default
+    if (DEFAULT_COLUMN_CONFIG) {
+      setColumnOrder(Object.keys(DEFAULT_COLUMN_CONFIG));
+    }
     
     // Force a re-render of the table
     setTimeout(() => {
@@ -325,6 +406,26 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     }
   }, [columnVisibility]);
   
+  // Save column order preferences whenever they change
+  useEffect(() => {
+    try {
+      console.log('Column order changed, saving to localStorage');
+      
+      // Check if columnOrder is valid
+      if (!columnOrder || !Array.isArray(columnOrder) || columnOrder.length === 0) {
+        console.error('Invalid column order state, resetting to defaults');
+        setColumnOrder(Object.keys(DEFAULT_COLUMN_CONFIG));
+        return;
+      }
+      
+      // Save to localStorage
+      localStorage.setItem(STORAGE_KEY_COLUMN_ORDER, JSON.stringify(columnOrder));
+      console.log('Saved column order to localStorage');
+    } catch (error) {
+      console.error('Error saving column order:', error);
+    }
+  }, [columnOrder]);
+  
   // UI state
   const [showStopped, setShowStopped] = useState(() => {
     try {
@@ -347,46 +448,53 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
   });
   
   const [escRecentlyPressed, setEscRecentlyPressed] = useState(false);
-  const [sliderDragging, setSliderDragging] = useState(null);
   
   // Add a ref for the filter button
   const filterButtonRef = useRef(null);
   
+  // Add a ref for the search button
+  const searchButtonRef = useRef(null);
+  
   // Filter popover handlers
   const handleFilterButtonClick = (event) => {
-    // Instead of opening a popover, toggle the filter section
-    setShowFilters(!showFilters);
+    setFilterAnchorEl(event.currentTarget);
   };
   
   const handleCloseFilterPopover = () => {
-    // This function is no longer needed for closing a popover
-    // but we'll keep it for compatibility with existing code
     setFilterAnchorEl(null);
   };
   
-  // Handler for clicking outside the filter box
-  const handleClickAway = (event) => {
-    // Don't close if clicking on the filter button, if dragging a slider,
-    // or if clicking on a select menu or dropdown
-    if (
-      !showFilters || 
-      sliderDragging || 
-      filterButtonRef.current?.contains(event.target) || 
-      event.target.closest('[data-filter-button="true"]') ||
-      // Check for MUI Select elements and their menus
-      event.target.closest('.MuiSelect-root') ||
-      event.target.closest('.MuiMenu-root') ||
-      event.target.closest('.MuiPopover-root') ||
-      // Prevent closing when interacting with sliders
-      event.target.closest('.MuiSlider-root')
-    ) {
-      return;
-    }
-    
-    // Add a small delay to prevent race conditions with other click handlers
+  // Search popover handlers
+  const handleSearchButtonClick = (event) => {
+    setSearchAnchorEl(event.currentTarget);
+    // Focus the search input after a short delay to ensure the popover is open
     setTimeout(() => {
-      setShowFilters(false);
-    }, 50);
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    }, 100);
+  };
+  
+  const handleCloseSearchPopover = () => {
+    setSearchAnchorEl(null);
+  };
+  
+  // System type popover handlers
+  const handleTypeButtonClick = (event) => {
+    setTypeAnchorEl(event.currentTarget);
+  };
+  
+  const handleCloseTypePopover = () => {
+    setTypeAnchorEl(null);
+  };
+  
+  // Visibility popover handlers
+  const handleVisibilityButtonClick = (event) => {
+    setVisibilityAnchorEl(event.currentTarget);
+  };
+  
+  const handleCloseVisibilityPopover = () => {
+    setVisibilityAnchorEl(null);
   };
   
   // Count active filters
@@ -399,7 +507,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
   // Add guest type filter state - load from localStorage or use default
   const [guestTypeFilter, setGuestTypeFilter] = useState(() => {
     try {
-      const saved = localStorage.getItem('guestTypeFilter');
+      const saved = localStorage.getItem(STORAGE_KEY_GUEST_TYPE_FILTER);
       return saved ? JSON.parse(saved) : 'all'; // Default: 'all' (show both VMs and LXCs)
     } catch (e) {
       console.error('Error loading guest type filter preference:', e);
@@ -415,7 +523,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
   // Save guest type filter preference whenever it changes
   useEffect(() => {
     try {
-      localStorage.setItem('guestTypeFilter', JSON.stringify(guestTypeFilter));
+      localStorage.setItem(STORAGE_KEY_GUEST_TYPE_FILTER, JSON.stringify(guestTypeFilter));
     } catch (e) {
       console.error('Error saving guest type filter preference:', e);
     }
@@ -458,11 +566,17 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     setActiveSearchTerms([]);
     setSearchTerm('');
     setShowStopped(false);
+    setGuestTypeFilter('all');
   }, []);
   
   // Set up keyboard shortcuts
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
+      // Immediately return if search popover is open
+      if (openSearch) {
+        return;
+      }
+      
       // Don't trigger shortcuts if typing in an input field
       if (
         e.target.tagName === 'INPUT' || 
@@ -474,37 +588,64 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
       
       // Escape key to close filters or clear search
       if (e.key === 'Escape') {
-        if (showFilters) {
-          setShowFilters(false);
-          setEscRecentlyPressed(true);
-          setTimeout(() => setEscRecentlyPressed(false), 300);
-        } else if (searchTerm) {
-          setSearchTerm('');
-        } else if (activeSearchTerms.length > 0) {
-          setActiveSearchTerms([]);
+        // Close any open popovers
+        if (openFilters) {
+          setFilterAnchorEl(null);
         }
+        if (openSearch) {
+          setSearchAnchorEl(null);
+        }
+        if (openType) {
+          setTypeAnchorEl(null);
+        }
+        if (openVisibility) {
+          setVisibilityAnchorEl(null);
+        }
+        if (openColumnMenu) {
+          setColumnMenuAnchorEl(null);
+        }
+        
+        // Reset all filters
+        resetFilters();
+        
+        // Set flag to prevent other shortcuts from triggering
+        setEscRecentlyPressed(true);
+        setTimeout(() => setEscRecentlyPressed(false), 300);
+        
+        // Show notification
+        showNotification('All filters have been cleared', 'info');
+        return;
       }
       
       // Ctrl+F or Cmd+F to focus search
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
         e.preventDefault();
-        if (searchInputRef.current) {
-          searchInputRef.current.focus();
-          if (!showFilters) {
-            setShowFilters(true);
-          }
-        }
+        handleSearchButtonClick({ currentTarget: searchButtonRef.current });
+        return;
       }
       
       // / to focus search
       if (e.key === '/' && !escRecentlyPressed) {
         e.preventDefault();
-        if (searchInputRef.current) {
-          searchInputRef.current.focus();
-          if (!showFilters) {
-            setShowFilters(true);
-          }
-        }
+        handleSearchButtonClick({ currentTarget: searchButtonRef.current });
+        return;
+      }
+      
+      // Capture typing for search (only if it's a single printable character)
+      const isPrintableChar = 
+        e.key.length === 1 && 
+        !e.ctrlKey && 
+        !e.metaKey && 
+        !e.altKey && 
+        !e.key.match(/^F\d+$/); // Exclude function keys like F1-F12
+      
+      if (isPrintableChar && !openSearch) {
+        // Open search popover and set the search term to the pressed key
+        handleSearchButtonClick({ currentTarget: searchButtonRef.current });
+        // Set a small timeout to ensure the search input is ready
+        setTimeout(() => {
+          setSearchTerm(e.key);
+        }, 50);
       }
     };
     
@@ -512,18 +653,30 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     return () => {
       window.removeEventListener('keydown', handleGlobalKeyDown);
     };
-  }, [showFilters, searchTerm, activeSearchTerms, escRecentlyPressed]);
+  }, [
+    showFilters, 
+    searchTerm, 
+    activeSearchTerms, 
+    escRecentlyPressed, 
+    openFilters, 
+    openSearch, 
+    openType, 
+    openVisibility, 
+    openColumnMenu, 
+    resetFilters,
+    handleSearchButtonClick
+  ]);
   
-  // Add search term to active terms
+  // Function to add a search term
   const addSearchTerm = (term) => {
-    if (term && !activeSearchTerms.includes(term)) {
+    if (!activeSearchTerms.includes(term)) {
       setActiveSearchTerms([...activeSearchTerms, term]);
     }
   };
   
-  // Remove search term from active terms
-  const removeSearchTerm = (termToRemove) => {
-    setActiveSearchTerms(activeSearchTerms.filter(term => term !== termToRemove));
+  // Function to remove a search term
+  const removeSearchTerm = (term) => {
+    setActiveSearchTerms(activeSearchTerms.filter(t => t !== term));
   };
   
   // Update filter value
@@ -576,7 +729,8 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
       activeSearchTerms,
       searchTerm,
       combinedMetrics,
-      guestTypeFilter
+      guestTypeFilter,
+      nodeData
     );
   }, [
     guestData, 
@@ -588,8 +742,53 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     searchTerm, 
     selectedNode, 
     getNodeFilteredGuests,
-    guestTypeFilter
+    guestTypeFilter,
+    nodeData
   ]);
+  
+  // Format percentage for display
+  const formatPercentage = (value) => {
+    return `${value}%`;
+  };
+  
+  // Format network rate for filter display
+  const formatNetworkRateForFilter = (value) => {
+    if (value === 0) return '0 KB/s';
+    if (value <= 10) return `${value * 10} KB/s`;
+    if (value <= 50) return `${(value - 10) * 20 + 100} KB/s`;
+    if (value <= 80) return `${(value - 50) * 50 + 900} KB/s`;
+    return `${(value - 80) * 500 + 2400} KB/s`;
+  };
+  
+  // Determine which columns have active filters
+  const activeFilteredColumns = useMemo(() => {
+    const result = {};
+    
+    // Resource filters
+    if (filters.cpu > 0) result.cpu = true;
+    if (filters.memory > 0) result.memory = true;
+    if (filters.disk > 0) result.disk = true;
+    if (filters.download > 0) result.netIn = true;
+    if (filters.upload > 0) result.netOut = true;
+    
+    // Search terms only affect the name column
+    if (activeSearchTerms.length > 0 || searchTerm) {
+      result.name = true;
+    }
+    
+    // Guest type filter affects the type column
+    if (guestTypeFilter !== 'all') {
+      result.type = true;
+    }
+    
+    // Only highlight status column for show/hide stopped systems if it's not the default state
+    // By default, showStopped is false, so we only highlight when it's true (showing stopped systems)
+    if (showStopped) {
+      result.status = true;
+    }
+    
+    return result;
+  }, [filters, activeSearchTerms, searchTerm, guestTypeFilter, showStopped]);
   
   // Show loading state if not connected
   if (!isConnected && connectionStatus !== 'error' && connectionStatus !== 'disconnected') {
@@ -613,65 +812,532 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
   
   return (
     <Box sx={{ width: '100%' }}>
-      <ClickAwayListener onClickAway={handleClickAway}>
-        <Box>
-          {/* Filter toggle button */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="h6" component="h2" gutterBottom>
-              Systems
-            </Typography>
+      <Box>
+        {/* Header with buttons */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+          <Typography variant="h6" component="h2" gutterBottom>
+            Systems
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {/* Column visibility button */}
             <IconButton
-              onClick={handleFilterButtonClick}
-              color={showFilters ? 'primary' : 'default'}
-              ref={filterButtonRef}
-              data-filter-button="true"
+              onClick={handleColumnMenuOpen}
+              color={openColumnMenu ? 'primary' : 'default'}
               size="small"
+              aria-controls={openColumnMenu ? 'column-menu' : undefined}
+              aria-haspopup="true"
+              aria-expanded={openColumnMenu ? 'true' : undefined}
               sx={{ 
                 border: '1px solid',
-                borderColor: showFilters ? 'primary.main' : 'divider',
+                borderColor: openColumnMenu ? 'primary.main' : 'divider',
                 borderRadius: 1,
                 p: 0.5
               }}
             >
               <Badge
-                badgeContent={activeFilterCount}
+                badgeContent={Object.keys(DEFAULT_COLUMN_CONFIG).length - Object.values(columnVisibility).filter(col => col.visible).length}
                 color="primary"
-                invisible={activeFilterCount === 0}
+                invisible={Object.values(columnVisibility).filter(col => col.visible).length === Object.keys(DEFAULT_COLUMN_CONFIG).length}
               >
-                <FilterAltIcon />
+                <ViewColumnIcon />
+              </Badge>
+            </IconButton>
+            
+            {/* Search button */}
+            <IconButton
+              ref={searchButtonRef}
+              onClick={handleSearchButtonClick}
+              color={openSearch ? 'primary' : 'default'}
+              size="small"
+              aria-controls={openSearch ? 'search-menu' : undefined}
+              aria-haspopup="true"
+              aria-expanded={openSearch ? 'true' : undefined}
+              sx={{ 
+                border: '1px solid',
+                borderColor: openSearch ? 'primary.main' : 'divider',
+                borderRadius: 1,
+                p: 0.5
+              }}
+            >
+              <Badge
+                badgeContent={activeSearchTerms.length}
+                color="primary"
+                invisible={activeSearchTerms.length === 0}
+              >
+                <SearchIcon />
+              </Badge>
+            </IconButton>
+            
+            {/* System type button */}
+            <IconButton
+              onClick={handleTypeButtonClick}
+              color={openType ? 'primary' : 'default'}
+              size="small"
+              aria-controls={openType ? 'type-menu' : undefined}
+              aria-haspopup="true"
+              aria-expanded={openType ? 'true' : undefined}
+              sx={{ 
+                border: '1px solid',
+                borderColor: openType ? 'primary.main' : 'divider',
+                borderRadius: 1,
+                p: 0.5
+              }}
+            >
+              <Badge
+                badgeContent={guestTypeFilter !== 'all' ? 1 : 0}
+                color="primary"
+                invisible={guestTypeFilter === 'all'}
+              >
+                {guestTypeFilter === 'vm' ? <ComputerIcon /> : 
+                 guestTypeFilter === 'ct' ? <DnsIcon /> : 
+                 <ViewListIcon />}
+              </Badge>
+            </IconButton>
+            
+            {/* Visibility button */}
+            <IconButton
+              onClick={handleVisibilityButtonClick}
+              color={openVisibility ? 'primary' : 'default'}
+              size="small"
+              aria-controls={openVisibility ? 'visibility-menu' : undefined}
+              aria-haspopup="true"
+              aria-expanded={openVisibility ? 'true' : undefined}
+              sx={{ 
+                border: '1px solid',
+                borderColor: openVisibility ? 'primary.main' : 'divider',
+                borderRadius: 1,
+                p: 0.5
+              }}
+            >
+              {showStopped ? <VisibilityIcon /> : <VisibilityOffIcon />}
+            </IconButton>
+            
+            {/* Resource thresholds button */}
+            <IconButton
+              onClick={handleFilterButtonClick}
+              color={openFilters ? 'primary' : 'default'}
+              ref={filterButtonRef}
+              data-filter-button="true"
+              size="small"
+              aria-controls={openFilters ? 'filter-menu' : undefined}
+              aria-haspopup="true"
+              aria-expanded={openFilters ? 'true' : undefined}
+              sx={{ 
+                border: '1px solid',
+                borderColor: openFilters ? 'primary.main' : 'divider',
+                borderRadius: 1,
+                p: 0.5
+              }}
+            >
+              <Badge
+                badgeContent={
+                  (filters.cpu > 0 ? 1 : 0) + 
+                  (filters.memory > 0 ? 1 : 0) + 
+                  (filters.disk > 0 ? 1 : 0) + 
+                  (filters.download > 0 ? 1 : 0) + 
+                  (filters.upload > 0 ? 1 : 0)
+                }
+                color="primary"
+                invisible={
+                  filters.cpu === 0 && 
+                  filters.memory === 0 && 
+                  filters.disk === 0 && 
+                  filters.download === 0 && 
+                  filters.upload === 0
+                }
+              >
+                <TuneIcon />
               </Badge>
             </IconButton>
           </Box>
-          
-          {/* Filters section */}
-          <NetworkFilters
-            filters={filters}
-            updateFilter={updateFilter}
-            clearFilter={clearFilter}
-            resetFilters={resetFilters}
-            showStopped={showStopped}
-            setShowStopped={setShowStopped}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            activeSearchTerms={activeSearchTerms}
-            addSearchTerm={addSearchTerm}
-            removeSearchTerm={removeSearchTerm}
-            activeFilterCount={activeFilterCount}
-            showFilters={showFilters}
-            handleSliderDragStart={handleSliderDragStart}
-            handleSliderDragEnd={handleSliderDragEnd}
-            searchInputRef={searchInputRef}
-            guestTypeFilter={guestTypeFilter}
-            setGuestTypeFilter={setGuestTypeFilter}
-          />
         </Box>
-      </ClickAwayListener>
+        
+        {/* Search popover */}
+        <Popover
+          id="search-menu"
+          anchorEl={searchAnchorEl}
+          open={openSearch}
+          onClose={handleCloseSearchPopover}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'right',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+        >
+          <Paper sx={{ width: 350, p: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Search Systems
+            </Typography>
+            <Typography variant="caption" color="text.secondary" gutterBottom>
+              Search for specific systems by name, ID, or other properties.
+            </Typography>
+            
+            <Box
+              component="form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (searchTerm.trim()) {
+                  addSearchTerm(searchTerm.trim());
+                  setSearchTerm('');
+                }
+              }}
+              sx={{ mt: 2, display: 'flex', alignItems: 'center' }}
+            >
+              <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Search systems..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && searchTerm.trim()) {
+                    e.preventDefault();
+                    addSearchTerm(searchTerm.trim());
+                    setSearchTerm('');
+                  }
+                }}
+                inputRef={searchInputRef}
+                autoFocus
+                variant="standard"
+                InputProps={{
+                  disableUnderline: true,
+                  endAdornment: searchTerm ? (
+                    <IconButton
+                      size="small"
+                      aria-label="clear search"
+                      onClick={() => setSearchTerm('')}
+                      sx={{ p: 0.5 }}
+                    >
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  ) : null
+                }}
+                sx={{ flex: 1 }}
+              />
+            </Box>
+            
+            {activeSearchTerms.length > 0 && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body2" gutterBottom>
+                  Active Search Terms
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {activeSearchTerms.map((term) => (
+                    <Chip
+                      key={term}
+                      label={term}
+                      size="small"
+                      onDelete={() => removeSearchTerm(term)}
+                    />
+                  ))}
+                </Box>
+              </Box>
+            )}
+            
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+              <Button 
+                size="small" 
+                onClick={() => {
+                  setActiveSearchTerms([]);
+                  setSearchTerm('');
+                  handleCloseSearchPopover();
+                }}
+              >
+                Clear All
+              </Button>
+            </Box>
+          </Paper>
+        </Popover>
+        
+        {/* System type popover */}
+        <Popover
+          id="type-menu"
+          anchorEl={typeAnchorEl}
+          open={openType}
+          onClose={handleCloseTypePopover}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'right',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+        >
+          <Paper sx={{ width: 300, p: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              System Type
+            </Typography>
+            <Typography variant="caption" color="text.secondary" gutterBottom>
+              Filter systems by their type.
+            </Typography>
+            
+            <Box sx={{ mt: 2 }}>
+              <ToggleButtonGroup
+                value={guestTypeFilter}
+                exclusive
+                onChange={(event, newValue) => {
+                  if (newValue !== null) {
+                    setGuestTypeFilter(newValue);
+                    handleCloseTypePopover();
+                  }
+                }}
+                aria-label="system type filter"
+                size="small"
+                sx={{ width: '100%' }}
+              >
+                <ToggleButton value="all" aria-label="all systems" sx={{ flex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <ViewListIcon fontSize="small" sx={{ mr: 1 }} />
+                    All Systems
+                  </Box>
+                </ToggleButton>
+                <ToggleButton value="vm" aria-label="virtual machines only" sx={{ flex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <ComputerIcon fontSize="small" sx={{ mr: 1 }} />
+                    VMs Only
+                  </Box>
+                </ToggleButton>
+                <ToggleButton value="ct" aria-label="containers only" sx={{ flex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <DnsIcon fontSize="small" sx={{ mr: 1 }} />
+                    CTs Only
+                  </Box>
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+          </Paper>
+        </Popover>
+        
+        {/* Visibility popover */}
+        <Popover
+          id="visibility-menu"
+          anchorEl={visibilityAnchorEl}
+          open={openVisibility}
+          onClose={handleCloseVisibilityPopover}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'right',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+        >
+          <Paper sx={{ width: 300, p: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              System Visibility
+            </Typography>
+            <Typography variant="caption" color="text.secondary" gutterBottom>
+              Control which systems are visible.
+            </Typography>
+            
+            <Box sx={{ mt: 2 }}>
+              <MenuItem dense onClick={() => {
+                setShowStopped(!showStopped);
+                handleCloseVisibilityPopover();
+              }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  width: '100%',
+                  justifyContent: 'space-between'
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    {showStopped ? (
+                      <VisibilityIcon fontSize="small" color="primary" sx={{ mr: 1 }} />
+                    ) : (
+                      <VisibilityOffIcon fontSize="small" color="action" sx={{ mr: 1 }} />
+                    )}
+                    <Typography variant="body2">
+                      {showStopped ? 'Hide Stopped Systems' : 'Show Stopped Systems'}
+                    </Typography>
+                  </Box>
+                  <Switch
+                    checked={showStopped}
+                    onChange={(e) => {
+                      setShowStopped(e.target.checked);
+                      handleCloseVisibilityPopover();
+                    }}
+                    size="small"
+                  />
+                </Box>
+              </MenuItem>
+            </Box>
+          </Paper>
+        </Popover>
+        
+        {/* Resource thresholds popover */}
+        <Popover
+          id="filter-menu"
+          anchorEl={filterAnchorEl}
+          open={openFilters}
+          onClose={handleCloseFilterPopover}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'right',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+        >
+          <Paper sx={{ width: 350, p: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Resource Thresholds
+            </Typography>
+            <Typography variant="caption" color="text.secondary" gutterBottom>
+              Filter systems by resource usage thresholds.
+            </Typography>
+            
+            <Box sx={{ mt: 2 }}>
+              {/* CPU Filter */}
+              <Box sx={{ mb: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    CPU Usage
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {formatPercentage(filters.cpu)}+
+                  </Typography>
+                </Box>
+                <Slider
+                  value={filters.cpu}
+                  onChange={(e, newValue) => updateFilter('cpu', newValue)}
+                  onMouseDown={() => handleSliderDragStart('cpu')}
+                  onMouseUp={handleSliderDragEnd}
+                  aria-labelledby="cpu-filter-slider"
+                  valueLabelDisplay="auto"
+                  valueLabelFormat={formatPercentage}
+                  min={0}
+                  max={100}
+                  size="small"
+                />
+              </Box>
+              
+              {/* Memory Filter */}
+              <Box sx={{ mb: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Memory Usage
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {formatPercentage(filters.memory)}+
+                  </Typography>
+                </Box>
+                <Slider
+                  value={filters.memory}
+                  onChange={(e, newValue) => updateFilter('memory', newValue)}
+                  onMouseDown={() => handleSliderDragStart('memory')}
+                  onMouseUp={handleSliderDragEnd}
+                  aria-labelledby="memory-filter-slider"
+                  valueLabelDisplay="auto"
+                  valueLabelFormat={formatPercentage}
+                  min={0}
+                  max={100}
+                  size="small"
+                />
+              </Box>
+              
+              {/* Disk Filter */}
+              <Box sx={{ mb: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Disk Usage
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {formatPercentage(filters.disk)}+
+                  </Typography>
+                </Box>
+                <Slider
+                  value={filters.disk}
+                  onChange={(e, newValue) => updateFilter('disk', newValue)}
+                  onMouseDown={() => handleSliderDragStart('disk')}
+                  onMouseUp={handleSliderDragEnd}
+                  aria-labelledby="disk-filter-slider"
+                  valueLabelDisplay="auto"
+                  valueLabelFormat={formatPercentage}
+                  min={0}
+                  max={100}
+                  size="small"
+                />
+              </Box>
+              
+              {/* Network Download Filter */}
+              <Box sx={{ mb: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Download Rate
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {formatNetworkRateForFilter(filters.download)}+
+                  </Typography>
+                </Box>
+                <Slider
+                  value={filters.download}
+                  onChange={(e, newValue) => updateFilter('download', newValue)}
+                  onMouseDown={() => handleSliderDragStart('download')}
+                  onMouseUp={handleSliderDragEnd}
+                  aria-labelledby="download-filter-slider"
+                  valueLabelDisplay="auto"
+                  valueLabelFormat={formatNetworkRateForFilter}
+                  min={0}
+                  max={100}
+                  size="small"
+                />
+              </Box>
+              
+              {/* Network Upload Filter */}
+              <Box sx={{ mb: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Upload Rate
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {formatNetworkRateForFilter(filters.upload)}+
+                  </Typography>
+                </Box>
+                <Slider
+                  value={filters.upload}
+                  onChange={(e, newValue) => updateFilter('upload', newValue)}
+                  onMouseDown={() => handleSliderDragStart('upload')}
+                  onMouseUp={handleSliderDragEnd}
+                  aria-labelledby="upload-filter-slider"
+                  valueLabelDisplay="auto"
+                  valueLabelFormat={formatNetworkRateForFilter}
+                  min={0}
+                  max={100}
+                  size="small"
+                />
+              </Box>
+            </Box>
+            
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+              <Button 
+                size="small" 
+                variant="outlined" 
+                onClick={() => {
+                  resetFilters();
+                  handleCloseFilterPopover();
+                }}
+                startIcon={<FilterAltOffIcon />}
+              >
+                Reset All Thresholds
+              </Button>
+            </Box>
+          </Paper>
+        </Popover>
+      </Box>
       
       {/* Main data table */}
       <Card>
         <CardContent sx={{ p: 0 }}>
-          <TableContainer component={Paper} elevation={0}>
-            <Table size="small" aria-label="systems table">
+          <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 200px)', overflow: 'auto' }}>
+            <Table stickyHeader size="small">
               <NetworkTableHeader
                 sortConfig={sortConfig}
                 requestSort={requestSort}
@@ -683,6 +1349,9 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                 handleColumnMenuClose={handleColumnMenuClose}
                 openColumnMenu={openColumnMenu}
                 forceUpdateCounter={forceUpdateCounter}
+                columnOrder={columnOrder || Object.keys(DEFAULT_COLUMN_CONFIG)}
+                setColumnOrder={setColumnOrder}
+                activeFilteredColumns={activeFilteredColumns}
               />
               <NetworkTableBody
                 sortedAndFilteredData={sortedAndFilteredData}
@@ -697,6 +1366,8 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
                 guestTypeFilter={guestTypeFilter}
                 resetColumnVisibility={resetColumnVisibility}
                 forceUpdateCounter={forceUpdateCounter}
+                columnOrder={columnOrder || Object.keys(DEFAULT_COLUMN_CONFIG)}
+                activeFilteredColumns={activeFilteredColumns}
               />
             </Table>
           </TableContainer>

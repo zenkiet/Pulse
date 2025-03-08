@@ -25,7 +25,9 @@ const NetworkTableBody = ({
   setShowStopped,
   guestTypeFilter,
   resetColumnVisibility,
-  forceUpdateCounter
+  forceUpdateCounter,
+  columnOrder,
+  activeFilteredColumns = {}
 }) => {
   // Check if any columns are visible
   const hasVisibleColumns = Object.values(columnVisibility).some(col => col.visible);
@@ -48,87 +50,16 @@ const NetworkTableBody = ({
               <Typography variant="h6" color="text.secondary" gutterBottom>
                 No Columns Visible
               </Typography>
-              <Typography variant="body2" color="text.disabled" sx={{ mb: 2 }}>
-                All columns are currently hidden. Please show at least one column.
+              <Typography variant="body2" color="text.secondary" align="center" sx={{ maxWidth: 400, mb: 3 }}>
+                All columns are currently hidden. Click the button below to reset column visibility.
               </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center' }}>
-                <Button 
-                  variant="contained" 
-                  color="primary" 
-                  onClick={() => {
-                    console.log('Reset button clicked in NetworkTableBody');
-                    
-                    // Direct reset - create a new configuration with all columns visible
-                    const allVisibleConfig = {};
-                    Object.keys(columnVisibility).forEach(key => {
-                      allVisibleConfig[key] = {
-                        ...columnVisibility[key],
-                        visible: true // Force all columns to be visible
-                      };
-                    });
-                    
-                    // Call the resetColumnVisibility function from the parent
-                    resetColumnVisibility();
-                  }}
-                  sx={{ mt: 1 }}
-                >
-                  Reset to Default Columns
-                </Button>
-                
-                {/* Debug button - only visible in development */}
-                {process.env.NODE_ENV === 'development' && (
-                  <>
-                    <Button 
-                      variant="outlined" 
-                      color="warning" 
-                      onClick={() => {
-                        console.log('Debug button clicked');
-                        console.log('Current column visibility:', columnVisibility);
-                        
-                        // Log localStorage state
-                        try {
-                          const saved = localStorage.getItem('network_display_column_visibility');
-                          console.log('Saved column visibility in localStorage:', saved);
-                        } catch (error) {
-                          console.error('Error reading localStorage:', error);
-                        }
-                      }}
-                      size="small"
-                      sx={{ mt: 1 }}
-                    >
-                      Debug Column State
-                    </Button>
-                    
-                    <Button 
-                      variant="outlined" 
-                      color="error" 
-                      onClick={() => {
-                        console.log('Force reset button clicked');
-                        
-                        // Clear all localStorage entries related to the table
-                        try {
-                          localStorage.removeItem('network_display_column_visibility');
-                          localStorage.removeItem('network_display_filters');
-                          localStorage.removeItem('network_display_sort');
-                          localStorage.removeItem('network_display_show_stopped');
-                          localStorage.removeItem('network_display_show_filters');
-                          localStorage.removeItem('network_display_search_terms');
-                          console.log('Cleared all table settings from localStorage');
-                          
-                          // Reload the page to reset all state
-                          window.location.reload();
-                        } catch (error) {
-                          console.error('Error clearing localStorage:', error);
-                        }
-                      }}
-                      size="small"
-                      sx={{ mt: 1 }}
-                    >
-                      Force Reset & Reload
-                    </Button>
-                  </>
-                )}
-              </Box>
+              <Button 
+                variant="outlined" 
+                onClick={resetColumnVisibility}
+                startIcon={<VisibilityOffIcon />}
+              >
+                Reset Column Visibility
+              </Button>
             </Box>
           </TableCell>
         </TableRow>
@@ -136,81 +67,74 @@ const NetworkTableBody = ({
     );
   }
   
-  return (
-    <TableBody>
-      {sortedAndFilteredData.length > 0 ? (
-        sortedAndFilteredData.map((guest) => (
-          <NetworkTableRow
-            key={guest.id}
-            guest={guest}
-            metrics={metricsData}
-            columnVisibility={columnVisibility}
-            getNodeName={getNodeName}
-            extractNumericId={extractNumericId}
-            forceUpdateCounter={forceUpdateCounter}
-          />
-        ))
-      ) : (
+  // If no data is available, show a message
+  if (!sortedAndFilteredData || sortedAndFilteredData.length === 0) {
+    return (
+      <TableBody>
         <TableRow>
-          <TableCell colSpan={Object.values(columnVisibility).filter(col => col.visible).length + 1} align="center" sx={{ py: 8 }}>
+          <TableCell colSpan={12} align="center" sx={{ py: 8 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 2 }}>
               <NetworkCheckIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2, opacity: 0.6 }} />
               <Typography variant="h6" color="text.secondary" gutterBottom>
-                No Systems Available
+                No Systems Found
               </Typography>
-              <Typography variant="body2" color="text.disabled">
-                No guest data has been received from the server
+              <Typography variant="body2" color="text.secondary" align="center" sx={{ maxWidth: 400, mb: 3 }}>
+                {!showStopped ? (
+                  <>
+                    No running systems match your current filters. 
+                    {guestData && guestData.length > 0 && (
+                      <>
+                        <br />
+                        Try showing stopped systems or adjusting your filters.
+                      </>
+                    )}
+                  </>
+                ) : (
+                  'No systems match your current filters. Try adjusting your search criteria.'
+                )}
               </Typography>
-            </Box>
-          </TableCell>
-        </TableRow>
-      )}
-      {guestData.length > 0 && sortedAndFilteredData.length === 0 && (
-        <TableRow>
-          <TableCell 
-            colSpan={Object.values(columnVisibility).filter(col => col.visible).length + 1} 
-            align="center" 
-            sx={{ 
-              py: 6,
-              width: '100%',
-              '& > div': {
-                width: '100%'
-              }
-            }}
-          >
-            <Box sx={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center', 
-              py: 2,
-              width: '100%'
-            }}>
-              <FilterAltIcon sx={{ fontSize: 40, color: 'primary.light', mb: 2, opacity: 0.7 }} />
-              <Typography variant="h6" color="text.secondary" gutterBottom>
-                No Matching Systems
-              </Typography>
-              <Typography variant="body2" color="text.disabled" sx={{ mb: 2 }}>
-                Try adjusting your filters or search terms
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                <Chip 
-                  label="Reset Filters" 
-                  color="primary" 
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                {!showStopped && guestData && guestData.some(guest => !guest.running) && (
+                  <Button 
+                    variant="outlined" 
+                    onClick={() => setShowStopped(true)}
+                    size="small"
+                  >
+                    Show Stopped Systems
+                  </Button>
+                )}
+                <Button 
+                  variant="outlined" 
                   onClick={resetFilters}
-                  sx={{ mt: 1 }}
-                />
-                <Chip 
-                  label="Show Stopped Systems" 
-                  color="default" 
-                  variant="outlined"
-                  onClick={() => setShowStopped(true)}
-                  sx={{ mt: 1, display: !showStopped ? 'flex' : 'none' }}
-                />
+                  startIcon={<FilterAltIcon />}
+                  size="small"
+                >
+                  Reset Filters
+                </Button>
               </Box>
             </Box>
           </TableCell>
         </TableRow>
-      )}
+      </TableBody>
+    );
+  }
+
+  return (
+    <TableBody>
+      {Array.isArray(sortedAndFilteredData) && sortedAndFilteredData.map((guest) => (
+        guest && (
+          <NetworkTableRow
+            key={`${guest.node || 'unknown'}-${guest.id || 'unknown'}`}
+            guest={guest}
+            metrics={metricsData || {}}
+            columnVisibility={columnVisibility || {}}
+            getNodeName={getNodeName || (() => 'Unknown')}
+            extractNumericId={extractNumericId || ((id) => id)}
+            columnOrder={columnOrder || []}
+            activeFilteredColumns={activeFilteredColumns}
+          />
+        )
+      ))}
     </TableBody>
   );
 };

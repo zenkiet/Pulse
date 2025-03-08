@@ -16,16 +16,17 @@ const NetworkTableRow = ({
   columnVisibility, 
   getNodeName,
   extractNumericId,
-  forceUpdateCounter
+  columnOrder,
+  activeFilteredColumns = {}
 }) => {
   // Determine if the guest is running
-  const isRunning = guest.status.toLowerCase() === 'running';
+  const isRunning = guest.status?.toLowerCase() === 'running';
   
   // Get metrics for this guest
-  const cpuMetrics = metrics?.cpu?.[guest.id] || null;
-  const memoryMetrics = metrics?.memory?.[guest.id] || null;
-  const diskMetrics = metrics?.disk?.[guest.id] || null;
-  const networkMetrics = metrics?.network?.[guest.id] || null;
+  const cpuMetrics = metrics?.cpu?.[guest?.id] || null;
+  const memoryMetrics = metrics?.memory?.[guest?.id] || null;
+  const diskMetrics = metrics?.disk?.[guest?.id] || null;
+  const networkMetrics = metrics?.network?.[guest?.id] || null;
   
   // Determine guest type
   const isVM = guest.type === 'qemu';
@@ -48,182 +49,177 @@ const NetworkTableRow = ({
   const diskUsed = diskMetrics?.used ?? 0;
   
   // Get network rates with unit awareness
-  const networkInRate = networkMetrics?.inRate ?? 0;
-  const networkOutRate = networkMetrics?.outRate ?? 0;
-  const networkUnit = networkMetrics?.unit || 'bytes';
+  const downloadRate = networkMetrics?.inRate ?? 0;
+  const uploadRate = networkMetrics?.outRate ?? 0;
   
-  // Check if any columns are visible
-  const hasVisibleColumns = Object.values(columnVisibility).some(col => col.visible);
-  
-  // If no columns are visible, don't render the row
-  if (!hasVisibleColumns) {
-    return null;
-  }
+  // Get uptime
+  const uptime = guest.uptime ?? 0;
   
   // Calculate dynamic column widths based on visible columns
   const columnWidths = useMemo(() => {
     return calculateDynamicColumnWidths(columnVisibility);
-  }, [columnVisibility, forceUpdateCounter]);
+  }, [columnVisibility]);
   
-  return (
-    <TableRow
-      hover
-      sx={{
-        '&:last-child td, &:last-child th': { border: 0 },
-        opacity: isRunning ? 1 : 0.7,
-      }}
-    >
-      {/* Node Column */}
-      {columnVisibility.node.visible && (
-        <TableCell sx={{ width: columnWidths.node, minWidth: 80 }}>
-          <Typography variant="body2" noWrap>
-            {getNodeName(guest.node)}
-          </Typography>
-        </TableCell>
-      )}
-      
-      {/* Type Column */}
-      {columnVisibility.type.visible && (
-        <TableCell sx={{ width: columnWidths.type, minWidth: 50 }}>
-          <Chip
-            label={guestTypeLabel}
-            color={guestTypeColor}
-            size="small"
-            variant="outlined"
-            sx={{ 
-              minWidth: 36, 
-              height: 22,
-              fontSize: '0.7rem',
-              fontWeight: 600
-            }}
-          />
-        </TableCell>
-      )}
-      
-      {/* ID Column */}
-      {columnVisibility.id.visible && (
-        <TableCell sx={{ width: columnWidths.id, minWidth: 70 }}>
+  // Get visible columns in the correct order
+  const visibleColumns = useMemo(() => {
+    if (!columnOrder || !Array.isArray(columnOrder) || columnOrder.length === 0) {
+      return [];
+    }
+    
+    // Filter visible columns and sort them according to columnOrder
+    return columnOrder
+      .filter(id => columnVisibility[id]?.visible)
+      .map(id => ({ id, ...columnVisibility[id] }))
+      .filter(Boolean);
+  }, [columnVisibility, columnOrder]);
+
+  // Render cell content based on column ID
+  const renderCellContent = (columnId) => {
+    if (!columnId) return null;
+    
+    switch (columnId) {
+      case 'node':
+        return (
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <StatusIndicator status={guest.status} />
-            <Typography 
-              variant="body2" 
-              sx={{ ml: 1.5 }}
-              noWrap
-            >
-              {extractNumericId(guest.id)}
+            <Typography variant="body2" noWrap>
+              {getNodeName(guest?.node)}
             </Typography>
           </Box>
-        </TableCell>
-      )}
-      
-      {/* Name Column */}
-      {columnVisibility.name.visible && (
-        <TableCell sx={{ width: columnWidths.name, minWidth: 150 }}>
-          <Typography 
-            variant="body2" 
+        );
+      case 'type':
+        return (
+          <Chip 
+            label={guestTypeLabel} 
+            color={guestTypeColor} 
+            size="small" 
+            variant="outlined"
             sx={{ 
-              fontWeight: 500,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              maxWidth: 200
+              minWidth: 32,
+              height: 20,
+              fontSize: '0.7rem',
+              '& .MuiChip-label': {
+                px: 1
+              }
             }}
-          >
-            {guest.name}
+          />
+        );
+      case 'id':
+        return (
+          <Typography variant="body2" color="text.secondary">
+            {extractNumericId(guest?.id)}
           </Typography>
-        </TableCell>
-      )}
-      
-      {/* CPU Column */}
-      {columnVisibility.cpu.visible && (
-        <TableCell sx={{ width: columnWidths.cpu, minWidth: 120 }}>
+        );
+      case 'status':
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <StatusIndicator status={isRunning ? 'running' : 'stopped'} />
+            <Typography variant="body2" sx={{ ml: 1, color: isRunning ? 'success.main' : 'text.disabled' }}>
+              {isRunning ? 'Running' : 'Stopped'}
+            </Typography>
+          </Box>
+        );
+      case 'name':
+        return (
+          <Typography variant="body2" noWrap>
+            {guest?.name}
+          </Typography>
+        );
+      case 'cpu':
+        return (
           <ProgressWithLabel 
             value={cpuUsage} 
-            color={cpuUsage > 80 ? "error" : cpuUsage > 60 ? "warning" : "primary"}
-            disabled={!isRunning}
-            tooltipText={isRunning ? 
-              `CPU: ${formatPercentage(cpuUsage)} utilized` : 
-              "System is not running"}
+            label={`${formatPercentage(cpuUsage)}`} 
+            color={cpuUsage > 90 ? 'error' : cpuUsage > 70 ? 'warning' : 'primary'}
           />
-        </TableCell>
-      )}
-      
-      {/* Memory Column */}
-      {columnVisibility.memory.visible && (
-        <TableCell sx={{ width: columnWidths.memory, minWidth: 120 }}>
+        );
+      case 'memory':
+        return (
           <ProgressWithLabel 
             value={memoryUsage} 
-            color={memoryUsage > 80 ? "error" : memoryUsage > 60 ? "warning" : "primary"}
-            disabled={!isRunning}
-            tooltipText={isRunning ? 
-              memoryTotal ? 
-                `Memory: ${formatBytesWithUnit(memoryUsed, memoryUnit)} / ${formatBytesWithUnit(memoryTotal, memoryUnit)} (${formatPercentage(memoryUsage)})` :
-                `Memory: ${formatPercentage(memoryUsage)} utilized` : 
-              "System is not running"}
+            label={`${formatBytesWithUnit(memoryUsed, memoryUnit)} / ${formatBytesWithUnit(memoryTotal, memoryUnit)}`} 
+            color={memoryUsage > 90 ? 'error' : memoryUsage > 70 ? 'warning' : 'primary'}
           />
-        </TableCell>
-      )}
-      
-      {/* Disk Column */}
-      {columnVisibility.disk.visible && (
-        <TableCell sx={{ width: columnWidths.disk, minWidth: 120 }}>
+        );
+      case 'disk':
+        return (
           <ProgressWithLabel 
             value={diskUsage} 
-            color={diskUsage > 80 ? "error" : diskUsage > 60 ? "warning" : "primary"}
-            disabled={!isRunning}
-            tooltipText={isRunning ? 
-              diskTotal ? 
-                `Disk: ${formatBytesWithUnit(diskUsed, diskUnit)} / ${formatBytesWithUnit(diskTotal, diskUnit)} (${formatPercentage(diskUsage)})` :
-                `Disk: ${formatPercentage(diskUsage)} utilized` : 
-              "System is not running"}
+            label={`${formatBytesWithUnit(diskUsed, diskUnit)} / ${formatBytesWithUnit(diskTotal, diskUnit)}`} 
+            color={diskUsage > 90 ? 'error' : diskUsage > 70 ? 'warning' : 'primary'}
           />
-        </TableCell>
-      )}
-      
-      {/* Download Column */}
-      {columnVisibility.download.visible && (
-        <TableCell sx={{ width: columnWidths.download, minWidth: 100 }}>
-          {isRunning && networkMetrics ? (
-            <Typography variant="body2" color="primary" noWrap fontWeight="medium">
-              ↓ {formatNetworkRate(networkInRate, networkUnit)}
-            </Typography>
-          ) : (
-            <Typography variant="body2" color="text.disabled" noWrap>
-              ↓ -
-            </Typography>
-          )}
-        </TableCell>
-      )}
-      
-      {/* Upload Column */}
-      {columnVisibility.upload.visible && (
-        <TableCell sx={{ width: columnWidths.upload, minWidth: 100 }}>
-          {isRunning && networkMetrics ? (
-            <Typography variant="body2" color="secondary" noWrap fontWeight="medium">
-              ↑ {formatNetworkRate(networkOutRate, networkUnit)}
-            </Typography>
-          ) : (
-            <Typography variant="body2" color="text.disabled" noWrap>
-              ↑ -
-            </Typography>
-          )}
-        </TableCell>
-      )}
-      
-      {/* Uptime Column */}
-      {columnVisibility.uptime.visible && (
-        <TableCell sx={{ width: columnWidths.uptime, minWidth: 80 }}>
-          <Typography 
-            variant="body2" 
-            color={isRunning ? "text.primary" : "text.disabled"}
-            noWrap
-          >
-            {isRunning ? formatUptime(guest.uptime) : "-"}
+        );
+      case 'download':
+        return (
+          <Typography variant="body2" color="text.secondary">
+            {formatNetworkRate(downloadRate)}
           </Typography>
-        </TableCell>
+        );
+      case 'upload':
+        return (
+          <Typography variant="body2" color="text.secondary">
+            {formatNetworkRate(uploadRate)}
+          </Typography>
+        );
+      case 'uptime':
+        return (
+          <Typography variant="body2" color="text.secondary">
+            {isRunning ? formatUptime(uptime) : '—'}
+          </Typography>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <TableRow 
+      hover
+      sx={{ 
+        opacity: isRunning ? 1 : 0.6,
+        '&:hover': {
+          opacity: 1
+        }
+      }}
+    >
+      {/* Render cells based on column order */}
+      {Array.isArray(visibleColumns) && visibleColumns.length > 0 ? (
+        visibleColumns.map(column => (
+          column && (
+            <TableCell 
+              key={column.id}
+              sx={{ 
+                width: columnWidths?.[column.id] || 'auto',
+                minWidth: getMinWidthForColumn(column.id),
+                backgroundColor: activeFilteredColumns[column.id] ? 'rgba(25, 118, 210, 0.04)' : 'inherit'
+              }}
+            >
+              {renderCellContent(column.id)}
+            </TableCell>
+          )
+        ))
+      ) : (
+        <TableCell colSpan={2}>No visible columns</TableCell>
       )}
     </TableRow>
   );
+};
+
+// Helper function to get minimum width for each column
+const getMinWidthForColumn = (columnId) => {
+  const minWidths = {
+    node: 80,
+    type: 50,
+    id: 70,
+    name: 150,
+    cpu: 120,
+    memory: 120,
+    disk: 120,
+    download: 100,
+    upload: 100,
+    uptime: 80
+  };
+  
+  return minWidths[columnId] || 100;
 };
 
 export default NetworkTableRow; 
