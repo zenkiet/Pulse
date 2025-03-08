@@ -258,18 +258,18 @@ export const getSortedAndFilteredData = (
  * @returns {Object} - Object with column IDs as keys and percentage width strings as values
  */
 export const calculateDynamicColumnWidths = (columnVisibility) => {
-  // Base widths (original percentages)
+  // Base widths (adjusted to be more space conservative)
   const baseWidths = {
-    node: 8,
-    type: 5,
-    id: 7,
-    name: 15,
-    cpu: 15,
-    memory: 15,
-    disk: 15,
-    download: 10,
-    upload: 10,
-    uptime: 8
+    node: 7,     // Reduced from 8%
+    type: 4,     // Reduced from 5%
+    id: 6,       // Reduced from 7%
+    name: 14,    // Reduced from 15%
+    cpu: 13,     // Reduced from 15%
+    memory: 13,  // Reduced from 15%
+    disk: 13,    // Reduced from 15%
+    download: 9, // Reduced from 10%
+    upload: 9,   // Reduced from 10%
+    uptime: 7    // Reduced from 8%
   };
   
   // Get total width of visible columns

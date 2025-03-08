@@ -415,20 +415,20 @@ const NetworkTableHeader = ({
 // Helper function to get minimum width for each column
 const getMinWidthForColumn = (columnId) => {
   const minWidths = {
-    node: 80,
-    type: 50,
-    id: 70,
-    status: 100,
-    name: 150,
-    cpu: 120,
-    memory: 120,
-    disk: 120,
-    download: 100,
-    upload: 100,
-    uptime: 80
+    node: 70,     // Reduced from 80px
+    type: 45,     // Reduced from 50px
+    id: 60,       // Reduced from 70px
+    status: 90,   // Reduced from 100px
+    name: 130,    // Reduced from 150px
+    cpu: 100,     // Reduced from 120px
+    memory: 100,  // Reduced from 120px
+    disk: 100,    // Reduced from 120px
+    download: 90, // Reduced from 100px
+    upload: 90,   // Reduced from 100px
+    uptime: 70    // Reduced from 80px
   };
   
-  return minWidths[columnId] || 100;
+  return minWidths[columnId] || 90; // Default reduced from 100px
 };
 
 export default NetworkTableHeader; 

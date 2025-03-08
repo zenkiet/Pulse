@@ -207,19 +207,19 @@ const NetworkTableRow = ({
 // Helper function to get minimum width for each column
 const getMinWidthForColumn = (columnId) => {
   const minWidths = {
-    node: 80,
-    type: 50,
-    id: 70,
-    name: 150,
-    cpu: 120,
-    memory: 120,
-    disk: 120,
-    download: 100,
-    upload: 100,
-    uptime: 80
+    node: 70,
+    type: 45,
+    id: 60,
+    name: 130,
+    cpu: 100,
+    memory: 100,
+    disk: 100,
+    download: 90,
+    upload: 90,
+    uptime: 70
   };
   
-  return minWidths[columnId] || 100;
+  return minWidths[columnId] || 90;
 };
 
 export default NetworkTableRow; 
