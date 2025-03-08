@@ -25,141 +25,102 @@ const useSocket = (url) => {
 
   // Initialize socket connection
   useEffect(() => {
-    // Socket.io connection configuration
-    socketRef.current = io(socketUrl, {
-      transports: ['websocket', 'polling'],  // Allow fallback to polling
-      reconnectionAttempts: 20,              // Increased from 15
-      reconnectionDelay: 1000,               // Reduced from 1500
-      timeout: 8000,                         // Reduced from 10000
-      forceNew: true,
-      autoConnect: true,
-      reconnection: true,
-      reconnectionDelayMax: 5000,            // Reduced from 10000
-      randomizationFactor: 0.3,              // Reduced from 0.5 for more predictable reconnection timing
-      // Add connection state recovery
-      connectionStateRecovery: {
-        maxDisconnectionDuration: 2 * 60 * 1000,
-        skipMiddlewares: true,
-      }
-    });
-
-    console.log('Attempting to connect to WebSocket server at:', socketUrl);
-    setConnectionStatus('connecting');
+    if (socketRef.current) return; // Already connected
     
-    // Connection event handlers
-    socketRef.current.on('connect', () => {
-      console.log('Socket connected successfully');
+    // Create a new socket connection
+    const newSocket = io(socketUrl, {
+      transports: ['websocket'],
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000
+    });
+    
+    // Set up event listeners
+    newSocket.on('connect', () => {
+      setConnectionStatus('connected');
       setIsConnected(true);
       setError(null);
-      setConnectionStatus('connected');
     });
-
-    // Add graceful shutdown handler for page navigation/refresh
-    const handleBeforeUnload = () => {
-      if (socketRef.current) {
-        console.log('Gracefully closing socket connection before page unload');
-        socketRef.current.disconnect();
-      }
-    };
     
-    // Add visibility change handler to manage connections when tab is hidden/visible
+    // Handle page visibility changes
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        console.log('Page hidden, preparing for potential disconnect');
-        // Don't disconnect, but prepare for it
-        if (socketRef.current) {
-          socketRef.current.io.opts.reconnection = true;
-        }
-      } else if (document.visibilityState === 'visible') {
-        console.log('Page visible, ensuring connection');
-        // Ensure we're connected when the page becomes visible again
-        if (socketRef.current && !socketRef.current.connected) {
-          console.log('Reconnecting after visibility change');
-          socketRef.current.connect();
-          setConnectionStatus('connecting');
+        // Page is hidden, prepare for potential disconnect
+      } else {
+        // Page is visible again, ensure connection
+        if (!newSocket.connected) {
+          reconnect();
         }
       }
     };
     
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    // Handle page unload
+    const handleBeforeUnload = () => {
+      if (newSocket) {
+        newSocket.disconnect();
+      }
+    };
+    
+    // Set up page visibility and unload listeners
     document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    socketRef.current.on('connect_error', (err) => {
-      console.error('Socket connection error:', err);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    // Handle connection errors
+    newSocket.on('connect_error', (err) => {
+      setConnectionStatus('error');
       setIsConnected(false);
       setError(`Connection error: ${err.message}`);
-      setConnectionStatus('error');
       
-      // Instead of using debug data, we'll just update the connection status
-      console.log('Backend server appears to be offline or unreachable');
+      // Update connection status
+      setConnectionStatus('error');
     });
-
-    socketRef.current.on('disconnect', () => {
-      console.log('Socket disconnected');
+    
+    newSocket.on('disconnect', () => {
       setIsConnected(false);
       setConnectionStatus('disconnected');
     });
 
-    // Check connection after 1 second and try fallback if needed
-    const timeoutId = setTimeout(() => {
-      if (socketRef.current && !socketRef.current.connected) {
-        console.warn('Socket not connected after 1 second, attempting fallback...');
-        // Try to reconnect with polling as a fallback
-        socketRef.current.io.opts.transports = ['polling', 'websocket'];
-        socketRef.current.connect();
-      }
-    }, 1000);
-
     // Message handler
-    socketRef.current.on('message', (message) => {
-      console.log('Received message:', message);
+    newSocket.on('message', (message) => {
       setLastMessage(message);
       
       switch (message.type) {
         case 'CONNECTED':
-          console.log('Connected to server:', message.payload);
           break;
         
         case 'NODE_STATUS_UPDATE':
-          console.log('Received NODE_STATUS_UPDATE:', message.payload);
           handleNodeStatusUpdate(message.payload);
           break;
         
         case 'GUEST_STATUS_UPDATE':
-          console.log('Received GUEST_STATUS_UPDATE:', message.payload);
           handleGuestStatusUpdate(message.payload);
           break;
         
         case 'METRICS_UPDATE':
-          console.log('Received METRICS_UPDATE:', message.payload);
           handleMetricsUpdate(message.payload);
           break;
         
         case 'EVENT':
-          console.log('Event:', message.payload);
           break;
         
         case 'ERROR':
-          console.error('Error:', message.payload);
           setError(message.payload);
           break;
         
         default:
-          console.warn('Unknown message type:', message.type);
       }
     });
 
     // Cleanup function
     return () => {
-      clearTimeout(timeoutId);
-      // Remove event listeners
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current.off();
-        socketRef.current = null;
+      if (newSocket) {
+        newSocket.disconnect();
+        newSocket.off();
       }
+      // Remove event listeners
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [socketUrl]);
 
@@ -167,7 +128,6 @@ const useSocket = (url) => {
   const handleNodeStatusUpdate = useCallback((payload) => {
     // Handle both single node and array of nodes
     const nodeData = Array.isArray(payload) ? payload : [payload];
-    console.log('Processing node data:', nodeData);
     
     setNodeData(prevNodes => {
       const updatedNodes = [...prevNodes];
@@ -181,7 +141,6 @@ const useSocket = (url) => {
         }
       });
       
-      console.log('Updated node data:', updatedNodes);
       return updatedNodes;
     });
   }, []);
@@ -190,7 +149,6 @@ const useSocket = (url) => {
   const handleGuestStatusUpdate = useCallback((payload) => {
     // Handle both single guest and array of guests
     const guestData = Array.isArray(payload) ? payload : [payload];
-    console.log('Processing guest data:', guestData);
     
     setGuestData(prevGuests => {
       const updatedGuests = [...prevGuests];
@@ -204,7 +162,6 @@ const useSocket = (url) => {
         }
       });
       
-      console.log('Updated guest data:', updatedGuests);
       return updatedGuests;
     });
   }, []);
@@ -214,14 +171,7 @@ const useSocket = (url) => {
     // Handle both single metric and array of metrics
     const metricData = Array.isArray(payload) ? payload : [payload];
     
-    // Important performance optimization:
-    // Only log in development mode to reduce overhead
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Processing metrics data:', metricData);
-      // Log the specific guest IDs we're receiving metrics for
-      metricData.forEach(metric => {
-        console.log(`Received metrics for guest: ${metric.guestId || 'unknown'} at ${new Date().toLocaleTimeString()}`);
-      });
+    if (metricData.length > 0) {
     }
     
     // Use functional update to avoid closure issues with stale state
@@ -283,7 +233,6 @@ const useSocket = (url) => {
   // Function to manually attempt reconnection
   const reconnect = useCallback(() => {
     if (socketRef.current) {
-      console.log('Manually attempting to reconnect...');
       setConnectionStatus('connecting');
       socketRef.current.connect();
     }
