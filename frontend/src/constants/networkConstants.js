@@ -38,10 +38,10 @@ export const STORAGE_KEY_GUEST_TYPE_FILTER = 'network_display_guest_type_filter'
 
 // Define default column configuration
 export const DEFAULT_COLUMN_CONFIG = {
+  status: { id: 'status', label: '', visible: true },
   node: { id: 'node', label: 'Node', visible: true },
   type: { id: 'type', label: 'Type', visible: true },
   id: { id: 'id', label: 'ID', visible: true },
-  status: { id: 'status', label: 'Status', visible: true },
   name: { id: 'name', label: 'Name', visible: true },
   cpu: { id: 'cpu', label: 'CPU', visible: true },
   memory: { id: 'memory', label: 'Memory', visible: true },

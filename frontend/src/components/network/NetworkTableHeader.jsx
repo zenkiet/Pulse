@@ -240,13 +240,21 @@ const NetworkTableHeader = ({
                   })
                 }}
               >
-                <TableSortLabel
-                  active={sortConfig?.key === column.id}
-                  direction={getSortDirection(column.id)}
-                  onClick={() => requestSort(column.id)}
-                >
-                  {column.label || column.id}
-                </TableSortLabel>
+                {column.id === 'status' ? (
+                  // For status column, just show an empty header with no sort functionality
+                  <Box sx={{ height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {column.label}
+                  </Box>
+                ) : (
+                  // For all other columns, show the sort label
+                  <TableSortLabel
+                    active={sortConfig?.key === column.id}
+                    direction={getSortDirection(column.id)}
+                    onClick={() => requestSort(column.id)}
+                  >
+                    {column.label || column.id}
+                  </TableSortLabel>
+                )}
               </TableCell>
             ))}
           </>
