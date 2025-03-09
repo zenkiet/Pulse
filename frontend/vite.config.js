@@ -11,8 +11,8 @@ export default defineConfig({
       // Proxy WebSocket connections to the real backend
       '/socket.io': {
         target: process.env.DOCKER_CONTAINER 
-          ? 'http://localhost:7654'  // In Docker, use the port exposed by the container
-          : (process.env.VITE_API_URL || 'http://localhost:7654'),
+          ? 'http://127.0.0.1:7654'  // In Docker, use the port exposed by the container
+          : (process.env.VITE_API_URL || 'http://127.0.0.1:7654'),
         ws: true,
         changeOrigin: true,
         secure: false,
@@ -60,8 +60,8 @@ export default defineConfig({
       // Proxy API requests to the real backend
       '/api': {
         target: process.env.DOCKER_CONTAINER
-          ? 'http://localhost:7654'  // In Docker, use the port exposed by the container
-          : (process.env.VITE_API_URL || 'http://localhost:7654'),
+          ? 'http://127.0.0.1:7654'  // In Docker, use the port exposed by the container
+          : (process.env.VITE_API_URL || 'http://127.0.0.1:7654'),
         changeOrigin: true,
         configure: (proxy, _options) => {
           // Increase timeout values for Docker environments
@@ -78,7 +78,7 @@ export default defineConfig({
   // Define environment variables that will be available in the frontend code
   define: {
     // Stringify the values to ensure they're treated as strings in the frontend
-    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || ''),
+    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'http://127.0.0.1:7654'),
     'import.meta.env.DOCKER_CONTAINER': JSON.stringify(process.env.DOCKER_CONTAINER || ''),
   }
 }); 
