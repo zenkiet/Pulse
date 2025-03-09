@@ -171,6 +171,35 @@ docker compose up -d  # Restart with new image
 - Responsive design that works on desktop and mobile
 - WebSocket connection for live updates
 
+## ❓ Frequently Asked Questions
+
+### How does Pulse compare to Grafana + InfluxDB monitoring?
+Pulse and Grafana serve different monitoring needs. Pulse focuses on real-time monitoring with WebSocket-based instant updates, ideal for active system monitoring and dashboards. It's lightweight (single Docker container) and simple to set up. Grafana+InfluxDB is better suited for historical data analysis, complex visualizations, and monitoring multiple systems. If you need detailed historical metrics or custom dashboards, use Grafana. If you want instant resource updates and a simple setup, use Pulse.
+
+### How is it different from the built-in Proxmox summary?
+While Proxmox's built-in summary is great for management, Pulse offers:
+- Real-time WebSocket updates
+- All nodes visible on one screen
+- Monitoring without logging into Proxmox
+- Ability to share monitoring access without admin privileges
+- Lightweight resource usage
+- Perfect for dedicated monitoring displays
+
+### Will Pulse support Proxmox Backup Server (PBS)?
+PBS integration is planned. The PBS API provides the metrics needed for backup job status, datastore usage tracking, and verification monitoring. A roadmap of planned features will be published soon.
+
+### What about hardware monitoring (temperatures, additional disks)?
+Hardware metric expansion is in development, including temperature sensors and additional disk metrics. The focus is on keeping the interface clean and responsive while adding these features.
+
+### How resource-intensive is Pulse?
+Pulse is designed to be lightweight, requiring minimal resources (256MB RAM, 1 CPU core). It runs as a single Docker container and doesn't store historical data, keeping the resource footprint small.
+
+### What's the long-term plan for this project?
+Pulse is actively maintained and used daily. I'm committed to keeping it relevant and useful, with a focus on stability and thoughtful feature additions. A public roadmap will be published soon to share planned features and improvements.
+
+### Does Pulse collect any telemetry or user data?
+No. Pulse only communicates directly with your Proxmox servers using the API token you provide. No data is sent outside your network, and the entire codebase is open source for verification.
+
 ## ❓ Troubleshooting
 
 1. **Connection Issues**: Verify your Proxmox node details in `.env`
