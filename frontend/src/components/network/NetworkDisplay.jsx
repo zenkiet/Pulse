@@ -134,6 +134,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     openVisibility,
     filterButtonRef,
     searchButtonRef,
+    systemFilterButtonRef,
     handleFilterButtonClick,
     handleCloseFilterPopover,
     handleSearchButtonClick,
@@ -231,6 +232,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
         handleFilterButtonClick={handleFilterButtonClick}
         searchButtonRef={searchButtonRef}
         filterButtonRef={filterButtonRef}
+        systemFilterButtonRef={systemFilterButtonRef}
       />
       
       {/* Popovers */}

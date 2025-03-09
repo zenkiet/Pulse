@@ -12,7 +12,9 @@ import {
   ToggleButton,
   MenuItem,
   Switch,
-  Slider
+  Slider,
+  Divider,
+  Radio
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -177,12 +179,15 @@ const NetworkPopovers = ({
         </Paper>
       </Popover>
       
-      {/* System type popover */}
+      {/* Combined System Filters popover */}
       <Popover
-        id="type-menu"
-        anchorEl={typeAnchorEl}
-        open={openType}
-        onClose={handleCloseTypePopover}
+        id="system-filters-menu"
+        anchorEl={typeAnchorEl || visibilityAnchorEl}
+        open={openType || openVisibility}
+        onClose={() => {
+          if (openType) handleCloseTypePopover();
+          if (openVisibility) handleCloseVisibilityPopover();
+        }}
         anchorOrigin={{
           vertical: 'bottom',
           horizontal: 'right',
@@ -202,125 +207,21 @@ const NetworkPopovers = ({
         <Paper sx={{ width: 300, p: 0, overflow: 'hidden' }}>
           <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
             <Typography variant="subtitle2" gutterBottom>
-              System Type
+              System Filters
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Filter systems by their type.
+              Control which systems are displayed.
             </Typography>
           </Box>
           
           <Box sx={{ p: 2 }}>
-            <ToggleButtonGroup
-              value={guestTypeFilter}
-              exclusive
-              onChange={(event, newValue) => {
-                if (newValue !== null) {
-                  setGuestTypeFilter(newValue);
-                  handleCloseTypePopover();
-                }
-              }}
-              aria-label="system type filter"
-              size="small"
-              sx={{ 
-                width: '100%',
-                '& .MuiToggleButton-root': {
-                  borderRadius: 1.5,
-                  py: 1,
-                  textTransform: 'none',
-                  fontWeight: 500,
-                  '&.Mui-selected': {
-                    backgroundColor: 'primary.main',
-                    color: 'primary.contrastText',
-                    '&:hover': {
-                      backgroundColor: 'primary.dark',
-                    },
-                    '& .MuiSvgIcon-root': {
-                      color: 'primary.contrastText'
-                    }
-                  },
-                  '&:hover': {
-                    backgroundColor: 'action.hover'
-                  }
-                },
-                '& .MuiToggleButtonGroup-grouped': {
-                  mx: 0.5,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  '&:not(:first-of-type)': {
-                    borderLeft: '1px solid',
-                    borderLeftColor: 'divider',
-                  },
-                  '&:first-of-type': {
-                    ml: 0
-                  },
-                  '&:last-of-type': {
-                    mr: 0
-                  }
-                }
-              }}
-            >
-              <ToggleButton value="all" aria-label="all systems" sx={{ flex: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ViewListIcon fontSize="small" sx={{ mr: 1 }} />
-                  All Systems
-                </Box>
-              </ToggleButton>
-              <ToggleButton value="vm" aria-label="virtual machines only" sx={{ flex: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ComputerIcon fontSize="small" sx={{ mr: 1 }} />
-                  VMs Only
-                </Box>
-              </ToggleButton>
-              <ToggleButton value="ct" aria-label="containers only" sx={{ flex: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <DnsIcon fontSize="small" sx={{ mr: 1 }} />
-                  CTs Only
-                </Box>
-              </ToggleButton>
-            </ToggleButtonGroup>
-          </Box>
-        </Paper>
-      </Popover>
-      
-      {/* Visibility popover */}
-      <Popover
-        id="visibility-menu"
-        anchorEl={visibilityAnchorEl}
-        open={openVisibility}
-        onClose={handleCloseVisibilityPopover}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
-        PaperProps={{
-          elevation: 3,
-          sx: { 
-            borderRadius: 2,
-            overflow: 'hidden'
-          }
-        }}
-      >
-        <Paper sx={{ width: 300, p: 0, overflow: 'hidden' }}>
-          <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-            <Typography variant="subtitle2" gutterBottom>
-              System Visibility
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Control which systems are visible.
-            </Typography>
-          </Box>
-          
-          <Box sx={{ p: 2 }}>
+            {/* System Visibility */}
             <MenuItem dense onClick={() => {
               setShowStopped(!showStopped);
-              handleCloseVisibilityPopover();
             }}
             sx={{
               borderRadius: 1.5,
+              mb: 2,
               '&:hover': {
                 backgroundColor: 'action.hover'
               }
@@ -338,19 +239,142 @@ const NetworkPopovers = ({
                     <VisibilityOffIcon fontSize="small" color="action" sx={{ mr: 1 }} />
                   )}
                   <Typography variant="body2">
-                    {showStopped ? 'Hide Stopped Systems' : 'Show Stopped Systems'}
+                    {showStopped ? 'Show Stopped Systems' : 'Hide Stopped Systems'}
                   </Typography>
                 </Box>
                 <Switch
                   checked={showStopped}
                   onChange={(e) => {
                     setShowStopped(e.target.checked);
-                    handleCloseVisibilityPopover();
                   }}
                   size="small"
                 />
               </Box>
             </MenuItem>
+            
+            <Divider sx={{ my: 2 }} />
+            
+            {/* System Type */}
+            <Typography variant="body2" gutterBottom sx={{ fontWeight: 500, mb: 1 }}>
+              System Types
+            </Typography>
+            
+            {/* VM Option */}
+            <MenuItem dense onClick={() => {
+              if (guestTypeFilter === 'vm') {
+                setGuestTypeFilter('all');
+              } else if (guestTypeFilter === 'ct') {
+                setGuestTypeFilter('all');
+              } else {
+                setGuestTypeFilter('vm');
+              }
+            }}
+            sx={{
+              borderRadius: 1.5,
+              mb: 1,
+              '&:hover': {
+                backgroundColor: 'action.hover'
+              }
+            }}>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                width: '100%',
+                justifyContent: 'space-between'
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <ComputerIcon fontSize="small" color={guestTypeFilter === 'vm' ? "primary" : "action"} sx={{ mr: 1 }} />
+                  <Typography variant="body2">
+                    Virtual Machines Only
+                  </Typography>
+                </Box>
+                <Radio
+                  checked={guestTypeFilter === 'vm'}
+                  onChange={() => {}}
+                  size="small"
+                />
+              </Box>
+            </MenuItem>
+            
+            {/* CT Option */}
+            <MenuItem dense onClick={() => {
+              if (guestTypeFilter === 'ct') {
+                setGuestTypeFilter('all');
+              } else if (guestTypeFilter === 'vm') {
+                setGuestTypeFilter('all');
+              } else {
+                setGuestTypeFilter('ct');
+              }
+            }}
+            sx={{
+              borderRadius: 1.5,
+              mb: 1,
+              '&:hover': {
+                backgroundColor: 'action.hover'
+              }
+            }}>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                width: '100%',
+                justifyContent: 'space-between'
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <DnsIcon fontSize="small" color={guestTypeFilter === 'ct' ? "primary" : "action"} sx={{ mr: 1 }} />
+                  <Typography variant="body2">
+                    Containers Only
+                  </Typography>
+                </Box>
+                <Radio
+                  checked={guestTypeFilter === 'ct'}
+                  onChange={() => {}}
+                  size="small"
+                />
+              </Box>
+            </MenuItem>
+            
+            {/* All Systems Option */}
+            <MenuItem dense onClick={() => {
+              setGuestTypeFilter('all');
+            }}
+            sx={{
+              borderRadius: 1.5,
+              '&:hover': {
+                backgroundColor: 'action.hover'
+              }
+            }}>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                width: '100%',
+                justifyContent: 'space-between'
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <ViewListIcon fontSize="small" color={guestTypeFilter === 'all' ? "primary" : "action"} sx={{ mr: 1 }} />
+                  <Typography variant="body2">
+                    All System Types
+                  </Typography>
+                </Box>
+                <Radio
+                  checked={guestTypeFilter === 'all'}
+                  onChange={() => {}}
+                  size="small"
+                />
+              </Box>
+            </MenuItem>
+            
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+              <Button 
+                variant="contained" 
+                size="small"
+                onClick={() => {
+                  if (openType) handleCloseTypePopover();
+                  if (openVisibility) handleCloseVisibilityPopover();
+                }}
+              >
+                Apply Filters
+              </Button>
+            </Box>
           </Box>
         </Paper>
       </Popover>

@@ -13,6 +13,7 @@ import ViewListIcon from '@mui/icons-material/ViewList';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import TuneIcon from '@mui/icons-material/Tune';
+import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import { DEFAULT_COLUMN_CONFIG } from '../../../constants/networkConstants';
 
 const NetworkHeader = ({
@@ -32,13 +33,14 @@ const NetworkHeader = ({
   handleVisibilityButtonClick,
   handleFilterButtonClick,
   searchButtonRef,
-  filterButtonRef
+  filterButtonRef,
+  systemFilterButtonRef
 }) => {
+  // Calculate if any system filters are active
+  const hasActiveSystemFilters = guestTypeFilter !== 'all' || showStopped;
+  
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-      <Typography variant="h6" component="h2" gutterBottom>
-        Systems
-      </Typography>
+    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
       <Box sx={{ display: 'flex', gap: 1 }}>
         {/* Column visibility button */}
         <IconButton
@@ -89,48 +91,29 @@ const NetworkHeader = ({
           </Badge>
         </IconButton>
         
-        {/* System type button */}
+        {/* Combined System Filters button */}
         <IconButton
+          ref={systemFilterButtonRef}
           onClick={handleTypeButtonClick}
-          color={openType ? 'primary' : 'default'}
+          color={(openType || openVisibility) ? 'primary' : 'default'}
           size="small"
-          aria-controls={openType ? 'type-menu' : undefined}
+          aria-controls={(openType || openVisibility) ? 'system-filters-menu' : undefined}
           aria-haspopup="true"
-          aria-expanded={openType ? 'true' : undefined}
+          aria-expanded={(openType || openVisibility) ? 'true' : undefined}
           sx={{ 
             border: '1px solid',
-            borderColor: openType ? 'primary.main' : 'divider',
+            borderColor: (openType || openVisibility) ? 'primary.main' : 'divider',
             borderRadius: 1,
             p: 0.5
           }}
         >
           <Badge
-            badgeContent={guestTypeFilter !== 'all' ? 1 : 0}
+            badgeContent={hasActiveSystemFilters ? 1 : 0}
             color="primary"
-            invisible={guestTypeFilter === 'all'}
+            invisible={!hasActiveSystemFilters}
           >
-            {guestTypeFilter === 'vm' ? <ComputerIcon /> : 
-             guestTypeFilter === 'ct' ? <DnsIcon /> : 
-             <ViewListIcon />}
+            <FilterAltIcon />
           </Badge>
-        </IconButton>
-        
-        {/* Visibility button */}
-        <IconButton
-          onClick={handleVisibilityButtonClick}
-          color={openVisibility ? 'primary' : 'default'}
-          size="small"
-          aria-controls={openVisibility ? 'visibility-menu' : undefined}
-          aria-haspopup="true"
-          aria-expanded={openVisibility ? 'true' : undefined}
-          sx={{ 
-            border: '1px solid',
-            borderColor: openVisibility ? 'primary.main' : 'divider',
-            borderRadius: 1,
-            p: 0.5
-          }}
-        >
-          {showStopped ? <VisibilityIcon /> : <VisibilityOffIcon />}
         </IconButton>
         
         {/* Resource thresholds button */}

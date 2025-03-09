@@ -24,6 +24,9 @@ const usePopoverManagement = () => {
   // Add a ref for the search button
   const searchButtonRef = useRef(null);
   
+  // Add a ref for the system filter button
+  const systemFilterButtonRef = useRef(null);
+  
   // Filter popover handlers
   const handleFilterButtonClick = useCallback((event) => {
     setFilterAnchorEl(event.currentTarget);
@@ -86,6 +89,7 @@ const usePopoverManagement = () => {
     openVisibility,
     filterButtonRef,
     searchButtonRef,
+    systemFilterButtonRef,
     handleFilterButtonClick,
     handleCloseFilterPopover,
     handleSearchButtonClick,
