@@ -179,6 +179,12 @@ docker compose up -d  # Restart with new image
    ```
 3. **Port Conflicts**: Change the port mapping in your docker run command if port 7654 is already in use
 4. **API Token Issues**: Ensure your token has the correct permissions (PVEAuditor role)
+5. **Frontend Cannot Connect to Backend**: Ensure you're using IPv4 addresses instead of IPv6:
+   ```
+   # Add this to your .env file
+   VITE_API_URL=http://127.0.0.1:7654
+   ```
+   This is particularly important in Docker environments or when the frontend and backend are running on different hosts.
 
 ## 📋 Advanced Configuration
 
