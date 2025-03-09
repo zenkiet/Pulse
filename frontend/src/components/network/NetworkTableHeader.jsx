@@ -233,7 +233,7 @@ const NetworkTableHeader = ({
                 sx={{ 
                   width: columnWidths[column.id] || 'auto',
                   minWidth: getMinWidthForColumn(column.id),
-                  backgroundColor: activeFilteredColumns[column.id] ? 'rgba(25, 118, 210, 0.08)' : 'background.paper',
+                  backgroundColor: activeFilteredColumns[column.id] ? '#e3f2fd' : 'background.paper',
                   ...(column.id === 'status' && {
                     textAlign: 'center',
                     padding: '0px 8px'
