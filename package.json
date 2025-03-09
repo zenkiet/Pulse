@@ -14,7 +14,8 @@
     "dev:frontend": "cd frontend && npm run dev",
     "dev": "./start-dev.sh",
     "dev:mock": "./start-mock-dev.sh",
-    "screenshots": "./scripts/update-screenshots.sh"
+    "screenshots": "./scripts/update-screenshots.sh",
+    "generate:logos": "npm install canvas && node scripts/generate-logo-pngs.js && node scripts/generate-logo-with-text.js"
   },
   "keywords": [
     "proxmox",
@@ -41,6 +42,7 @@
     "@types/socket.io": "^3.0.1",
     "@types/uuid": "^10.0.0",
     "axios": "^1.8.1",
+    "canvas": "^3.1.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",

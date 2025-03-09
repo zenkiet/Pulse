@@ -1,5 +1,9 @@
 # Proxmox Pulse
 
+<p align="center">
+  <img src="public/logos/pulse-logo-256x256.png" alt="Proxmox Pulse Logo" width="128" height="128">
+</p>
+
 A lightweight, responsive Proxmox monitoring application that displays real-time metrics for CPU, memory, network, and disk usage across multiple nodes.
 
 ![Proxmox Pulse Dashboard](docs/images/dashboard.png)
