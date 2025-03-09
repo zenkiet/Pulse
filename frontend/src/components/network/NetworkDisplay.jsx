@@ -27,7 +27,8 @@ import {
   MenuItem,
   Switch,
   Slider,
-  TextField
+  TextField,
+  Autocomplete
 } from '@mui/material';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import FilterAltOffIcon from '@mui/icons-material/FilterAltOff';
@@ -675,52 +676,6 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     handleSearchButtonClick
   ]);
   
-  // Function to add a search term
-  const addSearchTerm = (term) => {
-    if (!activeSearchTerms.includes(term)) {
-      setActiveSearchTerms([...activeSearchTerms, term]);
-    }
-  };
-  
-  // Function to remove a search term
-  const removeSearchTerm = (term) => {
-    setActiveSearchTerms(activeSearchTerms.filter(t => t !== term));
-  };
-  
-  // Update filter value
-  const updateFilter = (filterName, newValue) => {
-    setFilters(prev => ({
-      ...prev,
-      [filterName]: newValue
-    }));
-  };
-  
-  // Handle slider drag start
-  const handleSliderDragStart = (filterName) => {
-    setSliderDragging(filterName);
-  };
-  
-  // Handle slider drag end
-  const handleSliderDragEnd = () => {
-    setSliderDragging(null);
-  };
-  
-  // Clear a specific filter
-  const clearFilter = (filterName) => {
-    setFilters(prev => ({
-      ...prev,
-      [filterName]: 0
-    }));
-  };
-  
-  // Request sort by key
-  const requestSort = (key) => {
-    setSortConfig(prev => ({
-      key,
-      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
-    }));
-  };
-  
   // Get sorted and filtered data
   const sortedAndFilteredData = useMemo(() => {
     // First filter by node
@@ -779,9 +734,50 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     if (filters.download > 0) result.netIn = true;
     if (filters.upload > 0) result.netOut = true;
     
-    // Search terms only affect the name column
+    // Search terms - determine which column to highlight based on the search term
     if (activeSearchTerms.length > 0 || searchTerm) {
-      result.name = true;
+      const allTerms = [...activeSearchTerms];
+      if (searchTerm) allTerms.push(searchTerm);
+      
+      // Check each term and determine which column(s) to highlight
+      allTerms.forEach(term => {
+        const termLower = term.trim().toLowerCase();
+        
+        // Check for exact type matches first
+        if (termLower === 'ct' || termLower === 'container') {
+          result.type = true;
+          return; // Skip other checks for this term
+        }
+        
+        if (termLower === 'vm' || termLower === 'virtual machine') {
+          result.type = true;
+          return; // Skip other checks for this term
+        }
+        
+        // Check if term is a numeric ID
+        if (/^\d+$/.test(termLower)) {
+          result.id = true;
+        } 
+        // Check if term matches type-related keywords
+        else if (['qemu', 'lxc'].includes(termLower)) {
+          result.type = true;
+        }
+        // Check if term matches status-related keywords
+        else if (['running', 'stopped', 'online', 'offline', 'active', 'inactive'].includes(termLower)) {
+          result.status = true;
+        }
+        // Check if term might be a node name
+        else if (nodeData && nodeData.some(node => 
+          (node.name && node.name.toLowerCase().includes(termLower)) || 
+          (node.id && node.id.toLowerCase().includes(termLower))
+        )) {
+          result.node = true;
+        }
+        // Default to name column for other terms
+        else {
+          result.name = true;
+        }
+      });
     }
     
     // Guest type filter affects the type column
@@ -796,7 +792,7 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
     }
     
     return result;
-  }, [filters, activeSearchTerms, searchTerm, guestTypeFilter, showStopped]);
+  }, [filters, activeSearchTerms, searchTerm, guestTypeFilter, showStopped, nodeData]);
   
   // Show loading state if not connected
   if (!isConnected && connectionStatus !== 'error' && connectionStatus !== 'disconnected') {
@@ -817,6 +813,52 @@ const NetworkDisplay = ({ selectedNode = 'all' }) => {
       />
     );
   }
+  
+  // Function to add a search term
+  const addSearchTerm = (term) => {
+    if (!activeSearchTerms.includes(term)) {
+      setActiveSearchTerms([...activeSearchTerms, term]);
+    }
+  };
+  
+  // Function to remove a search term
+  const removeSearchTerm = (term) => {
+    setActiveSearchTerms(activeSearchTerms.filter(t => t !== term));
+  };
+  
+  // Update filter value
+  const updateFilter = (filterName, newValue) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterName]: newValue
+    }));
+  };
+  
+  // Handle slider drag start
+  const handleSliderDragStart = (filterName) => {
+    setSliderDragging(filterName);
+  };
+  
+  // Handle slider drag end
+  const handleSliderDragEnd = () => {
+    setSliderDragging(null);
+  };
+  
+  // Clear a specific filter
+  const clearFilter = (filterName) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterName]: 0
+    }));
+  };
+  
+  // Request sort by key
+  const requestSort = (key) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
   
   return (
     <Box sx={{ width: '100%' }}>

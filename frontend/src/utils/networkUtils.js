@@ -100,7 +100,21 @@ export const getSortedAndFilteredData = (
     
     if (terms.length > 0) {
       filteredData = filteredData.filter(guest => {
-        // Convert all guest properties to lowercase strings for searching
+        // Special handling for exact type searches
+        for (const term of terms) {
+          const termLower = term.toLowerCase().trim();
+          
+          // Exact match for type terms
+          if (termLower === 'ct' || termLower === 'container') {
+            return guest.type === 'lxc';
+          }
+          
+          if (termLower === 'vm' || termLower === 'virtual machine') {
+            return guest.type === 'qemu';
+          }
+        }
+        
+        // For other searches, use the standard inclusion check
         const searchableText = [
           guest.name || '',
           guest.id || '',
@@ -118,7 +132,7 @@ export const getSortedAndFilteredData = (
         
         // Check if any search term is found in the searchable text
         return terms.some(term => 
-          searchableText.includes(term.toLowerCase())
+          searchableText.includes(term.toLowerCase().trim())
         );
       });
     }
@@ -261,10 +275,10 @@ export const calculateDynamicColumnWidths = (columnVisibility) => {
   // Base widths (adjusted to be more space conservative)
   const baseWidths = {
     node: 7,     // Reduced from 8%
-    type: 4,     // Reduced from 5%
+    type: 3,     // Reduced from 4% to make it more compact
     id: 6,       // Reduced from 7%
     status: 3,   // Small width since it's only an icon now
-    name: 14,    // Reduced from 15%
+    name: 15,    // Increased slightly to use the space saved from type
     cpu: 13,     // Reduced from 15%
     memory: 13,  // Reduced from 15%
     disk: 13,    // Reduced from 15%

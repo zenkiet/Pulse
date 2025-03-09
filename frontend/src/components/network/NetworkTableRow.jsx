@@ -89,20 +89,23 @@ const NetworkTableRow = ({
         );
       case 'type':
         return (
-          <Chip 
-            label={guestTypeLabel} 
-            color={guestTypeColor} 
-            size="small" 
-            variant="outlined"
+          <Typography 
+            variant="caption" 
             sx={{ 
-              minWidth: 32,
-              height: 20,
+              color: isVM ? 'primary.main' : 'secondary.main',
+              fontWeight: 'medium',
               fontSize: '0.7rem',
-              '& .MuiChip-label': {
-                px: 1
-              }
+              padding: '2px 4px',
+              border: '1px solid',
+              borderColor: isVM ? 'primary.main' : 'secondary.main',
+              borderRadius: '4px',
+              display: 'inline-block',
+              lineHeight: 1,
+              textAlign: 'center'
             }}
-          />
+          >
+            {guestTypeLabel}
+          </Typography>
         );
       case 'id':
         return (
@@ -220,7 +223,7 @@ const NetworkTableRow = ({
 const getMinWidthForColumn = (columnId) => {
   const minWidths = {
     node: 70,
-    type: 45,
+    type: 35,    // Reduced from 45px to make it more compact
     id: 60,
     status: 40,   // Reduced from 90px since we're only showing the icon now
     name: 130,
