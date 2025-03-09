@@ -1,8 +1,8 @@
-# ProxMox Pulse
+# Proxmox Pulse
 
-A lightweight, responsive ProxMox monitoring application that displays real-time metrics for CPU, memory, network, and disk usage across multiple nodes.
+A lightweight, responsive Proxmox monitoring application that displays real-time metrics for CPU, memory, network, and disk usage across multiple nodes.
 
-![ProxMox Pulse Dashboard](docs/images/dashboard.png)
+![Proxmox Pulse Dashboard](docs/images/dashboard.png)
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/rcourtman)
 
@@ -31,7 +31,7 @@ A lightweight, responsive ProxMox monitoring application that displays real-time
 curl -O https://raw.githubusercontent.com/rcourtman/pulse/main/.env.example
 mv .env.example .env
 
-# 2. Edit the .env file with your ProxMox details
+# 2. Edit the .env file with your Proxmox details
 nano .env  # or use your preferred editor
 
 # 3. Run with Docker
@@ -55,7 +55,7 @@ curl -O https://raw.githubusercontent.com/rcourtman/pulse/main/.env.example
 curl -O https://raw.githubusercontent.com/rcourtman/pulse/main/docker-compose.yml
 mv .env.example .env
 
-# 2. Edit the .env file with your ProxMox details
+# 2. Edit the .env file with your Proxmox details
 nano .env  # or use your preferred editor
 
 # 3. Run with Docker Compose
@@ -73,27 +73,27 @@ docker compose up -d  # Note: newer Docker versions use 'docker compose' (no hyp
 Edit your `.env` file with at least these settings:
 
 ```bash
-# Required: ProxMox Node Configuration
+# Required: Proxmox Node Configuration
 PROXMOX_NODE_1_NAME=Proxmox Node 1
 PROXMOX_NODE_1_HOST=https://proxmox.local:8006
 PROXMOX_NODE_1_TOKEN_ID=root@pam!pulse
 PROXMOX_NODE_1_TOKEN_SECRET=your-token-secret
 ```
 
-### ProxMox API Token Requirements
+### Proxmox API Token Requirements
 
-Your ProxMox API token needs these permissions:
+Your Proxmox API token needs these permissions:
 - PVEAuditor role or custom role with:
   - Datastore.Audit
   - VM.Audit
   - Sys.Audit
   - Pool.Audit
 
-### Creating a ProxMox API Token
+### Creating a Proxmox API Token
 
 #### Option 1: Quick Command (Convenient but less secure)
 
-You can run this command either by SSH'ing into your ProxMox server or by using the Shell console in the ProxMox web UI (Datacenter → Shell):
+You can run this command either by SSH'ing into your Proxmox server or by using the Shell console in the Proxmox web UI (Datacenter → Shell):
 
 ```bash
 # This creates a token named 'pulse' to match the example in the .env file
@@ -110,7 +110,7 @@ pveum user token list root@pam
 
 #### Option 2: Step-by-Step Guide (More secure)
 
-1. **Log in to the ProxMox web interface**
+1. **Log in to the Proxmox web interface**
 
 2. **Create a dedicated user** (optional but recommended)
    - Go to Datacenter → Permissions → Users
@@ -166,14 +166,14 @@ docker compose up -d  # Restart with new image
 
 ## ✨ Features
 
-- Real-time monitoring of ProxMox nodes, VMs, and containers
+- Real-time monitoring of Proxmox nodes, VMs, and containers
 - Dashboard with summary cards for nodes, guests, and resources
 - Responsive design that works on desktop and mobile
 - WebSocket connection for live updates
 
 ## ❓ Troubleshooting
 
-1. **Connection Issues**: Verify your ProxMox node details in `.env`
+1. **Connection Issues**: Verify your Proxmox node details in `.env`
 2. **SSL Problems**: Add these to your .env file:
    ```
    IGNORE_SSL_ERRORS=true
@@ -190,7 +190,7 @@ docker compose up -d  # Restart with new image
 
 ## 📋 Advanced Configuration
 
-For multiple ProxMox nodes or advanced settings, add these to your `.env`:
+For multiple Proxmox nodes or advanced settings, add these to your `.env`:
 
 ```bash
 # Additional nodes
@@ -234,7 +234,7 @@ cd frontend && npm install && cd ..
 ### Development Architecture
 
 Pulse uses a split architecture for development:
-- **Backend server** (port 7654): Node.js Express server that communicates with ProxMox
+- **Backend server** (port 7654): Node.js Express server that communicates with Proxmox
 - **Frontend server** (port 3000): Vite development server for the React frontend
 
 This separation provides several benefits:
@@ -243,7 +243,7 @@ This separation provides several benefits:
 - **API isolation**: Clear separation between data services and UI components
 
 When you run `start-dev.sh`, both servers start automatically:
-1. The backend server runs on port 7654 and handles all ProxMox API communication
+1. The backend server runs on port 7654 and handles all Proxmox API communication
 2. The frontend development server runs on port 3000 with hot reloading enabled
 3. API requests from the frontend are proxied to the backend
 
@@ -263,7 +263,7 @@ The development server will be accessible at:
 - **Memory**: Minimum 256MB RAM (512MB recommended)
 - **CPU**: Any modern CPU (1+ cores)
 - **Disk Space**: Approximately 100MB for the Docker image
-- **Network**: Connectivity to your ProxMox server(s)
+- **Network**: Connectivity to your Proxmox server(s)
 - **Browser**: Any modern browser (Chrome, Firefox, Safari, Edge)
 
 ## 🔄 Version Information
