@@ -90,7 +90,10 @@ export class ProxmoxClient extends EventEmitter implements ProxmoxClientMethods 
             const delay = this.retryDelayMs;
             await new Promise(resolve => setTimeout(resolve, delay));
             
-            return this.client(config);
+            if (this.client) {
+              return this.client(config);
+            }
+            return Promise.reject(new Error('HTTP client is not initialized'));
           }
           
           return Promise.reject(error);
