@@ -2,6 +2,8 @@
 
 A lightweight, responsive ProxMox monitoring application that displays real-time metrics for CPU, memory, network, and disk usage across multiple nodes.
 
+![ProxMox Pulse Dashboard](docs/images/dashboard.png)
+
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/rcourtman)
 
 ## 📑 Table of Contents
