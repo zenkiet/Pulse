@@ -7,11 +7,8 @@ This document explains how to use the screenshot automation tool to keep the doc
 The easiest way to update screenshots is to use the provided npm script:
 
 ```bash
-# From the project root (macOS/Linux)
+# From the project root
 npm run screenshots
-
-# From the project root (Windows)
-npm run screenshots:win
 ```
 
 This script will:
@@ -20,8 +17,6 @@ This script will:
 3. Run the screenshot tool with the default configuration
 4. Save the screenshots to the `docs/images` directory
 5. Clean up by stopping any servers it started
-
-> **Windows Users**: For detailed instructions specific to Windows, please see [SCREENSHOTS_WINDOWS.md](./SCREENSHOTS_WINDOWS.md).
 
 ## Configuration
 

@@ -14,8 +14,7 @@
     "dev:frontend": "cd frontend && npm run dev",
     "dev": "./start-dev.sh",
     "dev:mock": "./start-mock-dev.sh",
-    "screenshots": "./scripts/update-screenshots.sh",
-    "screenshots:win": "powershell -ExecutionPolicy Bypass -File .\\scripts\\update-screenshots.ps1"
+    "screenshots": "./scripts/update-screenshots.sh"
   },
   "keywords": [
     "proxmox",

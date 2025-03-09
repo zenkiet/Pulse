@@ -5,7 +5,6 @@ All notable changes to this project will be documented in this file.
 ## [1.3.0] - 2024-03-09
 
 ### Added
-- Windows support for screenshot automation tool
 - Dashboard screenshot to README
 - Ko-fi support button and Support section
 - Code of Conduct based on Contributor Covenant
