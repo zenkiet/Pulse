@@ -98,20 +98,27 @@ Before creating a release, ensure you have:
    cd frontend && npm run build && cd ..
    ```
 
-3. Commit version updates:
+3. Test the build locally:
    ```bash
-   git add frontend/src/utils/version.js package.json frontend/package.json Dockerfile
+   # Build and run locally to verify version
+   docker compose up -d --build
+   # Check the version in UI at http://localhost:7654
+   ```
+
+4. Commit version updates and built frontend:
+   ```bash
+   git add frontend/src/utils/version.js package.json frontend/package.json Dockerfile frontend/dist
    git commit -m "chore: bump version to X.Y.Z"
    git push origin main
    ```
 
-4. Create and push tag:
+5. Create and push tag:
    ```bash
    git tag -a vX.Y.Z -m "Release vX.Y.Z"
    git push origin vX.Y.Z
    ```
 
-5. Build and push Docker images:
+6. Build and push Docker images:
    ```bash
    # Verify buildx setup
    docker buildx ls
@@ -131,7 +138,7 @@ Before creating a release, ensure you have:
    docker buildx imagetools inspect rcourtman/pulse:X.X.X
    ```
 
-6. Create GitHub release:
+7. Create GitHub release:
    ```bash
    # Extract the latest version's changes from CHANGELOG.md
    awk '/^## \[.*\]/{p=NR==1}p' CHANGELOG.md > release-notes.tmp
@@ -143,9 +150,9 @@ Before creating a release, ensure you have:
    rm release-notes.tmp
    ```
 
-7. Verify the release:
+8. Verify the release:
    - [ ] Check GitHub Actions workflows completed successfully
-   - [ ] Pull and test the Docker image
+   - [ ] Pull and test the Docker image on a fresh system
    - [ ] Verify version number in UI matches the release version
    - [ ] Verify application functionality
 
