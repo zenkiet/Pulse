@@ -240,7 +240,7 @@ export class NodeManager extends EventEmitter {
   }
 
   /**
-   * Handle event from ProxMox
+   * Handle event from Proxmox
    */
   private handleEvent(nodeId: string, event: ProxmoxEvent): void {
     // Only process important events

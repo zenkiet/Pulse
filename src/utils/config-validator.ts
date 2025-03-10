@@ -80,7 +80,7 @@ async function validateNodeConfig(nodeConfig: NodeConfig, ignoreSSLErrors: boole
     
     // Test connection
     const response = await client.get('/version');
-    logger.info(`Node ${nodeConfig.id}: Successfully connected to ProxMox API version ${response.data.data.version}`);
+    logger.info(`Node ${nodeConfig.id}: Successfully connected to Proxmox API version ${response.data.data.version}`);
     return true;
   } catch (error) {
     if (axios.isAxiosError(error)) {
@@ -129,9 +129,9 @@ export async function validateAndLogHelp(config: AppConfig): Promise<boolean> {
   
   if (!isValid) {
     logger.info('Configuration validation failed. Here are some troubleshooting tips:');
-    logger.info('1. Check network connectivity to the ProxMox nodes');
-    logger.info('2. Verify that the API tokens have the correct permissions');
-    logger.info('3. Make sure the ProxMox API is accessible on the specified port');
+    logger.info('1. Check network connectivity to the Proxmox nodes');
+    logger.info('2. Verify your API token has the correct permissions (PVEAuditor role)');
+    logger.info('3. Make sure the Proxmox API is accessible on the specified port');
     logger.info('4. Check for special characters in token IDs that might need escaping');
     
     // Generate curl examples for each node

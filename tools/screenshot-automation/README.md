@@ -1,6 +1,6 @@
-# ProxMox Pulse Screenshot Automation Tool
+# Screenshot Automation Tool for Pulse for Proxmox VE
 
-This tool automates the process of taking screenshots for the ProxMox Pulse application documentation. It can capture screenshots in both light and dark modes, create split-view images, and crop specific regions of the UI.
+This tool automates the process of taking screenshots for the Pulse for Proxmox VE application documentation. It can capture screenshots in both light and dark modes, create split-view images, and crop specific regions of the UI.
 
 ## Features
 

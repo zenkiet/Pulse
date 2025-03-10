@@ -1,6 +1,6 @@
-# Contributing to ProxMox Pulse
+# Contributing to Pulse for Proxmox VE
 
-Thank you for considering contributing to ProxMox Pulse! This document outlines the process for contributing to the project.
+Thank you for considering contributing to Pulse for Proxmox VE! This document outlines the process for contributing to the project.
 
 ## Code of Conduct
 
@@ -31,8 +31,8 @@ This section guides you through submitting an enhancement suggestion, including 
 * **Provide a step-by-step description of the suggested enhancement** in as many details as possible.
 * **Provide specific examples to demonstrate the steps**. Include copy/pasteable snippets which you use in those examples.
 * **Describe the current behavior** and **explain which behavior you expected to see instead** and why.
-* **Include screenshots and animated GIFs** which help you demonstrate the steps or point out the part of ProxMox Pulse which the suggestion is related to.
-* **Explain why this enhancement would be useful** to most ProxMox Pulse users.
+* **Include screenshots and animated GIFs** which help you demonstrate the steps or point out the part of Pulse for Proxmox VE which the suggestion is related to.
+* **Explain why this enhancement would be useful** to most Pulse for Proxmox VE users.
 * **List some other applications where this enhancement exists.**
 
 ### Pull Requests
@@ -79,4 +79,4 @@ This section guides you through submitting an enhancement suggestion, including 
 
 ## License
 
-By contributing to ProxMox Pulse, you agree that your contributions will be licensed under the project's [MIT License](LICENSE). 
+By contributing to Pulse for Proxmox VE, you agree that your contributions will be licensed under the project's [MIT License](LICENSE). 

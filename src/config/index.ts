@@ -80,7 +80,7 @@ function parseNodeConfigs(): NodeConfig[] {
 function validateConfig(config: AppConfig): void {
   // Check if at least one node is configured
   if (config.nodes.length === 0) {
-    throw new Error('No valid ProxMox nodes configured. Please check your environment variables.');
+    throw new Error('No valid Proxmox VE nodes configured. Please check your environment variables.');
   }
   
   // Validate port

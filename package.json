@@ -27,7 +27,7 @@
   ],
   "author": "Richard Courtman",
   "license": "MIT",
-  "description": "A lightweight, responsive ProxMox monitoring application that displays real-time metrics for CPU, memory, network, and disk usage across multiple nodes.",
+  "description": "A lightweight, responsive monitoring application for Proxmox VE that displays real-time metrics for CPU, memory, network, and disk usage across multiple nodes.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rcourtman/pulse.git"

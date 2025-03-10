@@ -138,7 +138,7 @@ export async function getContainers(this: ProxmoxClient): Promise<ProxmoxContain
             vmid: container.vmid,
             cpus: status.cpus || container.cpus || 1,
             // Use CPU usage from detailed resource data or fallback to status
-            // Do NOT multiply by 100 - use the raw value from ProxMox
+            // Do NOT multiply by 100 - use the raw value from Proxmox
             cpu: (resourceData.cpu !== undefined && resourceData.cpu !== null) ? 
                  resourceData.cpu : 
                  (status.cpu !== undefined && status.cpu !== null) ? 

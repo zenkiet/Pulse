@@ -29,7 +29,7 @@ export async function subscribeToEvents(this: ProxmoxClient, callback: (event: P
   }
 
   // Set up polling interval - this is a fallback method
-  // ProxMox doesn't have a true WebSocket event API, but we can optimize our polling
+  // Proxmox doesn't have a true WebSocket event API, but we can optimize our polling
   // to be more responsive and efficient
   
   let isPolling = false;

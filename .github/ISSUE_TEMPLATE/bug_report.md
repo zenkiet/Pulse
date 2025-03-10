@@ -27,7 +27,7 @@ If applicable, add screenshots to help explain your problem.
 ## Environment
 - OS: [e.g. Ubuntu 22.04, Windows 11, macOS 13.0]
 - Browser: [e.g. Chrome 108, Firefox 106]
-- ProxMox Version: [e.g. 7.3-3]
+- Proxmox VE Version: [e.g. 7.3-3]
 - Pulse Version: [e.g. 1.2.1]
 - Deployment Method: [e.g. Docker, Docker Compose]
 

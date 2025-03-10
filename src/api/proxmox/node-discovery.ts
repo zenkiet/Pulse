@@ -1,7 +1,7 @@
 import { ProxmoxClient } from './index';
 
 /**
- * Discover the actual ProxMox node name
+ * Discover the actual Proxmox node name
  */
 export async function discoverNodeName(this: ProxmoxClient): Promise<string> {
   // If we already discovered the node name, return it
@@ -88,16 +88,8 @@ export async function getNodeNameAsync(this: ProxmoxClient): Promise<string> {
  * Get node name (legacy method, will be deprecated)
  */
 export function getNodeName(this: ProxmoxClient): string {
-  // In ProxMox, the node name is typically the hostname of the server
-  // We'll try to get it from the API, but for now use a hardcoded value based on the node ID
-  // This assumes your node IDs in the config match the actual ProxMox node names
-  if (this.config.id === 'node-1') {
-    return 'pve';  // Typical default name for the first node in a ProxMox cluster
-  } else if (this.config.id === 'node-2') {
-    return 'pve2'; // Typical name for the second node
-  }
-  
-  // Fallback to the old method if we can't determine the node name
-  const url = new URL(this.config.host);
-  return url.hostname;
+  // In Proxmox, the node name is typically the hostname of the server
+  // This assumes your node IDs in the config match the actual Proxmox node names
+  // If not found, return 'pve' which is the typical default name for the first node in a Proxmox cluster
+  return 'pve';
 } 

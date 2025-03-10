@@ -132,7 +132,7 @@ export class WebSocketServer {
     // Send connected message
     socket.emit('message', this.createMessage(WebSocketMessageType.CONNECTED, {
       timestamp: Date.now(),
-      message: 'Connected to ProxMox Monitor WebSocket server'
+      message: 'Connected to Pulse for Proxmox VE WebSocket server'
     }));
     
     // Send all nodes

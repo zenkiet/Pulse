@@ -1,4 +1,4 @@
-# Screenshot Automation for ProxMox Pulse
+# Screenshot Automation for Pulse for Proxmox VE
 
 This document explains how to use the screenshot automation tool to keep the documentation images up-to-date with the latest UI changes.
 

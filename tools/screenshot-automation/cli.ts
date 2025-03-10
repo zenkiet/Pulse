@@ -8,7 +8,7 @@ import { logger } from './logger';
 // Set up command line interface
 program
   .name('screenshot-tool')
-  .description('Automated screenshot tool for ProxMox Pulse')
+  .description('Automated screenshot tool for Pulse for Proxmox VE')
   .version('1.0.0')
   .option('-c, --config <path>', 'Path to config file', './screenshot-config.json')
   .option('-u, --url <url>', 'Base URL to use (overrides config file)')

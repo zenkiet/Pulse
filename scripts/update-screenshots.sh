@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ProxMox Pulse Screenshot Generator
+# Pulse for Proxmox VE Screenshot Generator
 # Automates the process of generating screenshots for documentation
 # by starting required servers with mock data and running the screenshot tool.
 

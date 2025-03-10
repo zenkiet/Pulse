@@ -49,7 +49,7 @@ export class ProxmoxClient extends EventEmitter implements ProxmoxClientMethods 
       };
       
       this.client = axios.create(axiosConfig);
-      this.logger.info(`ProxMox API client created with timeout: ${apiTimeoutMs}ms and ${this.retryAttempts} retry attempts`);
+      this.logger.info(`Proxmox API client created with timeout: ${apiTimeoutMs}ms and ${this.retryAttempts} retry attempts`);
 
       // Add request interceptor for logging
       this.client.interceptors.request.use(request => {
@@ -116,7 +116,7 @@ export class ProxmoxClient extends EventEmitter implements ProxmoxClientMethods 
   setupEventPolling(): void { throw new Error('Not implemented'); }
 
   /**
-   * Test the connection to the ProxMox API
+   * Test the connection to the Proxmox API
    */
   async testConnection(): Promise<boolean> {
     try {

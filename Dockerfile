@@ -23,7 +23,7 @@ FROM node:18-slim
 
 # Add version labels
 LABEL version="1.3.0"
-LABEL description="ProxMox Pulse - A lightweight monitoring application for ProxMox"
+LABEL description="Pulse - A lightweight monitoring application for Proxmox VE"
 LABEL maintainer="Richard Courtman"
 
 # Create a non-root user

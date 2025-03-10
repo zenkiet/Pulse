@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Update Screenshots Script for ProxMox Pulse
+# Update Screenshots Script for Pulse for Proxmox VE
 # This script automates the process of taking screenshots for documentation
 
 # Set default values

@@ -1,7 +1,7 @@
 {
   "name": "pulse-screenshot-tool",
   "version": "1.0.0",
-  "description": "Automated screenshot tool for ProxMox Pulse",
+  "description": "Automated screenshot tool for Pulse for Proxmox VE",
   "main": "dist/cli.js",
   "bin": {
     "pulse-screenshots": "dist/cli.js"
