@@ -5,7 +5,11 @@ chmod +x "$0"
 
 # Stop any running Pulse Docker containers first
 echo "Stopping any running Pulse Docker containers..."
-docker ps -q --filter "name=pulse" | xargs -r docker stop
+if command -v docker &> /dev/null; then
+  docker ps -q --filter "name=pulse" | xargs -r docker stop
+else
+  echo "Docker not found, skipping container cleanup..."
+fi
 
 # Kill any existing servers
 echo "Killing any existing servers..."

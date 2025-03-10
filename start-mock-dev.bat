@@ -3,8 +3,13 @@ setlocal
 
 REM Stop any running Pulse Docker containers first
 echo Stopping any running Pulse Docker containers...
-for /f "tokens=*" %%i in ('docker ps -q --filter "name=pulse"') do (
-    docker stop %%i
+where docker >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    for /f "tokens=*" %%i in ('docker ps -q --filter "name=pulse"') do (
+        docker stop %%i
+    )
+) else (
+    echo Docker not found, skipping container cleanup...
 )
 
 REM Kill any existing servers
