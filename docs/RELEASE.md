@@ -30,14 +30,16 @@ Before creating a release, ensure you have:
    - [ ] Decide on new version number (MAJOR.MINOR.PATCH)
 
 2. **Documentation**
+   - [ ] Review commits since last release: `git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"%h %s"`
    - [ ] Update CHANGELOG.md with new version section and date
-   - [ ] Document all changes under appropriate categories:
-     - Added (new features)
-     - Changed (changes in existing functionality)
-     - Deprecated (soon-to-be removed features)
-     - Removed (now removed features)
-     - Fixed (bug fixes)
-     - Security (security fixes)
+   - [ ] Categorize changes based on commit types:
+     - feat: → Added (new features)
+     - fix: → Fixed (bug fixes)
+     - security: → Security (security fixes)
+     - chore:/refactor:/perf: → Changed (changes in existing functionality)
+     - deprecate: → Deprecated (soon-to-be removed features)
+     - remove: → Removed (now removed features)
+   - [ ] Ensure all significant changes are documented in the changelog
 
 3. **Testing**
    - [ ] Build and test backend: `npm run build`
@@ -75,7 +77,14 @@ Before creating a release, ensure you have:
 
 5. Create GitHub release:
    ```bash
-   gh release create vX.Y.Z --title "Release vX.Y.Z" --notes-file CHANGELOG.md
+   # Extract the latest version's changes from CHANGELOG.md
+   awk '/^## \[.*\]/{p=NR==1}p' CHANGELOG.md > release-notes.tmp
+   
+   # Create the release using the extracted notes
+   gh release create vX.Y.Z --title "Release vX.Y.Z" --notes-file release-notes.tmp
+   
+   # Clean up
+   rm release-notes.tmp
    ```
 
 6. Verify the release:
