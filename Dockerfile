@@ -1,5 +1,24 @@
-# Build stage
-FROM node:18-slim AS builder
+# Frontend build stage
+FROM node:18-slim AS frontend-builder
+
+WORKDIR /app/frontend
+
+# Copy frontend package files for dependency caching
+COPY frontend/package*.json ./
+
+# Install frontend dependencies
+RUN npm ci
+
+# Copy frontend source files
+COPY frontend/src ./src
+COPY frontend/index.html ./
+COPY frontend/vite.config.js ./
+
+# Build the frontend
+RUN npm run build
+
+# Backend build stage
+FROM node:18-slim AS backend-builder
 
 WORKDIR /app
 
@@ -18,20 +37,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy package files for better caching
+# Copy package files for dependency caching
 COPY package*.json ./
-COPY frontend/package*.json ./frontend/
 
 # Install dependencies
 RUN npm ci
-RUN cd frontend && npm ci
 
-# Copy application files
-COPY . .
+# Copy backend source files
+COPY src ./src
+COPY tsconfig*.json ./
 
-# Build the application
+# Build the backend
 RUN npm run build
-RUN cd frontend && npm run build
 
 # Production stage
 FROM node:18-slim
@@ -41,7 +58,7 @@ LABEL version="1.4.1"
 LABEL description="Pulse - A lightweight monitoring application for Proxmox VE"
 LABEL maintainer="Richard Courtman"
 
-# Install dependencies for canvas and create a non-root user
+# Install runtime dependencies for canvas and create a non-root user
 RUN apt-get update && apt-get install -y --no-install-recommends \
     dumb-init \
     python3 \
@@ -49,6 +66,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     make \
     g++ \
     build-essential \
+    pkg-config \
+    libpixman-1-dev \
     libcairo2-dev \
     libpango1.0-dev \
     libjpeg-dev \
@@ -60,10 +79,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Copy only necessary files from builder stage
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/frontend/dist ./frontend/dist
+# Copy only production dependencies
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+# Copy built files from builder stages
+COPY --from=backend-builder /app/dist ./dist
+COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
 # Create logs directory with proper permissions
 RUN mkdir -p /app/logs && chown -R pulse:pulse /app/logs

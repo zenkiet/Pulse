@@ -82,8 +82,72 @@ Before creating a release, ensure you have:
 3. **Testing**
    - [ ] Build and test backend: `npm run build`
    - [ ] Build and test frontend: `cd frontend && npm run build && cd ..`
-   - [ ] Test application locally
-   - [ ] Verify all new features/fixes work as expected
+   - [ ] Test application locally (non-Docker):
+     ```bash
+     # Start the application
+     npm start
+     
+     # Verify in browser:
+     # 1. UI loads correctly at http://localhost:7654
+     # 2. Version number is correct
+     # 3. Can connect to Proxmox
+     # 4. Metrics are updating
+     # 5. All charts and graphs render
+     ```
+   - [ ] Test Docker build and deployment:
+     ```bash
+     # Clean all existing containers and images
+     docker compose down
+     docker rmi rcourtman/pulse:latest rcourtman/pulse:X.Y.Z
+     
+     # Build fresh and test locally
+     docker compose up -d --build
+     
+     # Verify in browser:
+     # 1. UI loads correctly at http://localhost:7654
+     # 2. Version number is correct
+     # 3. Can connect to Proxmox
+     # 4. Metrics are updating
+     # 5. All charts and graphs render
+     
+     # Check logs for any errors
+     docker logs pulse-app
+     ```
+   - [ ] Test clean Docker installation:
+     ```bash
+     # Create a fresh test directory
+     mkdir -p /tmp/pulse-test && cd /tmp/pulse-test
+     
+     # Create minimal docker-compose.yml
+     cat > docker-compose.yml << 'EOF'
+     services:
+       pulse-app:
+         image: rcourtman/pulse:X.Y.Z
+         ports:
+           - "7654:7654"
+         env_file:
+           - .env
+         environment:
+           - NODE_ENV=production
+         restart: unless-stopped
+     EOF
+     
+     # Copy your test .env file
+     cp /path/to/your/test/.env .
+     
+     # Test deployment
+     docker compose up -d
+     
+     # Verify as above and check logs
+     docker logs pulse-app
+     ```
+   - [ ] Test multi-architecture support:
+     ```bash
+     # Verify both architectures
+     docker buildx imagetools inspect rcourtman/pulse:X.Y.Z
+     
+     # Test pulling on different architectures if available
+     ```
 
 ## Release Process
 
@@ -91,24 +155,38 @@ Before creating a release, ensure you have:
    - `frontend/src/utils/version.js`
    - `package.json`
    - `frontend/package.json`
-   - `Dockerfile` labels
+   - `Dockerfile` labels (update version in LABEL version="X.Y.Z")
 
-2. Rebuild the frontend to ensure version changes are included:
+2. Rebuild the frontend with the new version:
    ```bash
+   # Clean the frontend build directory
+   rm -rf frontend/dist
+   
+   # Rebuild the frontend
    cd frontend && npm run build && cd ..
+   
+   # Verify the new version appears in the built files
+   grep -r "VERSION = " frontend/dist/assets/*.js
    ```
 
 3. Test the build locally:
    ```bash
    # Build and run locally to verify version
    docker compose up -d --build
+   
    # Check the version in UI at http://localhost:7654
+   # IMPORTANT: Verify the version number matches the new release version
    ```
 
-4. Commit version updates and built frontend:
+4. Once verified, commit version updates including the built frontend:
    ```bash
+   # Add all version-related files and the built frontend
    git add frontend/src/utils/version.js package.json frontend/package.json Dockerfile frontend/dist
+   
+   # Commit the changes
    git commit -m "chore: bump version to X.Y.Z"
+   
+   # Push to main
    git push origin main
    ```
 
@@ -127,6 +205,10 @@ Before creating a release, ensure you have:
    docker buildx use multiarch-builder
    
    # Build and push multi-architecture images
+   # Note: The multi-stage Dockerfile will:
+   # 1. Build frontend in isolated stage (only rebuilds on frontend changes)
+   # 2. Build backend in isolated stage (only rebuilds on backend changes)
+   # 3. Create minimal production image with only runtime dependencies
    docker buildx build \
      --platform linux/amd64,linux/arm64 \
      --tag rcourtman/pulse:X.X.X \
@@ -150,11 +232,53 @@ Before creating a release, ensure you have:
    rm release-notes.tmp
    ```
 
-8. Verify the release:
-   - [ ] Check GitHub Actions workflows completed successfully
-   - [ ] Pull and test the Docker image on a fresh system
-   - [ ] Verify version number in UI matches the release version
-   - [ ] Verify application functionality
+8. **Release Verification Checklist**
+   - [ ] GitHub Actions:
+     - All workflows completed successfully
+     - No warnings or errors in logs
+   
+   - [ ] Docker Image Testing:
+     - [ ] Fresh pull test:
+       ```bash
+       docker pull rcourtman/pulse:X.Y.Z
+       ```
+     - [ ] Clean installation test:
+       - Create new directory with only docker-compose.yml and .env
+       - Deploy using pulled image
+       - Verify functionality
+     - [ ] Version verification:
+       - Check version in UI matches release
+       - Check version in Docker labels
+       - Check version in application logs
+     - [ ] Multi-architecture verification:
+       - Confirm both amd64 and arm64 images are available
+       - Test on different architectures if possible
+   
+   - [ ] Application Functionality:
+     - [ ] UI loads correctly
+     - [ ] Static assets are served properly
+     - [ ] Can connect to Proxmox
+     - [ ] Metrics collection works
+     - [ ] Charts and graphs render
+     - [ ] WebSocket connection stable
+     - [ ] No console errors
+   
+   - [ ] Documentation:
+     - [ ] README is up to date
+     - [ ] CHANGELOG reflects all changes
+     - [ ] Docker Hub description is current
+     - [ ] GitHub release notes are clear
+
+   - [ ] Regression Testing:
+     - [ ] Previously reported issues remain fixed
+     - [ ] No new issues introduced
+     - [ ] Core features working as expected
+
+If any of these checks fail:
+1. Do not proceed with the release
+2. Document the failure
+3. Fix the issue
+4. Restart testing from the beginning
 
 ## Troubleshooting
 
@@ -179,10 +303,31 @@ Before creating a release, ensure you have:
   docker buildx rm multiarch-builder
   docker buildx create --name multiarch-builder --driver docker-container --bootstrap
   ```
+- For faster builds:
+  - The multi-stage Dockerfile optimizes builds by:
+    - Caching frontend and backend builds separately
+    - Only rebuilding stages that have changed
+    - Minimizing the final image size
+  - Frontend-only changes (like version updates) will only rebuild the frontend stage
+  - Backend-only changes will only rebuild the backend stage
+  - To force a clean build: `docker buildx build --no-cache ...`
+  - To clean up old build cache: `docker builder prune`
+  - To see what's using build cache: `docker buildx du`
+  - For version updates, ensure you:
+    1. Update version in all files
+    2. Rebuild frontend locally and verify version
+    3. Commit changes including built frontend
+    4. Build and push Docker image
 
 ### Version Mismatches
-- Verify all version files are updated
-- Check for consistency across all files
+- Verify all version files are updated:
+  - `frontend/src/utils/version.js`
+  - `package.json`
+  - `frontend/package.json`
+  - `Dockerfile` labels
+- Always rebuild frontend after version changes
+- Verify version in built frontend before creating Docker image
+- Test version in UI after Docker build
 - Create patch release if needed
 
 ## Post-Release
