@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.1] - 2025-03-10
+
+### Security
+- Update axios to version 1.8.2 to address SSRF and Credential Leakage vulnerability (GHSA-jr5f-v2jv-69x6)
+
 ## [1.3.0] - 2024-03-09
 
 ### Added

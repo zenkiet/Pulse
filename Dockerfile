@@ -3,6 +3,21 @@ FROM node:18-slim AS builder
 
 WORKDIR /app
 
+# Install dependencies for canvas
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    python-is-python3 \
+    make \
+    g++ \
+    build-essential \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    librsvg2-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy package files for better caching
 COPY package*.json ./
 COPY frontend/package*.json ./frontend/
@@ -22,12 +37,23 @@ RUN cd frontend && npm run build
 FROM node:18-slim
 
 # Add version labels
-LABEL version="1.3.0"
+LABEL version="1.3.1"
 LABEL description="Pulse - A lightweight monitoring application for Proxmox VE"
 LABEL maintainer="Richard Courtman"
 
-# Create a non-root user
-RUN apt-get update && apt-get install -y --no-install-recommends dumb-init \
+# Install dependencies for canvas and create a non-root user
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    dumb-init \
+    python3 \
+    python-is-python3 \
+    make \
+    g++ \
+    build-essential \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    librsvg2-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd -r pulse && useradd -r -g pulse pulse
