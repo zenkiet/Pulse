@@ -195,11 +195,13 @@ Only use Docker testing when:
 
 ## Release Process
 
-1. Update version numbers in:
-   - `frontend/src/utils/version.js`
-   - `package.json`
-   - `frontend/package.json`
-   - `Dockerfile` labels (update version in LABEL version="X.Y.Z")
+1. **Update version numbers in ALL files** (⚠️ CRITICAL - VERIFY ALL FILES):
+   - [ ] `frontend/src/utils/version.js`
+   - [ ] `package.json`
+   - [ ] `frontend/package.json`
+   - [ ] `Dockerfile` labels (update version in LABEL version="X.Y.Z")
+   
+   ⚠️ **IMPORTANT**: Verify each file has been updated with the new version number. Missing any file will cause version inconsistencies.
 
 2. Rebuild the frontend with the new version:
    ```bash
@@ -222,8 +224,11 @@ Only use Docker testing when:
    # IMPORTANT: Verify the version number matches the new release version
    ```
 
-4. Once verified, commit version updates including the built frontend:
+4. **Commit ALL version updates** (⚠️ CRITICAL - VERIFY ALL FILES):
    ```bash
+   # Check for any uncommitted changes
+   git status
+   
    # Add all version-related files and the built frontend
    git add frontend/src/utils/version.js package.json frontend/package.json Dockerfile frontend/dist
    
@@ -232,7 +237,12 @@ Only use Docker testing when:
    
    # Push to main
    git push origin main
+   
+   # Verify all changes were committed and pushed
+   git status
    ```
+   
+   ⚠️ **IMPORTANT**: After pushing, run `git status` to verify there are no remaining uncommitted changes related to version updates.
 
 5. Create and push tag:
    ```bash
@@ -240,7 +250,7 @@ Only use Docker testing when:
    git push origin vX.Y.Z
    ```
 
-6. Build and push Docker images:
+6. **Build and push multi-architecture Docker images** (⚠️ CRITICAL - MUST BUILD FOR MULTIPLE ARCHITECTURES):
    ```bash
    # Verify buildx setup
    docker buildx ls
@@ -249,10 +259,7 @@ Only use Docker testing when:
    docker buildx use multiarch-builder
    
    # Build and push multi-architecture images
-   # Note: The multi-stage Dockerfile will:
-   # 1. Build frontend in isolated stage (only rebuilds on frontend changes)
-   # 2. Build backend in isolated stage (only rebuilds on backend changes)
-   # 3. Create minimal production image with only runtime dependencies
+   # IMPORTANT: The --platform flag MUST specify both architectures
    docker buildx build \
      --platform linux/amd64,linux/arm64 \
      --tag rcourtman/pulse:X.X.X \
@@ -260,9 +267,11 @@ Only use Docker testing when:
      --push \
      .
    
-   # Verify the images and architectures
+   # Verify BOTH architectures are available in the pushed image
    docker buildx imagetools inspect rcourtman/pulse:X.X.X
    ```
+   
+   ⚠️ **IMPORTANT**: Always verify that both `linux/amd64` and `linux/arm64` platforms appear in the image inspection output. If either is missing, the multi-architecture build was not successful.
 
 7. Create GitHub release:
    ```bash
@@ -294,9 +303,13 @@ Only use Docker testing when:
        - Check version in UI matches release
        - Check version in Docker labels
        - Check version in application logs
-     - [ ] Multi-architecture verification:
-       - Confirm both amd64 and arm64 images are available
-       - Test on different architectures if possible
+     - [ ] **Multi-architecture verification** (⚠️ CRITICAL):
+       - [ ] Confirm both amd64 and arm64 images are available:
+         ```bash
+         docker buildx imagetools inspect rcourtman/pulse:X.Y.Z
+         ```
+       - [ ] Verify the output shows both `linux/amd64` and `linux/arm64` platforms
+       - [ ] Test on different architectures if possible
    
    - [ ] Application Functionality:
      - [ ] UI loads correctly
@@ -374,6 +387,18 @@ If any of these checks fail:
 - Test version in UI after Docker build
 - Create patch release if needed
 
+### Multi-Architecture Build Issues
+- If multi-architecture build fails:
+  - Verify buildx is properly configured
+  - Check that the builder supports both architectures
+  - Ensure you're using the `--platform linux/amd64,linux/arm64` flag
+  - Verify Docker Hub credentials are valid
+  - Try recreating the builder if issues persist
+- If only one architecture is built:
+  - The `--platform` flag may be missing or incomplete
+  - The builder may not support all architectures
+  - Check for build errors specific to one architecture
+
 ## Post-Release
 
 1. Verify the release is working in production
@@ -381,3 +406,12 @@ If any of these checks fail:
 3. Announce release to users if needed
 4. Update documentation if required
 5. Start planning next release 
+
+## Release Checklist Quick Reference
+
+### Critical Steps (Don't Miss These!)
+1. ✅ Update ALL version files (frontend/src/utils/version.js, package.json, frontend/package.json, Dockerfile)
+2. ✅ Commit and push ALL version-related changes (verify with git status)
+3. ✅ Build for BOTH architectures (linux/amd64,linux/arm64)
+4. ✅ Verify multi-architecture support after pushing
+5. ✅ Test the release thoroughly before announcing 
