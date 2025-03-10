@@ -145,8 +145,6 @@ function AppContent() {
                   width: 34,
                   height: 34,
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
-                  boxShadow: '0 0 10px rgba(0,0,0,0.1)',
                   position: 'relative',
                   overflow: 'hidden',
                 }}
@@ -173,16 +171,16 @@ function AppContent() {
                     },
                   }}
                 />
-                <Box 
-                  component="span" 
-                  sx={{ 
-                    width: 18, 
-                    height: 18, 
-                    borderRadius: '50%', 
-                    background: 'linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%)',
-                    boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.5), 0 0 8px rgba(0,0,0,0.1)',
+                {/* Generated Logo */}
+                <Box
+                  component="img"
+                  src="/logos/pulse-logo-256x256.png"
+                  alt="Pulse Logo"
+                  sx={{
+                    width: 24,
+                    height: 24,
                     zIndex: 2,
-                  }} 
+                  }}
                 />
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'baseline' }}>
@@ -198,17 +196,11 @@ function AppContent() {
                     opacity: 0.8, 
                     fontWeight: 400,
                     fontSize: '0.7rem',
-                    bgcolor: 'rgba(255,255,255,0.15)',
-                    px: 0.8,
-                    py: 0.2,
-                    borderRadius: 1,
-                    letterSpacing: '0.02em',
                     cursor: 'pointer',
                     '&:hover': {
                       opacity: 1,
-                      bgcolor: 'rgba(255,255,255,0.25)',
+                      textDecoration: 'underline',
                     },
-                    transition: 'all 0.2s ease'
                   }}
                 >
                   v{VERSION}
