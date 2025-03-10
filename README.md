@@ -260,6 +260,25 @@ This will automatically detect your platform (Windows or Unix-like) and run the 
 - **Windows**: `npm run dev:windows` (runs start-dev.bat)
 - **Unix/Linux/macOS**: `npm run dev:unix` (runs start-dev.sh)
 
+### Docker Development Environment
+
+For a containerized development environment with hot-reloading:
+
+```bash
+# Start the Docker development environment
+npm run dev:docker
+
+# Or run in detached mode (background)
+npm run dev:docker:detached
+```
+
+This Docker-based development setup:
+- Mounts source code directories as volumes for live code changes
+- Enables hot-reloading for both frontend and backend
+- Exposes ports 7654 (backend) and 3000 (frontend)
+- Uses the same .env file as the regular development setup
+- Provides a consistent development environment across different platforms
+
 ### Mock Data Development
 
 For development without a Proxmox server, you can use mock data:
@@ -323,7 +342,6 @@ docker pull rcourtman/pulse:latest
 # View current running version
 docker exec pulse-app cat /app/package.json | grep version
 ```
-
 ## 👥 Contributing
 
 Contributions are welcome! Here's how you can contribute:

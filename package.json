@@ -18,6 +18,8 @@
     "dev:mock": "node scripts/start-mock-dev.js",
     "dev:mock:unix": "./start-mock-dev.sh",
     "dev:mock:windows": "start-mock-dev.bat",
+    "dev:docker": "docker compose -f docker-compose.dev.yml up --build",
+    "dev:docker:detached": "docker compose -f docker-compose.dev.yml up --build -d",
     "screenshots": "./scripts/update-screenshots.sh",
     "generate:logos": "npm install canvas && node scripts/generate-logo-pngs.js && node scripts/generate-logo-with-text.js"
   },

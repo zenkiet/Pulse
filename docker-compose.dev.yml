@@ -1,15 +1,26 @@
 services:
   pulse-app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     container_name: pulse-app
     ports:
-      - "7654:7654"
+      - "7654:7654"  # Backend API
+      - "3000:3000"  # Frontend dev server
+    volumes:
+      - ./src:/app/src
+      - ./frontend/src:/app/frontend/src
+      - ./frontend/public:/app/frontend/public
+      - ./frontend/index.html:/app/frontend/index.html
+      - ./frontend/vite.config.js:/app/frontend/vite.config.js
+      - ./logs:/app/logs
     env_file:
       - .env
     environment:
-      - LOG_LEVEL=info
+      - LOG_LEVEL=debug
       - NODE_OPTIONS=--no-warnings
       - SUPPRESS_NO_CONFIG_WARNING=true
+      - VITE_API_URL=http://localhost:7654
     logging:
       driver: "json-file"
       options:

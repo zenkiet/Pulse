@@ -1,0 +1,56 @@
+FROM node:18-slim
+
+# Install dependencies for canvas and development tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    python-is-python3 \
+    make \
+    g++ \
+    build-essential \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    librsvg2-dev \
+    procps \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy package files for dependency installation
+COPY package*.json ./
+COPY frontend/package*.json ./frontend/
+
+# Install backend dependencies
+RUN npm install
+
+# Install frontend dependencies
+WORKDIR /app/frontend
+RUN npm install
+
+# Return to app directory
+WORKDIR /app
+
+# Copy necessary configuration files
+COPY tsconfig*.json ./
+COPY frontend/vite.config.js ./frontend/
+COPY frontend/index.html ./frontend/
+COPY scripts ./scripts
+COPY frontend/src ./frontend/src
+COPY src ./src
+
+# Create logs directory
+RUN mkdir -p /app/logs
+
+# Create a script to start both servers
+RUN echo '#!/bin/sh\n\
+cd /app && npx ts-node-dev --respawn --transpile-only src/server.ts & \n\
+cd /app/frontend && npm run dev -- --port 3000 --host 0.0.0.0\n' > /app/start-dev.sh && \
+chmod +x /app/start-dev.sh
+
+# Expose ports for backend and frontend
+EXPOSE 7654 3000
+
+# Start development servers with hot-reloading
+CMD ["/app/start-dev.sh"] 
