@@ -7,7 +7,7 @@ The Pulse for Proxmox VE team takes security issues seriously. We appreciate you
 To report a security vulnerability, please follow these steps:
 
 1. **DO NOT** disclose the vulnerability publicly (e.g., in GitHub issues)
-2. Email security concerns directly to [your-email@example.com] with a description of the issue, the steps you took to create the issue, affected versions, and if known, mitigations for the issue
+2. Create a private security advisory in the GitHub repository by going to Security → Advisories → New advisory
 3. Allow time for the issue to be addressed before disclosing it publicly
 
 ## Supported Versions
