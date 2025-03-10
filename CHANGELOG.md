@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.1] - 2024-03-10
+
+### Fixed
+- Fixed WebSocket connection issues in both development and production environments
+- Added comprehensive WebSocket troubleshooting guide
+- Improved error handling and debugging for WebSocket connections
+
 ## [1.5.0] - 2024-03-10
 
 ### Added

@@ -54,8 +54,8 @@ RUN npm run build
 # Production stage
 FROM node:18-slim
 
-# Add version labels
-LABEL version="1.4.1"
+# Add metadata
+LABEL version="1.5.1"
 LABEL description="Pulse - A lightweight monitoring application for Proxmox VE"
 LABEL maintainer="Richard Courtman"
 
