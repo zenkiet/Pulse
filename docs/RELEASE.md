@@ -47,7 +47,22 @@ Before creating a release, ensure you have:
    - [ ] Decide on new version number (MAJOR.MINOR.PATCH)
 
 2. **Documentation**
-   - [ ] Review commits since last release: `git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"%h %s"`
+   - [ ] Find the last release version:
+     ```bash
+     # List all release tags
+     git tag -l 'v*' --sort=-v:refname | head -n1
+     
+     # Or find it in CHANGELOG.md
+     head -n5 CHANGELOG.md
+     ```
+   - [ ] Review commits since last release:
+     ```bash
+     # Using the last release tag (e.g., v1.3.1)
+     git log v1.3.1..HEAD --pretty=format:"%h %s"
+     
+     # Or using commit dates if needed
+     git log --since="$(git log -1 --format=%ai v1.3.1)" --pretty=format:"%h %s"
+     ```
    - [ ] Update CHANGELOG.md with new version section and date
    - [ ] Categorize changes based on commit types:
      - feat: → Added (new features)
@@ -56,7 +71,13 @@ Before creating a release, ensure you have:
      - chore:/refactor:/perf: → Changed (changes in existing functionality)
      - deprecate: → Deprecated (soon-to-be removed features)
      - remove: → Removed (now removed features)
+     - docs: → Documentation (if significant)
    - [ ] Ensure all significant changes are documented in the changelog
+   - [ ] Review and clean up the changelog entries:
+     - Use clear, user-focused language
+     - Group related changes together
+     - Remove internal/trivial changes
+     - Highlight breaking changes or required actions
 
 3. **Testing**
    - [ ] Build and test backend: `npm run build`
