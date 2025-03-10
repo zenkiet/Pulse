@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0] - 2024-03-10
+
+### Added
+- New animated pulse logo implementation
+- Cross-platform development environment with hot-reloading
+- Cross-platform cleanup script for development processes
+
+### Fixed
+- Fixed Vite port incrementing issues
+- Fixed logo asset inclusion in Docker build
+- Improved Docker development environment setup
+
+### Changed
+- Improved Docker build and release process
+- Enhanced Docker Compose setup for users and developers
+- Updated development workflow documentation
+
 ## [1.4.1] - 2024-03-15
 
 ### Fixed
