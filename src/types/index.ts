@@ -1,3 +1,9 @@
+/**
+ * Type definitions for Pulse for Proxmox VE
+ * Note: Proxmox® is a registered trademark of Proxmox Server Solutions GmbH.
+ * These type definitions are for interfacing with the Proxmox® VE API.
+ */
+
 // Node configuration type
 export interface NodeConfig {
   id: string;
@@ -7,7 +13,7 @@ export interface NodeConfig {
   tokenSecret: string;
 }
 
-// ProxMox API response types
+// Proxmox API response types
 export interface ProxmoxNodeStatus {
   id: string;
   name: string;

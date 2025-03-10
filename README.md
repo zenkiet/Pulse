@@ -1,12 +1,12 @@
-# Proxmox Pulse
+# Pulse for Proxmox VE
 
 <p align="center">
-  <img src="public/logos/pulse-logo-256x256.png" alt="Proxmox Pulse Logo" width="128" height="128">
+  <img src="public/logos/pulse-logo-256x256.png" alt="Pulse for Proxmox VE Logo" width="128" height="128">
 </p>
 
-A lightweight, responsive Proxmox monitoring application that displays real-time metrics for CPU, memory, network, and disk usage across multiple nodes.
+A lightweight, responsive monitoring application for Proxmox VE that displays real-time metrics for CPU, memory, network, and disk usage across multiple nodes.
 
-![Proxmox Pulse Dashboard](docs/images/dashboard.png)
+![Pulse Dashboard for Proxmox VE](docs/images/dashboard.png)
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/rcourtman)
 
@@ -335,6 +335,10 @@ When reporting issues, please use the appropriate issue template:
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Trademark Notice
+
+Proxmox® and Proxmox VE® are registered trademarks of Proxmox Server Solutions GmbH. Pulse for Proxmox VE is an independent project and is not affiliated with, endorsed by, or sponsored by Proxmox Server Solutions GmbH.
 
 ## ❤️ Support
 
