@@ -37,7 +37,14 @@ export class WebSocketServer {
     this.setupSocketHandlers();
     this.subscribeToEvents();
     
-    this.logger.info('WebSocket server initialized with multiple socket connections');
+    this.logger.info('WebSocket server initialized and ready to accept connections');
+    this.logger.debug('WebSocket server configuration:', {
+      transports: ['websocket', 'polling'],
+      pingTimeout: 15000,
+      pingInterval: 2000,
+      connectTimeout: 8000,
+      cors: { origin: '*', methods: ['GET', 'POST'] }
+    });
   }
 
   /**
@@ -47,14 +54,23 @@ export class WebSocketServer {
     this.io.on('connection', (socket: Socket) => {
       this.connectedClients++;
       this.logger.info(`Client connected: ${socket.id}. Total clients: ${this.connectedClients}`);
+      this.logger.debug('Client connection details:', {
+        id: socket.id,
+        handshake: {
+          address: socket.handshake.address,
+          headers: socket.handshake.headers,
+          query: socket.handshake.query,
+          url: socket.handshake.url
+        }
+      });
       
       // Send initial data
       this.sendInitialData(socket);
       
       // Handle disconnection
-      socket.on('disconnect', () => {
+      socket.on('disconnect', (reason) => {
         this.connectedClients--;
-        this.logger.info(`Client disconnected: ${socket.id}. Total clients: ${this.connectedClients}`);
+        this.logger.info(`Client disconnected: ${socket.id}. Reason: ${reason}. Total clients: ${this.connectedClients}`);
       });
       
       // Handle subscription to specific node
@@ -87,6 +103,19 @@ export class WebSocketServer {
         const history = metricsService.getMetricsHistory(id);
         callback(history);
       });
+
+      // Handle ping request (for debugging)
+      socket.on('ping', (callback) => {
+        this.logger.debug(`Received ping from client ${socket.id}`);
+        if (typeof callback === 'function') {
+          callback({ timestamp: Date.now(), status: 'ok' });
+        }
+      });
+    });
+
+    // Log any errors
+    this.io.engine.on('connection_error', (err) => {
+      this.logger.error('WebSocket connection error:', err);
     });
   }
 

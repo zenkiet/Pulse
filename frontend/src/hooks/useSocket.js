@@ -7,10 +7,19 @@ import { io } from 'socket.io-client';
  * @returns {Object} Socket state and message handlers
  */
 const useSocket = (url) => {
-  // Use the provided URL, or the environment variable, or fall back to window.location.origin
-  // This ensures the frontend connects to the same server that served it,
-  // avoiding hardcoded URLs that might not work in different environments
-  const socketUrl = url || import.meta.env.VITE_API_URL || window.location.origin;
+  // In development mode, we need to connect to the backend server on port 7654
+  // In production, we can use window.location.origin since both frontend and backend are served from the same origin
+  const isDevelopment = process.env.NODE_ENV === 'development' || import.meta.env.DEV;
+  
+  // For development, we need to explicitly connect to the backend server
+  // For production, we use the same origin that served the page
+  const socketUrl = url || (isDevelopment 
+    ? 'http://localhost:7654' 
+    : (import.meta.env.VITE_API_URL || window.location.origin));
+  
+  // For debugging - log the connection URL and environment
+  console.log('Environment:', isDevelopment ? 'development' : 'production');
+  console.log('Connecting to WebSocket server at:', socketUrl);
   
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState(null);
@@ -19,28 +28,61 @@ const useSocket = (url) => {
   const [metricsData, setMetricsData] = useState([]);
   const [error, setError] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState('connecting'); // 'connecting', 'connected', 'disconnected', 'error'
+  const [pingResult, setPingResult] = useState(null);
   
   // Use ref to maintain socket instance across renders
   const socketRef = useRef(null);
+  // Use ref for ping interval
+  const pingIntervalRef = useRef(null);
 
   // Initialize socket connection
   useEffect(() => {
-    if (socketRef.current) return; // Already connected
+    // Clear any existing socket connection
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
+    
+    // Clear any existing ping interval
+    if (pingIntervalRef.current) {
+      clearInterval(pingIntervalRef.current);
+      pingIntervalRef.current = null;
+    }
+    
+    console.log('Creating new socket connection to:', socketUrl);
     
     // Create a new socket connection
     const newSocket = io(socketUrl, {
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'], // Add polling as fallback
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      timeout: 20000
+      timeout: 20000,
+      forceNew: true, // Force a new connection
+      autoConnect: true // Automatically connect
     });
+    
+    // Store the socket in the ref
+    socketRef.current = newSocket;
     
     // Set up event listeners
     newSocket.on('connect', () => {
+      console.log('WebSocket connected successfully');
       setConnectionStatus('connected');
       setIsConnected(true);
       setError(null);
+      
+      // Start ping interval to keep connection alive and test latency
+      pingIntervalRef.current = setInterval(() => {
+        if (newSocket.connected) {
+          const startTime = Date.now();
+          newSocket.emit('ping', (response) => {
+            const latency = Date.now() - startTime;
+            setPingResult({ latency, timestamp: response.timestamp });
+            console.log(`WebSocket ping: ${latency}ms`);
+          });
+        }
+      }, 10000); // Ping every 10 seconds
     });
     
     // Handle page visibility changes
@@ -68,15 +110,14 @@ const useSocket = (url) => {
     
     // Handle connection errors
     newSocket.on('connect_error', (err) => {
+      console.error('WebSocket connection error:', err.message);
       setConnectionStatus('error');
       setIsConnected(false);
       setError(`Connection error: ${err.message}`);
-      
-      // Update connection status
-      setConnectionStatus('error');
     });
     
-    newSocket.on('disconnect', () => {
+    newSocket.on('disconnect', (reason) => {
+      console.log('WebSocket disconnected:', reason);
       setIsConnected(false);
       setConnectionStatus('disconnected');
     });
@@ -87,6 +128,7 @@ const useSocket = (url) => {
       
       switch (message.type) {
         case 'CONNECTED':
+          console.log('Received CONNECTED message from server');
           break;
         
         case 'NODE_STATUS_UPDATE':
@@ -114,10 +156,17 @@ const useSocket = (url) => {
 
     // Cleanup function
     return () => {
-      if (newSocket) {
-        newSocket.disconnect();
-        newSocket.off();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
       }
+      
+      // Clear ping interval
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+        pingIntervalRef.current = null;
+      }
+      
       // Remove event listeners
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleBeforeUnload);
@@ -233,6 +282,7 @@ const useSocket = (url) => {
   // Function to manually attempt reconnection
   const reconnect = useCallback(() => {
     if (socketRef.current) {
+      console.log('Attempting to reconnect WebSocket...');
       setConnectionStatus('connecting');
       socketRef.current.connect();
     }

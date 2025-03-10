@@ -12,6 +12,7 @@ A lightweight, responsive monitoring application for Proxmox VE that displays re
 - [Common Docker Commands](#️-common-docker-commands)
 - [Features](#-features)
 - [Troubleshooting](#-troubleshooting)
+  - [WebSocket Connection Issues](#websocket-connection-issues)
 - [Advanced Configuration](#-advanced-configuration)
 - [Development](#-development)
   - [Development Architecture](#development-architecture)
@@ -200,22 +201,17 @@ Pulse is actively maintained and used daily. I'm committed to keeping it relevan
 ### Does Pulse collect any telemetry or user data?
 No. Pulse only communicates directly with your Proxmox servers using the API token you provide. No data is sent outside your network, and the entire codebase is open source for verification.
 
-## ❓ Troubleshooting
+## 🔍 Troubleshooting
 
-1. **Connection Issues**: Verify your Proxmox node details in `.env`
-2. **SSL Problems**: Add these to your .env file:
-   ```
-   IGNORE_SSL_ERRORS=true
-   NODE_TLS_REJECT_UNAUTHORIZED=0
-   ```
-3. **Port Conflicts**: Change the port mapping in your docker run command if port 7654 is already in use
-4. **API Token Issues**: Ensure your token has the correct permissions (PVEAuditor role)
-5. **Frontend Cannot Connect to Backend**: Ensure you're using IPv4 addresses instead of IPv6:
-   ```
-   # Add this to your .env file
-   VITE_API_URL=http://127.0.0.1:7654
-   ```
-   This is particularly important in Docker environments or when the frontend and backend are running on different hosts.
+### WebSocket Connection Issues
+
+If you see a "Connection error: websocket error" message when accessing the web interface, it's typically because the browser cannot establish a WebSocket connection to the server.
+
+#### Quick Fix:
+1. Remove or comment out the `VITE_API_URL` line from your `.env` file
+2. Restart the container: `docker restart pulse-app`
+
+For detailed troubleshooting steps, see [WebSocket Troubleshooting Guide](docs/websocket-troubleshooting.md).
 
 ## 📋 Advanced Configuration
 
