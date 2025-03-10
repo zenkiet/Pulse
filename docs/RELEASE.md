@@ -18,6 +18,23 @@ For development-only changes (like dev dependency updates), wait for the next fe
 Before creating a release, ensure you have:
 - Git configured with appropriate credentials
 - Docker installed and logged in to Docker Hub
+- Docker buildx configured for multi-architecture builds:
+  ```bash
+  # Check if buildx is available
+  docker buildx version
+  
+  # List existing builders
+  docker buildx ls
+  
+  # Create a new builder if needed
+  docker buildx create --name multiarch-builder --driver docker-container --bootstrap
+  
+  # Use the builder
+  docker buildx use multiarch-builder
+  
+  # Verify platforms
+  docker buildx inspect --bootstrap
+  ```
 - GitHub CLI (`gh`) installed and authenticated
 - All changes committed to main branch
 - All items in the checklist below completed
@@ -70,9 +87,22 @@ Before creating a release, ensure you have:
 
 4. Build and push Docker images:
    ```bash
-   # For multi-architecture builds
+   # Verify buildx setup
+   docker buildx ls
+   
+   # Ensure using correct builder
    docker buildx use multiarch-builder
-   docker buildx build --platform linux/amd64,linux/arm64 -t rcourtman/pulse:X.X.X -t rcourtman/pulse:latest --push .
+   
+   # Build and push multi-architecture images
+   docker buildx build \
+     --platform linux/amd64,linux/arm64 \
+     --tag rcourtman/pulse:X.X.X \
+     --tag rcourtman/pulse:latest \
+     --push \
+     .
+   
+   # Verify the images and architectures
+   docker buildx imagetools inspect rcourtman/pulse:X.X.X
    ```
 
 5. Create GitHub release:
@@ -104,7 +134,18 @@ Before creating a release, ensure you have:
 - Verify Docker daemon is running
 - Check Docker Hub authentication: `docker login`
 - Verify push permissions
-- Check multi-arch builder setup
+- Check multi-arch builder setup:
+  ```bash
+  # If buildx builder is missing or not working
+  docker buildx create --name multiarch-builder --driver docker-container --bootstrap
+  docker buildx use multiarch-builder
+  docker buildx inspect --bootstrap
+  ```
+- If build fails, try rebuilding the builder:
+  ```bash
+  docker buildx rm multiarch-builder
+  docker buildx create --name multiarch-builder --driver docker-container --bootstrap
+  ```
 
 ### Version Mismatches
 - Verify all version files are updated
