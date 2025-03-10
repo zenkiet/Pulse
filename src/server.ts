@@ -31,6 +31,7 @@ if (config.enableDevTools) {
 
 // Static files - only in production mode
 if (config.nodeEnv === 'production') {
+  // Serve static files from the frontend dist directory
   app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
   
   // Serve index.html for all other routes in production

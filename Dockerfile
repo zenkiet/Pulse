@@ -37,7 +37,7 @@ RUN cd frontend && npm run build
 FROM node:18-slim
 
 # Add version labels
-LABEL version="1.4.0"
+LABEL version="1.4.1"
 LABEL description="Pulse - A lightweight monitoring application for Proxmox VE"
 LABEL maintainer="Richard Courtman"
 
@@ -65,17 +65,12 @@ COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/frontend/dist ./frontend/dist
 
-# Create a symbolic link from /app/dist/public to /app/frontend/dist
-RUN mkdir -p /app/dist/public && rm -rf /app/dist/public && ln -s /app/frontend/dist /app/dist/public
-
-# Install only production dependencies
-RUN npm ci --only=production
-
 # Create logs directory with proper permissions
 RUN mkdir -p /app/logs && chown -R pulse:pulse /app/logs
 
 # Set environment variables
 ENV PORT=7654
+ENV NODE_ENV=production
 
 # Switch to non-root user
 USER pulse
