@@ -93,20 +93,25 @@ Before creating a release, ensure you have:
    - `frontend/package.json`
    - `Dockerfile` labels
 
-2. Commit version updates:
+2. Rebuild the frontend to ensure version changes are included:
+   ```bash
+   cd frontend && npm run build && cd ..
+   ```
+
+3. Commit version updates:
    ```bash
    git add frontend/src/utils/version.js package.json frontend/package.json Dockerfile
    git commit -m "chore: bump version to X.Y.Z"
    git push origin main
    ```
 
-3. Create and push tag:
+4. Create and push tag:
    ```bash
    git tag -a vX.Y.Z -m "Release vX.Y.Z"
    git push origin vX.Y.Z
    ```
 
-4. Build and push Docker images:
+5. Build and push Docker images:
    ```bash
    # Verify buildx setup
    docker buildx ls
@@ -126,7 +131,7 @@ Before creating a release, ensure you have:
    docker buildx imagetools inspect rcourtman/pulse:X.X.X
    ```
 
-5. Create GitHub release:
+6. Create GitHub release:
    ```bash
    # Extract the latest version's changes from CHANGELOG.md
    awk '/^## \[.*\]/{p=NR==1}p' CHANGELOG.md > release-notes.tmp
@@ -138,10 +143,10 @@ Before creating a release, ensure you have:
    rm release-notes.tmp
    ```
 
-6. Verify the release:
+7. Verify the release:
    - [ ] Check GitHub Actions workflows completed successfully
    - [ ] Pull and test the Docker image
-   - [ ] Verify version number in UI
+   - [ ] Verify version number in UI matches the release version
    - [ ] Verify application functionality
 
 ## Troubleshooting
