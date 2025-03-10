@@ -1,8 +1,4 @@
-# Pulse for Proxmox VE
-
-<p align="center">
-  <img src="public/logos/pulse-logo-256x256.png" alt="Pulse for Proxmox VE Logo" width="128" height="128">
-</p>
+# <img src="public/logos/pulse-logo-256x256.png" alt="Pulse Logo" width="32" height="32" style="vertical-align: middle"> Pulse for Proxmox VE
 
 A lightweight, responsive monitoring application for Proxmox VE that displays real-time metrics for CPU, memory, network, and disk usage across multiple nodes.
 
