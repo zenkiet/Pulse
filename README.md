@@ -278,6 +278,12 @@ This Docker-based development setup:
 - Exposes ports 7654 (backend) and 3000 (frontend)
 - Uses the same .env file as the regular development setup
 - Provides a consistent development environment across different platforms
+- Automatically stops any running development processes before starting
+
+The cleanup process will:
+1. Stop any running Docker containers with "pulse" in their name
+2. Kill any processes using the development ports (7654, 7655, 3000, 9513)
+3. Ensure a clean start for the development environment
 
 ### Mock Data Development
 
