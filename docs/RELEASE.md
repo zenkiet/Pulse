@@ -82,26 +82,33 @@ Before creating a release, ensure you have:
 3. **Testing**
    - [ ] Build and test backend: `npm run build`
    - [ ] Build and test frontend: `cd frontend && npm run build && cd ..`
-   - [ ] Test application locally (non-Docker):
+   - [ ] Test application using local development setup:
      ```bash
-     # Start the application
-     npm start
+     # Start the application using the development script
+     npm run dev
+     
+     # This script will:
+     # 1. Stop any running Pulse Docker containers
+     # 2. Kill any existing servers on ports 7654 and 3000
+     # 3. Start the backend in development mode
+     # 4. Start the frontend Vite dev server
      
      # Verify in browser:
-     # 1. UI loads correctly at http://localhost:7654
+     # 1. UI loads correctly at http://localhost:3000
      # 2. Version number is correct
      # 3. Can connect to Proxmox
      # 4. Metrics are updating
      # 5. All charts and graphs render
+     # 6. Hot reloading works for frontend changes
      ```
-   - [ ] Test Docker build and deployment:
+   - [ ] Test Docker build (for release verification):
      ```bash
      # Clean all existing containers and images
-     docker compose down
-     docker rmi rcourtman/pulse:latest rcourtman/pulse:X.Y.Z
+     docker compose -f docker-compose.dev.yml down
+     docker rmi $(docker images -q rcourtman/pulse)
      
-     # Build fresh and test locally
-     docker compose up -d --build
+     # Build fresh and test locally using dev compose file
+     docker compose -f docker-compose.dev.yml up -d --build
      
      # Verify in browser:
      # 1. UI loads correctly at http://localhost:7654
@@ -149,6 +156,43 @@ Before creating a release, ensure you have:
      # Test pulling on different architectures if available
      ```
 
+## Development Workflow
+
+For active development, use `npm run dev` instead of Docker. This script provides:
+- Hot reloading for frontend changes
+- Automatic backend restart on changes
+- Direct access to logs and debugging
+- Faster iteration cycles than Docker rebuilds
+
+```bash
+# Start development servers
+npm run dev
+
+# Access the application:
+# - Frontend: http://localhost:3000 (with hot reloading)
+# - Backend: http://localhost:7654
+```
+
+Additional development commands available:
+```bash
+# Kill specific processes if needed
+npm run dev:kill:backend  # Kill backend server
+npm run dev:kill:frontend # Kill frontend server
+npm run dev:kill:all     # Kill all development servers
+
+# Start frontend separately if needed
+npm run dev:frontend
+
+# Use mock data for development
+npm run dev:mock
+```
+
+Only use Docker testing when:
+- Verifying the release build
+- Testing multi-architecture support
+- Checking production deployment configurations
+- Validating the Docker image before release
+
 ## Release Process
 
 1. Update version numbers in:
@@ -171,8 +215,8 @@ Before creating a release, ensure you have:
 
 3. Test the build locally:
    ```bash
-   # Build and run locally to verify version
-   docker compose up -d --build
+   # Build and run locally to verify version using dev compose file
+   docker compose -f docker-compose.dev.yml up -d --build
    
    # Check the version in UI at http://localhost:7654
    # IMPORTANT: Verify the version number matches the new release version
