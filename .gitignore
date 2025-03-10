@@ -49,3 +49,5 @@ docs/RELEASE_PROCESS.md
 
 # Personal checklist
 VERSION_UPDATE_CHECKLIST.md
+
+docker-compose.dev.yml
