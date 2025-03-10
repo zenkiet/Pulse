@@ -80,6 +80,14 @@ Before creating a release, ensure you have:
      - Highlight breaking changes or required actions
 
 3. **Testing**
+   - [ ] Verify dependencies are properly installed and up-to-date:
+     ```bash
+     # Root directory
+     npm ci
+     
+     # Frontend directory
+     cd frontend && npm ci && cd ..
+     ```
    - [ ] Build and test backend: `npm run build`
    - [ ] Build and test frontend: `cd frontend && npm run build && cd ..`
    - [ ] Test application using local development setup:
