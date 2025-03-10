@@ -250,15 +250,31 @@ npm install
 cd frontend && npm install && cd ..
 
 # Start the development server
-./start-dev.sh
+npm run dev
 ```
 
-⚠️ **Warning**: The `start-dev.sh` script performs the following actions:
-- Stops any running Docker containers with "pulse" in their name
-- Kills any running Node.js processes serving the application
-- Frees ports 7654 and 3000 by terminating processes using them
-- Sets NODE_ENV to development
-- Starts both backend and frontend development servers
+This will automatically detect your platform (Windows or Unix-like) and run the appropriate script.
+
+### Platform-Specific Development Scripts
+
+- **Windows**: `npm run dev:windows` (runs start-dev.bat)
+- **Unix/Linux/macOS**: `npm run dev:unix` (runs start-dev.sh)
+
+### Mock Data Development
+
+For development without a Proxmox server, you can use mock data:
+
+```bash
+# Start with mock data
+npm run dev:mock
+```
+
+⚠️ **Warning**: The development scripts perform the following actions:
+- Stop any running Docker containers with "pulse" in their name (if Docker is installed)
+- Kill any running Node.js processes serving the application
+- Free ports 7654 and 3000 by terminating processes using them
+- Set NODE_ENV to development
+- Start both backend and frontend development servers
 
 ### Development Architecture
 
