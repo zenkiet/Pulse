@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import type { Request, Response } from 'express';
+import type { Request, Response, RequestHandler } from 'express';
 import { nodeManager } from '../services/node-manager';
 import { metricsService } from '../services/metrics-service';
 import { ApiResponse } from '../types';
@@ -23,7 +23,7 @@ function createResponse<T>(data?: T, error?: string): ApiResponse<T> {
 /**
  * Error handler middleware
  */
-function asyncHandler(fn: (req: Request, res: Response) => Promise<void>) {
+function asyncHandler(fn: (req: Request, res: Response) => Promise<void>): RequestHandler {
   return async (req: Request, res: Response) => {
     try {
       await fn(req, res);
@@ -37,22 +37,22 @@ function asyncHandler(fn: (req: Request, res: Response) => Promise<void>) {
 /**
  * GET /api/health - Health check endpoint
  */
-router.get('/health', (req: Request, res: Response) => {
+router.get('/health', ((req: Request, res: Response) => {
   res.json(createResponse({ status: 'ok', timestamp: Date.now() }));
-});
+}) as RequestHandler);
 
 /**
  * GET /api/nodes - Get all nodes
  */
-router.get('/nodes', (req: Request, res: Response) => {
+router.get('/nodes', ((req: Request, res: Response) => {
   const nodes = nodeManager.getNodes();
   res.json(createResponse(nodes));
-});
+}) as RequestHandler);
 
 /**
  * GET /api/nodes/:nodeId - Get a specific node
  */
-router.get('/nodes/:nodeId', (req: Request, res: Response) => {
+router.get('/nodes/:nodeId', ((req: Request, res: Response) => {
   const { nodeId } = req.params;
   const node = nodeManager.getNode(nodeId);
   
@@ -61,7 +61,7 @@ router.get('/nodes/:nodeId', (req: Request, res: Response) => {
   }
   
   res.json(createResponse(node));
-});
+}) as RequestHandler);
 
 /**
  * GET /api/nodes/:nodeId/vms - Get all VMs for a node
@@ -109,7 +109,7 @@ router.get('/guests', (req: Request, res: Response) => {
 /**
  * GET /api/guests/:guestId - Get a specific guest
  */
-router.get('/guests/:guestId', (req: Request, res: Response) => {
+router.get('/guests/:guestId', ((req: Request, res: Response) => {
   const { guestId } = req.params;
   const guest = nodeManager.getGuest(guestId);
   
@@ -118,7 +118,7 @@ router.get('/guests/:guestId', (req: Request, res: Response) => {
   }
   
   res.json(createResponse(guest));
-});
+}) as RequestHandler);
 
 /**
  * GET /api/metrics - Get current metrics for all nodes and guests
@@ -147,7 +147,7 @@ router.get('/metrics/guests', (req: Request, res: Response) => {
 /**
  * GET /api/metrics/:id - Get current metrics for a specific node or guest
  */
-router.get('/metrics/:id', (req: Request, res: Response) => {
+router.get('/metrics/:id', ((req: Request, res: Response) => {
   const { id } = req.params;
   const metrics = metricsService.getCurrentMetrics(id);
   
@@ -156,7 +156,7 @@ router.get('/metrics/:id', (req: Request, res: Response) => {
   }
   
   res.json(createResponse(metrics));
-});
+}) as RequestHandler);
 
 /**
  * GET /api/metrics/:id/history - Get historical metrics for a specific node or guest
