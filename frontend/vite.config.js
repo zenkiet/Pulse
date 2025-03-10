@@ -7,6 +7,7 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: process.env.DOCKER_CONTAINER ? 7654 : 3000,
+    strictPort: true,  // This will make Vite fail instead of trying another port
     proxy: {
       // Proxy WebSocket connections to the real backend
       '/socket.io': {
