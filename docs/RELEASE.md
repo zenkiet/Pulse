@@ -1,6 +1,6 @@
 # Pulse Release Guide
 
-This document outlines both the process and checklist for creating new releases of the ProxMox Pulse application.
+This document outlines the process and checklist for creating new releases of the ProxMox Pulse application.
 
 ## Release Types
 
@@ -13,22 +13,16 @@ Releases should be created when there are:
 
 For development-only changes (like dev dependency updates), wait for the next feature/bugfix release.
 
-## Automated Release Process
+## Prerequisites
 
-We have an automated release script that handles most of the release process.
-
-### Prerequisites
-
-Before running the release script, ensure you have:
+Before creating a release, ensure you have:
 - Git configured with appropriate credentials
 - Docker installed and logged in to Docker Hub
 - GitHub CLI (`gh`) installed and authenticated
 - All changes committed to main branch
 - All items in the checklist below completed
 
-### Release Checklist
-
-Before running the release script, complete these steps:
+## Release Checklist
 
 1. **Preparation**
    - [ ] Ensure all desired changes are committed and pushed to main
@@ -51,51 +45,18 @@ Before running the release script, complete these steps:
    - [ ] Test application locally
    - [ ] Verify all new features/fixes work as expected
 
-### Running the Release
+## Release Process
 
-Once the checklist is complete:
+1. Update version numbers in:
+   - `frontend/src/utils/version.js`
+   - `package.json`
+   - `frontend/package.json`
+   - `Dockerfile` labels
 
-1. Run the automated release script:
-   ```bash
-   ./scripts/release.sh <version>
-   ```
-   For example: `./scripts/release.sh 1.0.13`
-
-2. The script will:
-   - Check you're on main branch with clean working directory
-   - Update version numbers in:
-     - `frontend/src/utils/version.js`
-     - `package.json`
-     - `frontend/package.json`
-     - `Dockerfile` labels
-   - Commit and push changes
-   - Create and push Git tag
-   - Build and push Docker images
-   - Create GitHub release
-
-3. Verify the release:
-   - [ ] Check GitHub Actions workflows completed successfully
-   - [ ] Pull and test the Docker image
-   - [ ] Verify version number in UI
-   - [ ] Verify application functionality
-
-## Manual Release Process
-
-If you need to perform a release manually:
-
-1. Update version numbers:
-   ```bash
-   # Update these files:
-   - frontend/src/utils/version.js
-   - package.json
-   - frontend/package.json
-   - Dockerfile labels
-   ```
-
-2. Commit and push:
+2. Commit version updates:
    ```bash
    git add frontend/src/utils/version.js package.json frontend/package.json Dockerfile
-   git commit -m "Bump version to X.Y.Z"
+   git commit -m "chore: bump version to X.Y.Z"
    git push origin main
    ```
 
@@ -114,8 +75,14 @@ If you need to perform a release manually:
 
 5. Create GitHub release:
    ```bash
-   gh release create vX.Y.Z --title "Release vX.Y.Z" --notes "Release notes here"
+   gh release create vX.Y.Z --title "Release vX.Y.Z" --notes-file CHANGELOG.md
    ```
+
+6. Verify the release:
+   - [ ] Check GitHub Actions workflows completed successfully
+   - [ ] Pull and test the Docker image
+   - [ ] Verify version number in UI
+   - [ ] Verify application functionality
 
 ## Troubleshooting
 
