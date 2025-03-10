@@ -36,7 +36,7 @@ fi
 
 # Start the frontend Vite dev server
 echo "Starting Pulse interface..."
-cd frontend && npm run dev -- --host "${HOST_IP}" --port 3000
+cd frontend && npm run dev -- --host "${HOST_IP}" --port 3000 --strict-port
 
 # When the frontend exits, also kill the backend server
 kill $BACKEND_PID

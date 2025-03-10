@@ -32,7 +32,7 @@ set HOST_IP=0.0.0.0
 
 REM Start the frontend Vite dev server
 echo Starting Pulse interface...
-cd frontend && npm run dev -- --host %HOST_IP% --port 3000
+cd frontend && npm run dev -- --host %HOST_IP% --port 3000 --strict-port
 
 REM When the frontend exits, also kill the backend server
 taskkill /f /im "node.exe" /fi "WINDOWTITLE eq npm run dev:server" 2>nul 
