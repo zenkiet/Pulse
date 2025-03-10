@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2024-03-15
+
+### Added
+- Improved favicon support with multiple sizes and formats
+- Detailed Docker buildx setup and troubleshooting documentation
+- Comprehensive release process documentation
+- Improved changelog generation process
+
+### Changed
+- Updated dependencies to latest major versions (@types/express@5, node-fetch@3, @types/react-dom@19)
+- Simplified release process and removed automated script references
+- Consolidated release documentation into single comprehensive guide
+- Improved TypeScript type definitions in API routes
+
+### Fixed
+- TypeScript build errors in API route handlers
+- Updated package-lock.json versions
+
 ## [1.3.1] - 2025-03-10
 
 ### Security
