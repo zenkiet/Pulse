@@ -99,6 +99,7 @@ pnpm-lock.yaml
 
 # Release tarballs
 *.tar.gz
+pulse-*.tar.gz
 
 # Update mechanism
 backup/
@@ -108,3 +109,12 @@ temp/
 docker-compose.zen.yml
 toggle-debug.html
 zen-mcp-server/
+
+# Temporary files
+CHANGELOG_TEMP.md
+commits.txt
+
+# Runtime data files (ensure all JSON files in data/ are ignored except templates)
+data/*.json
+!data/*.json.template
+!data/*.json.example
