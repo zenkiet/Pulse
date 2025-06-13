@@ -22,12 +22,16 @@ jobs:
       - name: Check if RC release needed
         id: check
         run: |
-          # Get the latest RC tag for this version
-          LATEST_RC=$(git tag -l "v${{ steps.version.outputs.version }}-rc*" | sort -V | tail -n1)
+          # Get base version (remove any existing RC suffix)
+          BASE_VERSION=$(echo "${{ steps.version.outputs.version }}" | sed 's/-rc[0-9]*$//')
+          
+          # Get the latest RC tag for this base version
+          LATEST_RC=$(git tag -l "v${BASE_VERSION}-rc*" | sort -V | tail -n1)
           
           if [ -z "$LATEST_RC" ]; then
             echo "rc_number=1" >> $GITHUB_OUTPUT
             echo "create_release=true" >> $GITHUB_OUTPUT
+            echo "base_version=$BASE_VERSION" >> $GITHUB_OUTPUT
           else
             # Extract RC number and increment
             RC_NUM=$(echo $LATEST_RC | grep -o 'rc[0-9]*' | grep -o '[0-9]*')
@@ -38,10 +42,34 @@ jobs:
             if [ "$COMMITS_SINCE" -gt 0 ]; then
               echo "rc_number=$NEXT_RC" >> $GITHUB_OUTPUT
               echo "create_release=true" >> $GITHUB_OUTPUT
+              echo "base_version=$BASE_VERSION" >> $GITHUB_OUTPUT
             else
               echo "create_release=false" >> $GITHUB_OUTPUT
             fi
           fi
+          
+      - name: Update package.json with RC version
+        if: steps.check.outputs.create_release == 'true'
+        run: |
+          NEW_VERSION="${{ steps.check.outputs.base_version }}-rc${{ steps.check.outputs.rc_number }}"
+          echo "Updating package.json version to: $NEW_VERSION"
+          
+          # Update package.json version
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '$NEW_VERSION';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+          
+          # Configure git
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # Commit the version change
+          git add package.json
+          git commit -m "chore: bump version to $NEW_VERSION for RC release"
+          git push origin develop
           
       - name: Set up Docker Buildx
         if: steps.check.outputs.create_release == 'true'
@@ -62,14 +90,14 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            rcourtman/pulse:v${{ steps.version.outputs.version }}-rc${{ steps.check.outputs.rc_number }}
+            rcourtman/pulse:v${{ steps.check.outputs.base_version }}-rc${{ steps.check.outputs.rc_number }}
             rcourtman/pulse:rc
           
       - name: Create Release Archive
         if: steps.check.outputs.create_release == 'true'
         run: |
           # Create release tarball
-          tar -czf pulse-v${{ steps.version.outputs.version }}-rc${{ steps.check.outputs.rc_number }}.tar.gz \
+          tar -czf pulse-v${{ steps.check.outputs.base_version }}-rc${{ steps.check.outputs.rc_number }}.tar.gz \
             --exclude=node_modules \
             --exclude=.git \
             --exclude=.env \
@@ -83,11 +111,11 @@ jobs:
         if: steps.check.outputs.create_release == 'true'
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ steps.version.outputs.version }}-rc${{ steps.check.outputs.rc_number }}
-          name: v${{ steps.version.outputs.version }}-rc${{ steps.check.outputs.rc_number }}
+          tag_name: v${{ steps.check.outputs.base_version }}-rc${{ steps.check.outputs.rc_number }}
+          name: v${{ steps.check.outputs.base_version }}-rc${{ steps.check.outputs.rc_number }}
           prerelease: true
           generate_release_notes: true
-          files: pulse-v${{ steps.version.outputs.version }}-rc${{ steps.check.outputs.rc_number }}.tar.gz
+          files: pulse-v${{ steps.check.outputs.base_version }}-rc${{ steps.check.outputs.rc_number }}.tar.gz
           body: |
             ## 🧪 Release Candidate ${{ steps.check.outputs.rc_number }}
             
@@ -97,12 +125,12 @@ jobs:
             
             #### Script Install (Recommended)
             ```bash
-            wget -qO- https://github.com/rcourtman/Pulse/releases/download/v${{ steps.version.outputs.version }}-rc${{ steps.check.outputs.rc_number }}/install-pulse.sh | bash
+            wget -qO- https://github.com/rcourtman/Pulse/releases/download/v${{ steps.check.outputs.base_version }}-rc${{ steps.check.outputs.rc_number }}/install-pulse.sh | bash
             ```
             
             #### Docker
             ```bash
-            docker pull rcourtman/pulse:v${{ steps.version.outputs.version }}-rc${{ steps.check.outputs.rc_number }}
+            docker pull rcourtman/pulse:v${{ steps.check.outputs.base_version }}-rc${{ steps.check.outputs.rc_number }}
             # or use the rolling RC tag
             docker pull rcourtman/pulse:rc
             ```
