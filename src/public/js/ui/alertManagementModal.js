@@ -3632,7 +3632,6 @@ ${isEditing ? 'Update Alert' : 'Create Alert'}
                             <span class="text-xs px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full">
                                 ${alert.guest?.type || 'unknown'} ${alert.guest?.vmid || ''}
                             </span>
-                            ${alert.escalated ? '<span class="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full">Escalated</span>' : ''}
                             ${acknowledged ? '<span class="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">Acknowledged</span>' : ''}
                         </div>
                         <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">
@@ -3682,11 +3681,6 @@ ${isEditing ? 'Update Alert' : 'Create Alert'}
                             <p class="text-xs text-gray-500 dark:text-gray-400">
                                 Triggered: ${new Date(alert.triggeredAt).toLocaleTimeString()}
                             </p>
-                            ${alert.escalated ? `
-                                <p class="text-xs text-orange-600 dark:text-orange-400 font-medium">
-                                    Escalated
-                                </p>
-                            ` : ''}
                         </div>
                     </div>
                 </div>

@@ -146,7 +146,6 @@ PulseApp.alerts = (() => {
                 // Set up alert event listeners
                 window.socket.on('alert', handleNewAlert);
                 window.socket.on('alertResolved', handleResolvedAlert);
-                window.socket.on('alertEscalated', handleEscalatedAlert);
                 window.socket.on('alertAcknowledged', handleAcknowledgedAlert);
                 
                 // Handle reconnection - reload alert data when reconnected
@@ -421,7 +420,6 @@ PulseApp.alerts = (() => {
                             <span class="${valueClass}">
                                 ${currentValueDisplay}
                             </span>
-                            ${alert.escalated && !acknowledged ? '<span class="text-xs bg-red-500 text-white px-1 rounded">!</span>' : ''}
                             ${acknowledged ? '<span class="text-xs bg-green-500/70 text-white px-1 rounded opacity-70">✓</span>' : ''}
                         </div>
                         <div class="${ruleClass}">
@@ -459,11 +457,6 @@ PulseApp.alerts = (() => {
         
         updateHeaderIndicator();
         
-        // Only show notifications for escalated alerts to reduce noise
-        const shouldShowNotification = alert.escalated;
-        if (shouldShowNotification) {
-            // showNotification(alert, alert.severity);
-        }
         
         if (alertDropdown && !alertDropdown.classList.contains('hidden')) {
             updateDropdownContent();
@@ -482,11 +475,6 @@ PulseApp.alerts = (() => {
         
         updateHeaderIndicator();
         
-        // Only show resolved notifications for previously escalated alerts
-        const shouldShowNotification = alert.escalated;
-        if (shouldShowNotification) {
-            // showNotification(alert, 'resolved');
-        }
         
         if (alertDropdown && !alertDropdown.classList.contains('hidden')) {
             updateDropdownContent();
@@ -501,7 +489,6 @@ PulseApp.alerts = (() => {
 
         const unacknowledgedAlerts = activeAlerts.filter(a => !a.acknowledged);
         const count = unacknowledgedAlerts.length;
-        const escalatedCount = unacknowledgedAlerts.filter(a => a.escalated).length;
         
         // Always show the button, just change its appearance based on unacknowledged alert count
         let className = 'text-xs px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 cursor-pointer relative flex-shrink-0 transition-colors';
@@ -509,13 +496,7 @@ PulseApp.alerts = (() => {
         if (count === 0) {
             className = 'text-xs px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 cursor-pointer relative flex-shrink-0 transition-colors';
         } else {
-            const hasEscalated = escalatedCount > 0;
-            
-            if (hasEscalated) {
-                className = 'text-xs px-1.5 py-0.5 rounded bg-red-500 text-white cursor-pointer relative flex-shrink-0 transition-colors';
-            } else {
-                className = 'text-xs px-1.5 py-0.5 rounded bg-red-400 text-white cursor-pointer relative flex-shrink-0 transition-colors';
-            }
+            className = 'text-xs px-1.5 py-0.5 rounded bg-red-400 text-white cursor-pointer relative flex-shrink-0 transition-colors';
         }
         
         indicator.className = className;
@@ -547,7 +528,6 @@ PulseApp.alerts = (() => {
         const icon = ALERT_ICONS.active;
         
         const title = type === 'resolved' ? 'Resolved' : 
-                     alert.escalated ? 'Escalated' : 
                      type === 'info' ? (alert.message && alert.message.includes('acknowledged') ? 'Success' : 'Alert') :
                      'Alert';
         
@@ -834,24 +814,6 @@ PulseApp.alerts = (() => {
     }
     
     // Additional socket event handlers
-    function handleEscalatedAlert(alert) {
-        
-        // Update existing alert or add if not found
-        const existingIndex = activeAlerts.findIndex(a => a.id === alert.id);
-        if (existingIndex >= 0) {
-            activeAlerts[existingIndex] = { ...activeAlerts[existingIndex], ...alert };
-        } else {
-            activeAlerts.unshift(alert);
-        }
-        
-        updateHeaderIndicator();
-        if (alertDropdown && !alertDropdown.classList.contains('hidden')) {
-            updateDropdownContent();
-        }
-        
-        // Show escalation notification
-        showToastNotification(`Alert escalated: ${alert.rule.name} for ${alert.guest.name}`, 'critical');
-    }
     
     function handleAcknowledgedAlert(alert) {
         
@@ -883,7 +845,6 @@ PulseApp.alerts = (() => {
         if (window.socket) {
             window.socket.off('alert', handleNewAlert);
             window.socket.off('alertResolved', handleResolvedAlert);
-            window.socket.off('alertEscalated', handleEscalatedAlert);
             window.socket.off('alertAcknowledged', handleAcknowledgedAlert);
         }
     }

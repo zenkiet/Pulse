@@ -8,7 +8,6 @@
       "enabled": true,
       "tags": [],
       "group": "compound_threshold",
-      "escalationTime": 900000,
       "autoResolve": false,
       "suppressionTime": 300000,
       "notificationChannels": [

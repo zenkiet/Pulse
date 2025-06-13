@@ -15,7 +15,6 @@ class AlertManager extends EventEmitter {
         this.suppressedAlerts = new Map();
         this.notificationStatus = new Map();
         this.alertGroups = new Map();
-        this.escalationRules = new Map();
         this.alertMetrics = {
             totalFired: 0,
             totalResolved: 0,
@@ -54,11 +53,6 @@ class AlertManager extends EventEmitter {
             this.cleanupResolvedAlerts();
             this.updateMetrics();
         }, 300000); // Every 5 minutes
-        
-        // Escalation check timer
-        this.escalationInterval = setInterval(() => {
-            this.checkEscalations();
-        }, 60000); // Every minute
         
         // Watch alert rules file for changes
         this.setupAlertRulesWatcher();
@@ -310,7 +304,6 @@ class AlertManager extends EventEmitter {
                         currentValue,
                         effectiveThreshold: effectiveThreshold,
                         state: 'pending',
-                        escalated: false,
                         acknowledged: false
                     };
                     this.activeAlerts.set(alertKey, newAlert);
@@ -492,37 +485,9 @@ class AlertManager extends EventEmitter {
         return `${ruleId}_${guestFilter.endpointId || '*'}_${guestFilter.node || '*'}_${guestFilter.vmid || '*'}`;
     }
 
-    checkEscalations() {
-        const now = Date.now();
-        
-        for (const [key, alert] of this.activeAlerts) {
-            if (alert.state === 'active' && !alert.escalated && !alert.acknowledged) {
-                const alertAge = now - alert.triggeredAt;
-                if (alertAge >= alert.rule.escalationTime) {
-                    this.escalateAlert(alert);
-                }
-            }
-        }
-    }
-
-    escalateAlert(alert) {
-        alert.escalated = true;
-        alert.escalatedAt = Date.now();
-        
-        const escalatedAlert = {
-            ...alert,
-            message: `ESCALATED: ${alert.rule.name}`,
-            escalated: true
-        };
-        
-        this.emit('alertEscalated', escalatedAlert);
-        this.sendNotifications(escalatedAlert, true);
-        
-        console.warn(`[ALERT ESCALATED] ${escalatedAlert.message}`);
-    }
 
 
-    sendNotifications(alert, forceUrgent = false) {
+    sendNotifications(alert) {
         // Check if we've already sent notifications for this alert
         const existingStatus = this.notificationStatus.get(alert.id);
         if (existingStatus && (existingStatus.emailSent || existingStatus.webhookSent)) {
@@ -689,7 +654,6 @@ class AlertManager extends EventEmitter {
                 acknowledged: alert.acknowledged || false,
                 acknowledgedBy: alert.acknowledgedBy || null,
                 acknowledgedAt: alert.acknowledgedAt || null,
-                escalated: alert.escalated || false,
                 message: this.generateAlertMessage(alert),
                 type: alert.rule?.type || 'single_metric',
                 thresholds: Array.isArray(alert.rule?.thresholds) ? 
@@ -855,7 +819,6 @@ class AlertManager extends EventEmitter {
             enabled: rule.enabled,
             tags: Array.isArray(rule.tags) ? [...rule.tags] : [],
             group: rule.group,
-            escalationTime: rule.escalationTime,
             autoResolve: rule.autoResolve,
             suppressionTime: rule.suppressionTime,
             type: rule.type,
@@ -896,7 +859,6 @@ class AlertManager extends EventEmitter {
             enabled: rule.enabled,
             tags: rule.tags ? [...rule.tags] : [],
             group: rule.group,
-            escalationTime: rule.escalationTime,
             autoResolve: rule.autoResolve,
             suppressionTime: rule.suppressionTime,
             type: rule.type,
@@ -928,13 +890,10 @@ class AlertManager extends EventEmitter {
         const acknowledgedCount = Array.from(this.activeAlerts.values())
             .filter(a => a.acknowledged).length;
 
-        const escalatedCount = Array.from(this.activeAlerts.values())
-            .filter(a => a.escalated).length;
 
         return {
             active: activeCount,
             acknowledged: acknowledgedCount,
-            escalated: escalatedCount,
             last24Hours: last24h.length,
             lastHour: lastHour.length,
             totalRules: this.alertRules.size,
@@ -1255,7 +1214,6 @@ class AlertManager extends EventEmitter {
             enabled: false,
             tags: [],
             group: isCompoundRule ? 'compound_threshold' : 'custom',
-            escalationTime: 900000,
             autoResolve: true,
             suppressionTime: 300000,
             type: isCompoundRule ? 'compound_threshold' : 'single_metric',
@@ -1400,8 +1358,7 @@ class AlertManager extends EventEmitter {
                                 currentValue: guest.status,
                                 effectiveThreshold: effectiveThreshold,
                                 state: 'active', // Make it active immediately
-                                escalated: false,
-                                acknowledged: false
+                                        acknowledged: false
                             };
                             
                             this.activeAlerts.set(alertKey, newAlert);
@@ -1871,7 +1828,6 @@ class AlertManager extends EventEmitter {
                     enabled: process.env.ALERT_CPU_ENABLED === 'true',
                     tags: ['performance', 'cpu'],
                     group: 'system_performance',
-                    escalationTime: 900000, // 15 minutes
                     autoResolve: true,
                     suppressionTime: 300000, // 5 minutes
                 },
@@ -1886,7 +1842,6 @@ class AlertManager extends EventEmitter {
                     enabled: process.env.ALERT_MEMORY_ENABLED === 'true',
                     tags: ['performance', 'memory'],
                     group: 'system_performance',
-                    escalationTime: 900000, // 15 minutes
                     autoResolve: true,
                     suppressionTime: 300000,
                 },
@@ -1901,7 +1856,6 @@ class AlertManager extends EventEmitter {
                     enabled: process.env.ALERT_DISK_ENABLED === 'true',
                     tags: ['storage', 'disk'],
                     group: 'storage_alerts',
-                    escalationTime: 1800000, // 30 minutes
                     autoResolve: true,
                     suppressionTime: 600000, // 10 minutes
                 },
@@ -1916,7 +1870,6 @@ class AlertManager extends EventEmitter {
                     enabled: process.env.ALERT_DOWN_ENABLED === 'true',
                     tags: ['availability', 'guest'],
                     group: 'availability_alerts',
-                    escalationTime: 600000, // 10 minutes
                     autoResolve: true,
                     suppressionTime: 120000, // 2 minutes
                 }
@@ -1993,7 +1946,6 @@ class AlertManager extends EventEmitter {
                     currentValue: alert.currentValue,
                     effectiveThreshold: alert.effectiveThreshold,
                     state: alert.state,
-                    escalated: alert.escalated,
                     acknowledged: alert.acknowledged,
                     acknowledgedBy: alert.acknowledgedBy,
                     acknowledgedAt: alert.acknowledgedAt,
@@ -2512,9 +2464,6 @@ This alert was generated by Pulse monitoring system.
     destroy() {
         if (this.cleanupInterval) {
             clearInterval(this.cleanupInterval);
-        }
-        if (this.escalationInterval) {
-            clearInterval(this.escalationInterval);
         }
         
         // Stop watching alert rules file

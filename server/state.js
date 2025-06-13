@@ -371,7 +371,6 @@ function getAlertInfo() {
       stats: {
         active: 0,
         acknowledged: 0,
-        escalated: 0,
         last24Hours: 0,
         lastHour: 0,
         totalRules: 0,

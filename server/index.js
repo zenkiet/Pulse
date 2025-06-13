@@ -345,7 +345,6 @@ app.get('/api/alerts', (req, res) => {
                 stats: {
                     active: 0,
                     acknowledged: 0,
-                    escalated: 0,
                     last24Hours: 0,
                     lastHour: 0,
                     totalRules: 0,
@@ -444,7 +443,6 @@ app.get('/api/alerts/metrics', (req, res) => {
             summary: {
                 active: stats.active,
                 acknowledged: stats.acknowledged,
-                escalated: stats.escalated,
                 suppressed: stats.suppressedRules
             },
             trends: {
@@ -1364,17 +1362,6 @@ stateManager.alertManager.on('alertResolved', (alert) => {
     }
 });
 
-stateManager.alertManager.on('alertEscalated', (alert) => {
-    if (io.engine.clientsCount > 0) {
-        try {
-            const safeAlert = stateManager.alertManager.createSafeAlertForEmit(alert);
-            console.log(`[Socket] Emitting alert escalated: ${safeAlert.id}`);
-            io.emit('alertEscalated', safeAlert);
-        } catch (error) {
-            console.error('[Socket] Failed to emit alert escalated:', error);
-        }
-    }
-});
 
 stateManager.alertManager.on('alertAcknowledged', (alert) => {
     if (io.engine.clientsCount > 0) {
