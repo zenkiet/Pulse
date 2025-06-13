@@ -1,6 +1,6 @@
 {
   "name": "pulse",
-  "version": "3.24.0",
+  "version": "3.24.0-rc3",
   "description": "A lightweight monitoring application for Proxmox VE.",
   "main": "server/index.js",
   "scripts": {
@@ -35,7 +35,7 @@
     "tar": "^7.4.3"
   },
   "_comment_tailwind_v3_reason": "Using Tailwind CSS v3 (3.4.4) due to build inconsistencies observed with v4 (specifically 4.1.4). v4 resulted in incorrectly purged CSS files when built within certain Linux environments (e.g., Proxmox LXC - Debian 12 x86_64), failing to detect dynamically added classes. v3.4.4 builds correctly.",
-  "_test_workflow": "Third RC workflow test - correct secret",
+  "_test_auto_version": "Testing automated RC version bumping",
   "devDependencies": {
     "@gradin/tailwindcss-scrollbar": "^3.0.1",
     "autoprefixer": "^10.4.21",
