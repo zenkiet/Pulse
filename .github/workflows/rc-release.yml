@@ -1,0 +1,63 @@
+name: Release Candidate
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  create-rc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Get version from package.json
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+      - name: Check if RC release needed
+        id: check
+        run: |
+          # Get the latest RC tag for this version
+          LATEST_RC=$(git tag -l "v${{ steps.version.outputs.version }}-rc*" | sort -V | tail -n1)
+          
+          if [ -z "$LATEST_RC" ]; then
+            echo "rc_number=1" >> $GITHUB_OUTPUT
+            echo "create_release=true" >> $GITHUB_OUTPUT
+          else
+            # Extract RC number and increment
+            RC_NUM=$(echo $LATEST_RC | grep -o 'rc[0-9]*' | grep -o '[0-9]*')
+            NEXT_RC=$((RC_NUM + 1))
+            
+            # Check if there are new commits since last RC
+            COMMITS_SINCE=$(git rev-list --count $LATEST_RC..HEAD)
+            if [ "$COMMITS_SINCE" -gt 0 ]; then
+              echo "rc_number=$NEXT_RC" >> $GITHUB_OUTPUT
+              echo "create_release=true" >> $GITHUB_OUTPUT
+            else
+              echo "create_release=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+          
+      - name: Create RC Release
+        if: steps.check.outputs.create_release == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.version }}-rc${{ steps.check.outputs.rc_number }}
+          name: v${{ steps.version.outputs.version }}-rc${{ steps.check.outputs.rc_number }}
+          prerelease: true
+          generate_release_notes: true
+          body: |
+            ## Release Candidate ${{ steps.check.outputs.rc_number }}
+            
+            This is a release candidate for testing. Please report any issues you find.
+            
+            ### Installation
+            For testing this RC version, use:
+            ```bash
+            wget -qO- https://github.com/rcourtman/Pulse/releases/download/v${{ steps.version.outputs.version }}-rc${{ steps.check.outputs.rc_number }}/install-pulse.sh | bash
+            ```
