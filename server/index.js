@@ -734,6 +734,19 @@ app.get('/api/version', async (req, res) => {
         
         let latestVersion = currentVersion;
         let updateAvailable = false;
+        let gitBranch = null;
+        
+        // Try to detect git branch
+        try {
+            const { execSync } = require('child_process');
+            gitBranch = execSync('git branch --show-current', { 
+                cwd: path.join(__dirname, '..'), 
+                encoding: 'utf8' 
+            }).trim();
+        } catch (gitError) {
+            // Git not available or not a git repo
+            gitBranch = null;
+        }
         
         try {
             // Try to check for updates, but don't fail if it doesn't work
@@ -748,7 +761,9 @@ app.get('/api/version', async (req, res) => {
         res.json({ 
             version: currentVersion,
             latestVersion: latestVersion,
-            updateAvailable: updateAvailable
+            updateAvailable: updateAvailable,
+            gitBranch: gitBranch,
+            isDevelopment: gitBranch === 'develop' || process.env.NODE_ENV === 'development'
         });
     } catch (error) {
          console.error("[Version API] Error in version endpoint:", error);
@@ -1746,6 +1761,7 @@ async function startServer() {
             path.join(__dirname, '../src/public'),    // Frontend files
             path.join(__dirname, './'),                // Server files
             path.join(__dirname, '../data'),           // Config files
+            path.join(__dirname, '../package.json'),  // Package.json for auto-restart on version updates
           ];
           
           devWatcher = chokidar.watch(watchPaths, { 
