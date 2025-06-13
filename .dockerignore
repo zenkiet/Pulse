@@ -65,5 +65,5 @@ config/
 .prettierrc*
 tailwind.config.js
 
-# Package lock files (only need package.json)
-package-lock.json
+# Package lock files - KEEP package-lock.json for npm ci
+# package-lock.json
