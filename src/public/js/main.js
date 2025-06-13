@@ -178,6 +178,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.version) {
                     versionSpan.textContent = data.version;
                     
+                    // Check if this is a release candidate
+                    const versionBadge = document.getElementById('version-badge');
+                    if (versionBadge && data.version) {
+                        const isRC = data.version.includes('-rc') || 
+                                     data.version.includes('-alpha') || 
+                                     data.version.includes('-beta');
+                        if (isRC) {
+                            versionBadge.textContent = 'RC';
+                            versionBadge.classList.remove('hidden');
+                        }
+                    }
+                    
+                    // Also update the page title
+                    const isRC = data.version && (data.version.includes('-rc') || 
+                                 data.version.includes('-alpha') || 
+                                 data.version.includes('-beta'));
+                    document.title = isRC ? 'Pulse RC' : 'Pulse';
+                    
                     // Check if update is available
                     if (data.updateAvailable && data.latestVersion) {
                         // Check if update indicator already exists
