@@ -113,9 +113,12 @@ class UpdateManager {
                     const releaseVersion = release.tag_name.replace('v', '');
                     const releaseIsRC = this.isReleaseCandidate(releaseVersion);
                     
-                    if (releaseIsRC && semver.gt(releaseVersion, this.currentVersion)) {
-                        latestRelease = release;
-                        break;
+                    if (releaseIsRC) {
+                        // For RC channel, show the latest RC regardless of current version
+                        // This allows showing RC versions even if current is stable
+                        if (!latestRelease || semver.gt(releaseVersion, latestRelease.tag_name.replace('v', ''))) {
+                            latestRelease = release;
+                        }
                     }
                 }
                 
@@ -150,6 +153,9 @@ class UpdateManager {
             if (isStableChannel && isCurrentRC && isDifferentVersion) {
                 // Offer stable version even if it's older than current RC
                 updateAvailable = true;
+            } else if (updateChannel === 'rc') {
+                // For RC channel, show update if versions differ or if latest is newer
+                updateAvailable = isDifferentVersion || semver.gt(latestVersion, this.currentVersion);
             } else {
                 // Normal case: only newer versions
                 updateAvailable = semver.gt(latestVersion, this.currentVersion);
