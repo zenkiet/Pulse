@@ -5,56 +5,115 @@ PulseApp.ui.backups = (() => {
     let resetBackupsButton = null;
     let backupsTabContent = null;
     let namespaceFilter = null;
+    let pbsInstanceFilter = null;
+    let lastUserUpdateTime = 0; // Track when user last triggered an update
     
-    // Cache for expensive data transformations
+    // Enhanced cache for expensive data transformations
     let dataCache = {
         lastStateHash: null,
         processedBackupData: null,
-        guestBackupStatus: null
+        guestBackupStatus: null,
+        // Fine-grained caching
+        guestCache: new Map(), // Maps guestId to cached data with TTL
+        tasksByGuestCache: new Map(),
+        snapshotsByGuestCache: new Map(),
+        lastCleanup: Date.now(),
+        cacheStats: { hits: 0, misses: 0 }
     };
     
-    function _generateStateHash(vmsData, containersData, pbsDataArray, pveBackups, namespaceFilter) {
-        // Simple hash based on data lengths and timestamps + namespace filter
+    // Cache TTL in milliseconds
+    const CACHE_TTL = 30000; // 30 seconds for guest data
+    const CACHE_CLEANUP_INTERVAL = 300000; // 5 minutes
+    
+    // DOM element cache to avoid repeated queries
+    const domCache = {
+        tableBody: null,
+        noDataMsg: null,
+        tableContainer: null,
+        scrollableContainer: null,
+        visualizationSection: null,
+        calendarContainer: null,
+        statusTextElement: null,
+        pbsSummaryElement: null,
+        detailCardContainer: null,
+        loadingIndicator: null
+    };
+    
+    // Row tracking for incremental updates
+    const rowTracker = new Map(); // Maps guestId to row element
+    
+    // Initialize DOM cache
+    function _initDomCache() {
+        domCache.tableBody = document.getElementById('backups-overview-tbody');
+        domCache.noDataMsg = document.getElementById('backups-no-data-message');
+        domCache.tableContainer = document.getElementById('backups-table-container');
+        domCache.scrollableContainer = document.querySelector('#backups .overflow-x-auto');
+        domCache.visualizationSection = document.getElementById('backup-visualization-section');
+        domCache.calendarContainer = document.getElementById('backup-calendar-heatmap');
+        domCache.statusTextElement = document.getElementById('backups-status-text');
+        domCache.pbsSummaryElement = document.getElementById('pbs-instances-summary');
+        domCache.detailCardContainer = document.getElementById('backup-detail-card');
+        domCache.loadingIndicator = document.getElementById('backups-loading-message');
+    }
+    
+    function _generateStateHash(vmsData, containersData, pbsDataArray, pveBackups, namespaceFilter, pbsInstanceFilter) {
+        // Enhanced hash generation with data sampling
         const vmCount = vmsData.length;
         const ctCount = containersData.length;
         const pbsCount = pbsDataArray.length;
         const pveTaskCount = pveBackups?.backupTasks?.length || 0;
         const pveStorageCount = pveBackups?.storageBackups?.length || 0;
         
-        return `${vmCount}-${ctCount}-${pbsCount}-${pveTaskCount}-${pveStorageCount}-${namespaceFilter || 'all'}`;
+        // Sample data for better change detection
+        const vmSample = vmsData.length > 0 ? `${vmsData[0]?.id}-${vmsData[vmsData.length-1]?.id}` : '';
+        const ctSample = containersData.length > 0 ? `${containersData[0]?.id}-${containersData[containersData.length-1]?.id}` : '';
+        
+        // Include timestamps for better cache invalidation
+        const latestBackupTime = Math.max(
+            ...pbsDataArray.flatMap(pbs => 
+                (pbs.datastores || []).flatMap(ds => 
+                    (ds.snapshots || []).map(s => s.timestamp || 0)
+                )
+            ),
+            0
+        );
+        
+        return `${vmCount}-${ctCount}-${pbsCount}-${pveTaskCount}-${pveStorageCount}-${namespaceFilter || 'all'}-${pbsInstanceFilter || 'all'}-${vmSample}-${ctSample}-${latestBackupTime}`;
+    }
+    
+    // Clean up expired cache entries
+    function _cleanupCache() {
+        const now = Date.now();
+        if (now - dataCache.lastCleanup < CACHE_CLEANUP_INTERVAL) return;
+        
+        // Clean up guest cache
+        for (const [guestId, data] of dataCache.guestCache) {
+            if (now - data.timestamp > CACHE_TTL) {
+                dataCache.guestCache.delete(guestId);
+            }
+        }
+        
+        // Clean up component caches
+        for (const [key, data] of dataCache.tasksByGuestCache) {
+            if (now - data.timestamp > CACHE_TTL) {
+                dataCache.tasksByGuestCache.delete(key);
+            }
+        }
+        
+        for (const [key, data] of dataCache.snapshotsByGuestCache) {
+            if (now - data.timestamp > CACHE_TTL) {
+                dataCache.snapshotsByGuestCache.delete(key);
+            }
+        }
+        
+        dataCache.lastCleanup = now;
     }
 
-    function _initMobileScrollIndicators() {
-        const tableContainer = document.querySelector('#backups .table-container');
-        const scrollHint = document.querySelector('#backups .scroll-hint');
-        
-        if (!tableContainer || !scrollHint) return;
-        
-        let scrollHintTimer;
-        
-        // Hide scroll hint after 5 seconds or on first scroll
-        const hideScrollHint = () => {
-            if (scrollHint) {
-                scrollHint.style.display = 'none';
-            }
-        };
-        
-        scrollHintTimer = setTimeout(hideScrollHint, 5000);
-        
-        // Handle scroll events
-        tableContainer.addEventListener('scroll', () => {
-            hideScrollHint();
-            clearTimeout(scrollHintTimer);
-        }, { passive: true });
-        
-        // Also hide on table container click/touch
-        tableContainer.addEventListener('touchstart', () => {
-            hideScrollHint();
-            clearTimeout(scrollHintTimer);
-        }, { passive: true });
-    }
 
     function init() {
+        // Initialize DOM cache first
+        _initDomCache();
+        
         backupsSearchInput = document.getElementById('backups-search');
         resetBackupsButton = document.getElementById('reset-backups-filters-button');
         backupsTabContent = document.getElementById('backups');
@@ -126,7 +185,7 @@ PulseApp.ui.backups = (() => {
         
         // Initialize mobile scroll indicators
         if (window.innerWidth < 768) {
-            _initMobileScrollIndicators();
+            PulseApp.utils.initMobileScrollIndicators('#backups');
         }
         
         // Initialize snapshot modal handlers
@@ -134,6 +193,9 @@ PulseApp.ui.backups = (() => {
         
         // Initialize namespace filter
         _initNamespaceFilter();
+        
+        // Initialize PBS instance filter
+        _initPbsInstanceFilter();
     }
 
     function calculateBackupSummary(backupStatusByGuest) {
@@ -183,18 +245,6 @@ PulseApp.ui.backups = (() => {
         };
     }
 
-    
-    function formatTimeAgo(milliseconds) {
-        const seconds = Math.floor(milliseconds / 1000);
-        const minutes = Math.floor(seconds / 60);
-        const hours = Math.floor(minutes / 60);
-        const days = Math.floor(hours / 24);
-
-        if (days > 0) return `${days}d ago`;
-        if (hours > 0) return `${hours}h ago`;
-        if (minutes > 0) return `${minutes}m ago`;
-        return 'Just now';
-    }
 
     function createNodeBackupSummaryCard(nodeName, guestStatuses) {
         const card = document.createElement('div');
@@ -258,13 +308,7 @@ PulseApp.ui.backups = (() => {
                 </div>
             </div>
             ${sortedGuests.map(guest => {
-                const statusColor = {
-                    'ok': 'text-green-600 dark:text-green-400',
-                    'stale': 'text-green-600 dark:text-green-400', 
-                    'old': 'text-yellow-600 dark:text-yellow-400',
-                    'failed': 'text-red-600 dark:text-red-400',
-                    'none': 'text-gray-600 dark:text-gray-400'
-                }[guest.backupHealthStatus] || 'text-gray-600 dark:text-gray-400';
+                const statusColor = PulseApp.utils.getBackupStatusColor(guest.backupHealthStatus);
                 
                 const statusIcon = {
                     'ok': '●',
@@ -290,7 +334,24 @@ PulseApp.ui.backups = (() => {
     function _extractBackupTypeFromVolid(volid, vmid) {
         // Extract type from volid format: vzdump-{type}-{vmid}-{timestamp}
         const volidMatch = volid.match(/vzdump-(qemu|lxc)-(\d+)-/);
-        return volidMatch ? (volidMatch[1] === 'qemu' ? 'vm' : 'ct') : (vmid ? 'ct' : 'vm');
+        if (volidMatch) {
+            return volidMatch[1] === 'qemu' ? 'vm' : 'ct';
+        }
+        
+        // Fallback: try to determine from guest data if available
+        // Look up the guest in current data to determine actual type
+        const vmsData = PulseApp.state.get('vmsData') || [];
+        const containersData = PulseApp.state.get('containersData') || [];
+        const allGuests = [...vmsData, ...containersData];
+        
+        const guest = allGuests.find(g => parseInt(g.vmid, 10) === parseInt(vmid, 10));
+        if (guest) {
+            return guest.type === 'qemu' ? 'vm' : 'ct';
+        }
+        
+        // Final fallback: assume VM if no match found
+        console.warn('[Backups] Could not determine backup type from volid:', volid, 'vmid:', vmid);
+        return 'vm';
     }
 
     function _getInitialBackupData() {
@@ -306,7 +367,8 @@ PulseApp.ui.backups = (() => {
         const namespaceFilter = PulseApp.state.get('backupsFilterNamespace') || 'all';
         
         // Check if we can use cached data (now includes namespace filter in hash)
-        const currentHash = _generateStateHash(vmsData, containersData, pbsDataArray, pveBackups, namespaceFilter);
+        const pbsInstanceFilterValue = PulseApp.state.get('backupsFilterPbsInstance') || 'all';
+        const currentHash = _generateStateHash(vmsData, containersData, pbsDataArray, pveBackups, namespaceFilter, pbsInstanceFilterValue);
         if (dataCache.lastStateHash === currentHash && dataCache.processedBackupData) {
             return dataCache.processedBackupData;
         }
@@ -316,8 +378,15 @@ PulseApp.ui.backups = (() => {
             console.log(`Namespace filtering: '${namespaceFilter}' selected`);
         }
 
+        // PBS instance filter already retrieved above for cache hash
+        
+        // Filter PBS instances based on selection
+        const filteredPbsDataArray = pbsInstanceFilterValue === 'all'
+            ? pbsDataArray
+            : pbsDataArray.filter((_, index) => index.toString() === pbsInstanceFilterValue);
+        
         // Filter PBS backup tasks by namespace if possible
-        let pbsBackupTasks = pbsDataArray.flatMap(pbs => {
+        let pbsBackupTasks = filteredPbsDataArray.flatMap(pbs => {
             return (pbs.backupTasks?.recentTasks || []).map(task => ({
                 ...task,
                 guestId: task.id?.split('/')[1] || task.guestId || null,
@@ -331,7 +400,7 @@ PulseApp.ui.backups = (() => {
         if (namespaceFilter !== 'all') {
             // Get guest+node combinations that have backups in the selected namespace
             const guestNodeCombosInNamespace = new Set();
-            pbsDataArray.forEach(pbsInstance => {
+            filteredPbsDataArray.forEach(pbsInstance => {
                 (pbsInstance.datastores || []).forEach(ds => {
                     (ds.snapshots || []).forEach(snap => {
                         const snapNamespace = snap.namespace || 'root';
@@ -361,7 +430,7 @@ PulseApp.ui.backups = (() => {
         if (namespaceFilter !== 'all') {
             // Get guest+node combinations that have backups in the selected namespace
             const guestNodeCombosInNamespace = new Set();
-            pbsDataArray.forEach(pbsInstance => {
+            filteredPbsDataArray.forEach(pbsInstance => {
                 (pbsInstance.datastores || []).forEach(ds => {
                     (ds.snapshots || []).forEach(snap => {
                         const snapNamespace = snap.namespace || 'root';
@@ -411,7 +480,7 @@ PulseApp.ui.backups = (() => {
         const failedTasks = allRecentBackupTasks.filter(task => task.status !== 'OK');
         
         // Combine PBS snapshots and PVE storage backups
-        let pbsSnapshots = pbsDataArray.flatMap(pbsInstance =>
+        let pbsSnapshots = filteredPbsDataArray.flatMap(pbsInstance =>
             (pbsInstance.datastores || []).flatMap(ds =>
                 (ds.snapshots || []).map(snap => ({
                     ...snap,
@@ -430,19 +499,30 @@ PulseApp.ui.backups = (() => {
             pbsSnapshots = pbsSnapshots.filter(snap => snap.namespace === namespaceFilter);
         }
 
-        const pveStorageBackups = (pveBackups.storageBackups || []).map(backup => ({
-            'backup-time': backup.ctime,
-            backupType: _extractBackupTypeFromVolid(backup.volid, backup.vmid),
-            backupVMID: backup.vmid,
-            vmid: backup.vmid, // Ensure vmid is preserved for filtering
-            size: backup.size,
-            protected: backup.protected,
-            storage: backup.storage,
-            volid: backup.volid,
-            node: backup.node,
-            endpointId: backup.endpointId,
-            source: 'pve'
-        }));
+        const pveStorageBackups = (pveBackups.storageBackups || []).map(backup => {
+            // Defensive programming: ensure required fields exist
+            if (!backup.ctime || !backup.vmid || !backup.volid) {
+                console.warn('[Backups] Skipping PVE backup with missing required fields:', backup);
+                return null;
+            }
+            
+            // Ensure vmid is a string for consistent key generation
+            const vmidStr = String(backup.vmid);
+            
+            return {
+                'backup-time': backup.ctime,
+                backupType: _extractBackupTypeFromVolid(backup.volid, vmidStr),
+                backupVMID: vmidStr,
+                vmid: vmidStr, // Ensure vmid is preserved for filtering
+                size: backup.size,
+                protected: backup.protected,
+                storage: backup.storage,
+                volid: backup.volid,
+                node: backup.node,
+                endpointId: backup.endpointId,
+                source: 'pve'
+            };
+        }).filter(Boolean); // Remove null entries
         
         // PVE guest snapshots are NOT backups - they should be handled separately
         // Only include actual PVE backup files in the backup processing
@@ -1003,12 +1083,13 @@ PulseApp.ui.backups = (() => {
         const row = document.createElement('tr');
         row.className = 'border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700';
         row.dataset.guestId = guestStatus.guestId;
+        row.id = `backup-row-${guestStatus.guestId}`; // Add ID for row tracking
 
         // Check if guest has custom thresholds
         const thresholdIndicator = createThresholdIndicator(guestStatus);
 
         const latestBackupFormatted = guestStatus.latestBackupTime
-            ? PulseApp.utils.formatPbsTimestamp(guestStatus.latestBackupTime)
+            ? PulseApp.utils.formatPbsTimestampRelative(guestStatus.latestBackupTime)
             : '<span class="text-gray-400">No backups found</span>';
 
         const typeIconClass = guestStatus.guestType === 'VM'
@@ -1164,8 +1245,14 @@ PulseApp.ui.backups = (() => {
         const pbsDataArray = PulseApp.state.get('pbsDataArray') || [];
         const pveBackups = PulseApp.state.get('pveBackups') || {};
         
+        // Apply PBS instance filter
+        const pbsInstanceFilterValue = PulseApp.state.get('backupsFilterPbsInstance') || 'all';
+        const filteredPbsDataArray = pbsInstanceFilterValue === 'all'
+            ? pbsDataArray
+            : pbsDataArray.filter((_, index) => index.toString() === pbsInstanceFilterValue);
+        
         // Get PBS snapshots
-        const pbsSnapshots = pbsDataArray.flatMap(pbsInstance =>
+        const pbsSnapshots = filteredPbsDataArray.flatMap(pbsInstance =>
             (pbsInstance.datastores || []).flatMap(ds =>
                 (ds.snapshots || []).map(snap => ({
                     ...snap,
@@ -1205,7 +1292,7 @@ PulseApp.ui.backups = (() => {
         
         // Get backup tasks
         const pbsBackupTasks = [];
-        pbsDataArray.forEach(pbs => {
+        filteredPbsDataArray.forEach(pbs => {
             if (pbs.backupTasks?.recentTasks && Array.isArray(pbs.backupTasks.recentTasks)) {
                 pbs.backupTasks.recentTasks.forEach(task => {
                     pbsBackupTasks.push({
@@ -1271,6 +1358,13 @@ PulseApp.ui.backups = (() => {
         const vmsData = PulseApp.state.get('vmsData') || [];
         const containersData = PulseApp.state.get('containersData') || [];
         const pbsDataArray = PulseApp.state.get('pbsDataArray') || [];
+        
+        // Apply PBS instance filter
+        const pbsInstanceFilterValue = PulseApp.state.get('backupsFilterPbsInstance') || 'all';
+        const filteredPbsDataArray = pbsInstanceFilterValue === 'all'
+            ? pbsDataArray
+            : pbsDataArray.filter((_, index) => index.toString() === pbsInstanceFilterValue);
+        
         const allGuests = [...vmsData, ...containersData];
         const { tasksByGuest, snapshotsByGuest, dayBoundaries, threeDaysAgo, sevenDaysAgo } = _getInitialBackupData();
         const backupStatusByGuest = allGuests.map(guest => {
@@ -1286,7 +1380,7 @@ PulseApp.ui.backups = (() => {
             // NOTE: PBS backups are identified only by VMID, not by source node, so guests with
             // the same VMID on different nodes will show the same PBS backup count
             const pbsSnapshots = [];
-            pbsDataArray.forEach(pbsInstance => {
+            filteredPbsDataArray.forEach(pbsInstance => {
                 // Get all possible namespaces from the PBS instance
                 const namespaces = new Set(['root']); // Always include root
                 if (pbsInstance.datastores) {
@@ -1309,8 +1403,27 @@ PulseApp.ui.backups = (() => {
                 });
             });
             
-            const pveEndpointSnapshots = snapshotsByGuest.get(endpointGenericKey) || [];
-            const pveSpecificSnapshots = snapshotsByGuest.get(fullSpecificKey) || [];
+            // Try multiple key variations for PVE backup matching to handle edge cases
+            let pveEndpointSnapshots = snapshotsByGuest.get(endpointGenericKey) || [];
+            let pveSpecificSnapshots = snapshotsByGuest.get(fullSpecificKey) || [];
+            
+            // Fallback: if no PVE backups found with standard keys, try alternative key formats
+            if (pveEndpointSnapshots.length === 0 && pveSpecificSnapshots.length === 0) {
+                // Try alternative guest type mappings in case of inconsistencies
+                const altGuestType = guest.type === 'qemu' ? 'ct' : 'vm';
+                const altBaseKey = `${guest.vmid}-${altGuestType}`;
+                const altEndpointGenericKey = `${altBaseKey}${endpointKey}`;
+                const altFullSpecificKey = `${altBaseKey}${endpointKey}${nodeKey}`;
+                
+                const altPveEndpointSnapshots = snapshotsByGuest.get(altEndpointGenericKey) || [];
+                const altPveSpecificSnapshots = snapshotsByGuest.get(altFullSpecificKey) || [];
+                
+                // Use alternative keys if they have results
+                if (altPveEndpointSnapshots.length > 0 || altPveSpecificSnapshots.length > 0) {
+                    pveEndpointSnapshots = altPveEndpointSnapshots;
+                    pveSpecificSnapshots = altPveSpecificSnapshots;
+                }
+            }
             
             // Deduplicate PVE snapshots by volid to avoid counting the same backup multiple times
             const pveSnapshotsMap = new Map();
@@ -1337,7 +1450,7 @@ PulseApp.ui.backups = (() => {
         const pveBackups = PulseApp.state.get('pveBackups') || {};
         
         // Prepare backup data same as in updateBackupsTab
-        const pbsSnapshots = pbsDataArray.flatMap(pbsInstance =>
+        const pbsSnapshots = filteredPbsDataArray.flatMap(pbsInstance =>
             (pbsInstance.datastores || []).flatMap(ds =>
                 (ds.snapshots || []).map(snap => ({
                     ...snap,
@@ -1374,7 +1487,7 @@ PulseApp.ui.backups = (() => {
         }));
         
         const pbsBackupTasks = [];
-        pbsDataArray.forEach(pbs => {
+        filteredPbsDataArray.forEach(pbs => {
             if (pbs.backupTasks?.recentTasks && Array.isArray(pbs.backupTasks.recentTasks)) {
                 pbs.backupTasks.recentTasks.forEach(task => {
                     pbsBackupTasks.push({
@@ -1645,22 +1758,29 @@ PulseApp.ui.backups = (() => {
     }
 
     function updateBackupsTab(isUserAction = false) {
-        const tableContainer = document.getElementById('backups-table-container');
-        const tableBody = document.getElementById('backups-overview-tbody');
-        const loadingMsg = document.getElementById('backups-loading-message');
-        const noDataMsg = document.getElementById('backups-no-data-message');
-        const statusTextElement = document.getElementById('backups-status-text');
-        const pbsSummaryElement = document.getElementById('pbs-instances-summary');
+        // Prevent socket updates too close to user actions
+        if (!isUserAction && (Date.now() - lastUserUpdateTime < 1000)) {
+            // Skip this update if it's within 1 second of a user action
+            return;
+        }
+        
+        if (isUserAction) {
+            lastUserUpdateTime = Date.now();
+        }
+        
+        // Ensure DOM cache is initialized
+        if (!domCache.tableBody) {
+            _initDomCache();
+        }
+        
+        // Use cached DOM elements
+        const { tableContainer, tableBody, noDataMsg, statusTextElement, pbsSummaryElement, scrollableContainer } = domCache;
+        const loadingMsg = document.getElementById('backups-loading-message'); // Not in cache yet
 
         if (!tableContainer || !tableBody || !loadingMsg || !noDataMsg || !statusTextElement) {
             console.error("UI elements for Backups tab not found!");
             return;
         }
-        
-        // Find the scrollable container
-        const scrollableContainer = PulseApp.utils.getScrollableParent(tableBody) || 
-                                   tableContainer.closest('.overflow-x-auto') ||
-                                   tableContainer;
 
         // Store current scroll position for both axes
         const currentScrollLeft = scrollableContainer.scrollLeft || 0;
@@ -1669,9 +1789,12 @@ PulseApp.ui.backups = (() => {
         const { allGuests, initialDataReceived, tasksByGuest, snapshotsByGuest, dayBoundaries, threeDaysAgo, sevenDaysAgo } = _getInitialBackupData();
 
         if (!initialDataReceived) {
-            loadingMsg.classList.remove('hidden');
-            tableContainer.classList.add('hidden');
-            noDataMsg.classList.add('hidden');
+            // Only show loading message if the table is not already visible with data
+            if (tableContainer.classList.contains('hidden') || tableBody.children.length === 0) {
+                loadingMsg.classList.remove('hidden');
+                tableContainer.classList.add('hidden');
+                noDataMsg.classList.add('hidden');
+            }
             return;
         }
 
@@ -1689,6 +1812,14 @@ PulseApp.ui.backups = (() => {
         
         // Get PBS data array early as it's needed for guest backup status calculation
         const pbsDataArray = PulseApp.state.get('pbsDataArray') || [];
+        
+        // Get PBS instance filter
+        const pbsInstanceFilterValue = PulseApp.state.get('backupsFilterPbsInstance') || 'all';
+        
+        // Filter PBS instances based on selection
+        const filteredPbsDataArray = pbsInstanceFilterValue === 'all'
+            ? pbsDataArray
+            : pbsDataArray.filter((_, index) => index.toString() === pbsInstanceFilterValue);
         
         // Get the current namespace filter
         const namespaceFilter = PulseApp.state.get('backupsFilterNamespace') || 'all';
@@ -1710,7 +1841,7 @@ PulseApp.ui.backups = (() => {
             if (namespaceFilter !== 'all') {
                 // Guest is already filtered to be from this specific namespace
                 guestNamespace = namespaceFilter;
-                pbsDataArray.forEach(pbsInstance => {
+                filteredPbsDataArray.forEach(pbsInstance => {
                     const pbsKey = `${baseKey}-${pbsInstance.pbsInstanceName}-${namespaceFilter}`;
                     const snapshots = snapshotsByGuest.get(pbsKey) || [];
                     pbsSnapshots.push(...snapshots);
@@ -1722,7 +1853,7 @@ PulseApp.ui.backups = (() => {
                 let bestNamespace = null;
                 let mostRecentTime = 0;
                 
-                pbsDataArray.forEach(pbsInstance => {
+                filteredPbsDataArray.forEach(pbsInstance => {
                     // Look through all available namespace keys for this guest
                     snapshotsByGuest.forEach((snapshots, key) => {
                         if (key.startsWith(`${baseKey}-${pbsInstance.pbsInstanceName}-`)) {
@@ -1913,6 +2044,17 @@ PulseApp.ui.backups = (() => {
                             sevenDaysAgo
                         );
                         
+                        // Override the latest backup time with the most recent PBS backup from this specific namespace
+                        // This ensures the displayed time matches the namespace being shown
+                        if (pbsSnapshots.length > 0) {
+                            const latestPbsInNamespace = pbsSnapshots.reduce((latest, snap) => {
+                                return (!latest || (snap['backup-time'] && snap['backup-time'] > latest['backup-time'])) ? snap : latest;
+                            }, null);
+                            if (latestPbsInNamespace) {
+                                guestStatus.latestBackupTime = latestPbsInNamespace['backup-time'];
+                            }
+                        }
+                        
                         // Add namespace information to the guest status
                         guestStatus.pbsNamespaceText = namespace;
                         
@@ -1927,12 +2069,11 @@ PulseApp.ui.backups = (() => {
         const pveBackups = PulseApp.state.get('pveBackups') || {};
         
         // Get PBS snapshots for backup health card
-        // When showing all namespaces, use unfiltered PBS data for comprehensive summary
+        // When showing all namespaces, still respect PBS instance filter
         let pbsSnapshots;
         if (namespaceFilter === 'all') {
-            // Use original unfiltered PBS data for health card
-            const originalPbsDataArray = PulseApp.state.get('pbsDataArray') || [];
-            pbsSnapshots = originalPbsDataArray.flatMap(pbsInstance =>
+            // Use PBS data filtered by instance but not by namespace
+            pbsSnapshots = filteredPbsDataArray.flatMap(pbsInstance =>
                 (pbsInstance.datastores || []).flatMap(ds =>
                     (ds.snapshots || []).map(snap => ({
                         ...snap,
@@ -1945,7 +2086,7 @@ PulseApp.ui.backups = (() => {
             );
         } else {
             // When filtering by specific namespace, use filtered data
-            pbsSnapshots = pbsDataArray.flatMap(pbsInstance =>
+            pbsSnapshots = filteredPbsDataArray.flatMap(pbsInstance =>
                 (pbsInstance.datastores || []).flatMap(ds =>
                     (ds.snapshots || []).map(snap => ({
                         ...snap,
@@ -2011,7 +2152,7 @@ PulseApp.ui.backups = (() => {
             
             // Get backup tasks for calendar
             const pbsBackupTasks = [];
-            pbsDataArray.forEach(pbs => {
+            filteredPbsDataArray.forEach(pbs => {
                 if (pbs.backupTasks?.recentTasks && Array.isArray(pbs.backupTasks.recentTasks)) {
                     pbs.backupTasks.recentTasks.forEach(task => {
                         pbsBackupTasks.push({
@@ -2057,7 +2198,10 @@ PulseApp.ui.backups = (() => {
                 
                 // Create detail card only if it doesn't exist
                 if (detailCardContainer && !detailCard) {
-                    detailCard = PulseApp.ui.backupDetailCard.createBackupDetailCard(null);
+                    // Don't show empty state if we already have data to display
+                    const initialData = filteredBackupStatus.length > 0 ? 
+                        _prepareMultiDateDetailData(filteredBackupStatus, extendedBackupData) : null;
+                    detailCard = PulseApp.ui.backupDetailCard.createBackupDetailCard(initialData);
                     detailCardContainer.innerHTML = '';
                     detailCardContainer.appendChild(detailCard);
                 }
@@ -2195,7 +2339,16 @@ PulseApp.ui.backups = (() => {
                 }
             }
             
-            visualizationSection.classList.remove('hidden');
+            // Only show visualization section after all content is ready
+            // Use requestAnimationFrame to ensure DOM updates are complete
+            if (isUserAction || !visualizationSection.classList.contains('hidden')) {
+                visualizationSection.classList.remove('hidden');
+            } else {
+                // First time showing - wait for next frame to avoid flash
+                requestAnimationFrame(() => {
+                    visualizationSection.classList.remove('hidden');
+                });
+            }
         } else if (visualizationSection) {
             visualizationSection.classList.add('hidden');
         }
@@ -2276,12 +2429,27 @@ PulseApp.ui.backups = (() => {
         }
 
         PulseApp.utils.preserveScrollPosition(scrollableContainer, () => {
-            tableBody.innerHTML = '';
+            // Use DocumentFragment for batch DOM insertion
             if (sortedBackupStatus.length > 0) {
+                const fragment = document.createDocumentFragment();
+                
+                // Clear existing rows and row tracker
+                while (tableBody.firstChild) {
+                    tableBody.removeChild(tableBody.firstChild);
+                }
+                rowTracker.clear();
+                
+                // Build all rows in fragment
                 sortedBackupStatus.forEach(guestStatus => {
                     const row = _renderBackupTableRow(guestStatus);
-                    tableBody.appendChild(row);
+                    // Track row for future updates
+                    const guestId = `${guestStatus.guestType}-${guestStatus.guestId}`;
+                    rowTracker.set(guestId, row);
+                    fragment.appendChild(row);
                 });
+                
+                // Single DOM insertion
+                tableBody.appendChild(fragment);
                 noDataMsg.classList.add('hidden');
                 tableContainer.classList.remove('hidden');
             } else {
@@ -2349,6 +2517,10 @@ PulseApp.ui.backups = (() => {
         const failuresFilter = document.getElementById('backups-filter-failures');
         if(failuresFilter) failuresFilter.checked = false;
         PulseApp.state.set('backupsFilterFailures', false);
+        
+        // Reset PBS instance filter
+        if (pbsInstanceFilter) pbsInstanceFilter.value = 'all';
+        PulseApp.state.set('backupsFilterPbsInstance', 'all');
         
         // Reset namespace filter
         if (namespaceFilter) namespaceFilter.value = 'all';
@@ -2750,10 +2922,15 @@ PulseApp.ui.backups = (() => {
         if (!namespaceFilter) return;
         
         const pbsDataArray = PulseApp.state.get('pbsDataArray') || [];
+        const selectedPbsInstance = pbsInstanceFilter ? pbsInstanceFilter.value : 'all';
         const namespaces = new Set(['root']); // Always include root
         
-        // Collect all namespaces from PBS data
-        pbsDataArray.forEach(pbsInstance => {
+        // Collect namespaces from PBS data based on selected instance
+        const instancesToCheck = selectedPbsInstance === 'all' 
+            ? pbsDataArray 
+            : pbsDataArray.filter((_, index) => index.toString() === selectedPbsInstance);
+            
+        instancesToCheck.forEach(pbsInstance => {
             if (pbsInstance.datastores) {
                 pbsInstance.datastores.forEach(ds => {
                     if (ds.snapshots) {
@@ -2776,15 +2953,81 @@ PulseApp.ui.backups = (() => {
             namespaceFilter.appendChild(option);
         });
         
-        // Restore selection
-        namespaceFilter.value = currentValue;
+        // Restore selection if it still exists
+        if (Array.from(namespaceFilter.options).some(opt => opt.value === currentValue)) {
+            namespaceFilter.value = currentValue;
+        } else {
+            namespaceFilter.value = 'all';
+        }
         
         // Show/hide filter based on PBS being available and having multiple namespaces
         const filterGroup = document.getElementById('pbs-namespace-filter-group');
         if (filterGroup) {
             const hasMultipleNamespaces = namespaces.size > 1;
-            const hasPBS = pbsDataArray.length > 0;
+            const hasPBS = instancesToCheck.length > 0;
             filterGroup.style.display = hasPBS && hasMultipleNamespaces ? '' : 'none';
+        }
+    }
+    
+    function _initPbsInstanceFilter() {
+        pbsInstanceFilter = document.getElementById('backups-filter-pbs-instance');
+        const filterGroup = document.getElementById('pbs-instance-filter-group');
+        
+        if (!pbsInstanceFilter || !filterGroup) return;
+        
+        // Add change listener
+        pbsInstanceFilter.addEventListener('change', () => {
+            PulseApp.state.set('backupsFilterPbsInstance', pbsInstanceFilter.value);
+            // Update namespace options based on selected instance
+            _updateNamespaceOptions();
+            updateBackupsTab(true);
+        });
+        
+        // Update PBS instance options when PBS data changes
+        const originalPbsData = PulseApp.state.get('pbsDataArray');
+        let lastPbsDataLength = originalPbsData ? originalPbsData.length : 0;
+        
+        // Check for PBS data changes periodically
+        const checkPbsDataChanges = () => {
+            const currentPbsData = PulseApp.state.get('pbsDataArray');
+            const currentLength = currentPbsData ? currentPbsData.length : 0;
+            if (currentLength !== lastPbsDataLength) {
+                lastPbsDataLength = currentLength;
+                _updatePbsInstanceOptions();
+            }
+        };
+        
+        // Check for changes every 2 seconds
+        setInterval(checkPbsDataChanges, 2000);
+        
+        // Initial update
+        _updatePbsInstanceOptions();
+    }
+    
+    function _updatePbsInstanceOptions() {
+        if (!pbsInstanceFilter) return;
+        
+        const pbsDataArray = PulseApp.state.get('pbsDataArray') || [];
+        
+        // Update options
+        const currentValue = pbsInstanceFilter.value || 'all';
+        pbsInstanceFilter.innerHTML = '<option value="all">All PBS Instances</option>';
+        
+        pbsDataArray.forEach((pbsInstance, index) => {
+            const option = document.createElement('option');
+            option.value = index.toString();
+            option.textContent = pbsInstance.pbsInstanceName || `PBS Instance ${index + 1}`;
+            pbsInstanceFilter.appendChild(option);
+        });
+        
+        // Restore selection
+        pbsInstanceFilter.value = currentValue;
+        
+        // Show/hide filter based on multiple PBS instances
+        const filterGroup = document.getElementById('pbs-instance-filter-group');
+        if (filterGroup) {
+            const hasMultiplePBS = pbsDataArray.length > 1;
+            filterGroup.style.display = hasMultiplePBS ? '' : 'none';
         }
     }
 

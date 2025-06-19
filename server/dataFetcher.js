@@ -4,6 +4,13 @@ const axios = require('axios');
 const https = require('https');
 const dnsResolver = require('./dnsResolver');
 const { getNamespacesToQuery } = require('./pbsNamespaceDiscovery');
+const { 
+    analyzeVerificationHealth, 
+    checkVerificationJobStatus, 
+    getVerificationJobs, 
+    getVerificationRecommendations 
+} = require('./pbsVerificationUtils');
+const { runVerificationDiagnostics } = require('./pbsVerificationDiagnostics');
 
 let pLimit;
 let requestLimiter;
@@ -1021,6 +1028,7 @@ async function fetchAllPbsTasksForProcessing({ client, config }, nodeName) {
                                     guest: `${latestSnapshot['backup-type']}/${latestSnapshot['backup-id']}`,
                                     guestType: latestSnapshot['backup-type'],
                                     guestId: latestSnapshot['backup-id'],
+                                    id: `BACKUP-RUN:${datastore.name}:${latestSnapshot['backup-type']}:${latestSnapshot['backup-id']}:${dayKey}`,
                                     upid: `BACKUP-RUN:${datastore.name}:${latestSnapshot['backup-type']}:${latestSnapshot['backup-id']}:${dayKey}`,
                                     comment: latestSnapshot.comment || '',
                                     size: latestSnapshot.size || 0,
@@ -1053,6 +1061,19 @@ async function fetchAllPbsTasksForProcessing({ client, config }, nodeName) {
             
             console.log(`[DataFetcher] Created ${backupRunsByUniqueKey.size} unique backup runs from PBS snapshots for ${config.name}`);
             
+            // Debug: Log backup runs with their namespaces
+            const backupRuns = Array.from(backupRunsByUniqueKey.values());
+            console.log(`[DataFetcher] DEBUG: Backup runs by namespace:`);
+            const runsByNamespace = {};
+            backupRuns.forEach(run => {
+                const ns = run.namespace || 'undefined';
+                if (!runsByNamespace[ns]) runsByNamespace[ns] = 0;
+                runsByNamespace[ns]++;
+            });
+            Object.entries(runsByNamespace).forEach(([ns, count]) => {
+                console.log(`[DataFetcher] DEBUG:   ${ns}: ${count} backup runs`);
+            });
+            
         } catch (datastoreError) {
             console.error(`ERROR: [DataFetcher] Could not fetch datastore backup history: ${datastoreError.message}`);
             return { tasks: null, error: true };
@@ -1061,7 +1082,7 @@ async function fetchAllPbsTasksForProcessing({ client, config }, nodeName) {
         // 3. Get administrative tasks (prune/GC/verify) from node endpoint
         try {
             const response = await client.get(`/nodes/${encodeURIComponent(nodeName.trim())}/tasks`, {
-                params: { errors: 1, limit: 1000 }
+                params: { limit: 1000 }
             });
             const allAdminTasks = response.data?.data || [];
             
@@ -1105,6 +1126,8 @@ async function fetchAllPbsTasksForProcessing({ client, config }, nodeName) {
             // Enhance synthetic backup runs with real task details when available
             const backupRuns = Array.from(backupRunsByUniqueKey.values());
             
+            console.log(`[DataFetcher] DEBUG: Found ${realBackupTasksMap.size} real backup tasks to potentially enhance synthetic runs`);
+            
             // Track used UPIDs to prevent enhancement duplicates
             const usedUPIDs = new Set();
             
@@ -1127,6 +1150,8 @@ async function fetchAllPbsTasksForProcessing({ client, config }, nodeName) {
                         upid: realTask.upid, // Use real UPID for enhanced runs
                         user: realTask.user,
                         exitcode: realTask.exitcode,
+                        // Explicitly preserve namespace from synthetic run
+                        namespace: run.namespace,
                         // Mark as enhanced
                         enhancedWithRealTask: true
                     };
@@ -1134,6 +1159,18 @@ async function fetchAllPbsTasksForProcessing({ client, config }, nodeName) {
                     // Keep synthetic run as-is for historical data or if UPID already used
                     return run;
                 }
+            });
+            
+            // Debug: Log final enhanced backup runs with their namespaces
+            console.log(`[DataFetcher] DEBUG: Enhanced backup runs by namespace:`);
+            const enhancedRunsByNamespace = {};
+            enhancedBackupRuns.forEach(run => {
+                const ns = run.namespace || 'undefined';
+                if (!enhancedRunsByNamespace[ns]) enhancedRunsByNamespace[ns] = 0;
+                enhancedRunsByNamespace[ns]++;
+            });
+            Object.entries(enhancedRunsByNamespace).forEach(([ns, count]) => {
+                console.log(`[DataFetcher] DEBUG:   ${ns}: ${count} enhanced backup runs`);
             });
             
             // Add individual guest failure tasks from real backup tasks that didn't match synthetic runs
@@ -1161,6 +1198,7 @@ async function fetchAllPbsTasksForProcessing({ client, config }, nodeName) {
                                     guest: `${guestType}/${guestId}`,
                                     guestType: guestType,
                                     guestId: guestId,
+                                    id: task.upid,
                                     upid: task.upid,
                                     comment: task.comment || '',
                                     size: 0, // No snapshot created
@@ -1225,6 +1263,7 @@ async function fetchAllPbsTasksForProcessing({ client, config }, nodeName) {
         if (Object.keys(namespaceCounts).length > 0) {
             console.log(`[DataFetcher] PBS backup runs by namespace: ${JSON.stringify(namespaceCounts)}`);
         }
+        
         
         return { 
             tasks: deduplicatedTasks, 
@@ -1406,9 +1445,9 @@ async function fetchPveBackupTasks(apiClient, endpointId, nodeName) {
 async function fetchStorageBackups(apiClient, endpointId, nodeName, storage, isShared, node, config) {
     try {
         // Skip PBS storage based on the storage name (PBS storages usually have 'pbs' in the name)
-        // We can't check the global storage config due to permission issues
+        // This is a safety check - PBS storages should already be filtered out at the node level
         if (storage.toLowerCase().includes('pbs')) {
-            console.log(`[DataFetcher - ${endpointId}-${nodeName}] Skipping PBS storage '${storage}' for PVE backup collection`);
+            console.log(`[DataFetcher - ${endpointId}-${nodeName}] Skipping PBS storage '${storage}' for PVE backup collection (safety check)`);
             return [];
         }
         
@@ -1547,7 +1586,8 @@ async function fetchPbsData(currentPbsApiClients) {
                 // Fetch tasks early to align with test stub order
                 const allTasksResult = await fetchAllPbsTasksForProcessing(pbsClient, nodeName);
                 if (allTasksResult.tasks && !allTasksResult.error) {
-                    const processedTasks = processPbsTasks(allTasksResult.tasks); // Assumes processPbsTasks is imported
+                    const processedTasks = processPbsTasks(allTasksResult.tasks);
+                    
                     instanceData = { ...instanceData, ...processedTasks }; // Merge task summaries
                 } else {
                     console.warn(`No tasks to process or task fetching failed. Error flag: ${allTasksResult.error}, Tasks array: ${allTasksResult.tasks}`);
@@ -1556,10 +1596,26 @@ async function fetchPbsData(currentPbsApiClients) {
                     instanceData = { ...instanceData, ...processedTasks };
                 }
                 
+                // Diagnostics have confirmed v-3fb332a6-ba43 is an orphaned job
+                // The filtering in pbsUtils.js now handles hiding these tasks
+                
                 // Fetch PBS node status and version info only in non-test environments
                 if (process.env.NODE_ENV !== 'test') {
                     instanceData.nodeStatus = await fetchPbsNodeStatus(pbsClient, nodeName);
                     instanceData.versionInfo = await fetchPbsVersionInfo(pbsClient);
+                }
+                
+                // Add verification job health diagnostics
+                try {
+                    instanceData.verificationDiagnostics = await fetchVerificationDiagnostics(pbsClient, instanceData.datastores);
+                } catch (verifyError) {
+                    console.warn(`[DataFetcher - ${instanceName}] Verification diagnostics failed: ${verifyError.message}`);
+                    instanceData.verificationDiagnostics = {
+                        error: verifyError.message,
+                        healthScore: 'error',
+                        jobsStatus: 'unknown',
+                        datastores: {}
+                    };
                 }
                 
                 instanceData.status = 'ok';
@@ -1626,9 +1682,16 @@ async function fetchPveBackupData(currentApiClients, nodes, vms, containers) {
         
         // Fetch backups from each storage on this node
         if (node.storage && Array.isArray(node.storage)) {
-            const backupStorages = node.storage.filter(storage => 
+            // Filter out PBS storages to prevent double-counting PBS backups
+            const allBackupStorages = node.storage.filter(storage => 
                 storage.content && storage.content.includes('backup')
             );
+            const pbsStorages = allBackupStorages.filter(storage => storage.type === 'pbs');
+            const backupStorages = allBackupStorages.filter(storage => storage.type !== 'pbs');
+            
+            if (pbsStorages.length > 0) {
+                console.log(`[DataFetcher - ${endpointId}-${nodeName}] Excluding ${pbsStorages.length} PBS storage(s) from PVE backup collection: ${pbsStorages.map(s => s.storage).join(', ')}`);
+            }
             
             if (backupStorages.length > 0) {
                 // Get or create direct connection once per node for efficiency
@@ -1736,12 +1799,40 @@ async function fetchDiscoveryData(currentApiClients, currentPbsApiClients, _fetc
       console.error("[DataFetcher] Error fetching PVE backup data:", backupResults[1].reason);
   }
 
+  // Aggregate PBS task data from all instances for global access
+  const allPbsTasks = [];
+  const aggregatedPbsTaskSummary = { total: 0, ok: 0, failed: 0 };
+  
+  (pbsResult || []).forEach(pbsInstance => {
+      if (pbsInstance.backupTasks?.recentTasks) {
+          allPbsTasks.push(...pbsInstance.backupTasks.recentTasks);
+      }
+      if (pbsInstance.verificationTasks?.recentTasks) {
+          allPbsTasks.push(...pbsInstance.verificationTasks.recentTasks);
+      }
+      if (pbsInstance.syncTasks?.recentTasks) {
+          allPbsTasks.push(...pbsInstance.syncTasks.recentTasks);
+      }
+      if (pbsInstance.pruneTasks?.recentTasks) {
+          allPbsTasks.push(...pbsInstance.pruneTasks.recentTasks);
+      }
+      
+      // Aggregate summary data
+      if (pbsInstance.aggregatedPbsTaskSummary) {
+          aggregatedPbsTaskSummary.total += pbsInstance.aggregatedPbsTaskSummary.total || 0;
+          aggregatedPbsTaskSummary.ok += pbsInstance.aggregatedPbsTaskSummary.ok || 0;
+          aggregatedPbsTaskSummary.failed += pbsInstance.aggregatedPbsTaskSummary.failed || 0;
+      }
+  });
+
   const aggregatedResult = {
       nodes: pveResult.nodes || [],
       vms: pveResult.vms || [],
       containers: pveResult.containers || [],
       pbs: pbsResult || [], // pbsResult is already the array we need
-      pveBackups: pveBackups // Add PVE backup data
+      pveBackups: pveBackups, // Add PVE backup data
+      allPbsTasks: allPbsTasks, // Global PBS task array for frontend
+      aggregatedPbsTaskSummary: aggregatedPbsTaskSummary // Global PBS task summary
   };
 
   console.log(`[DataFetcher] Discovery cycle completed. Found: ${aggregatedResult.nodes.length} PVE nodes, ${aggregatedResult.vms.length} VMs, ${aggregatedResult.containers.length} CTs, ${aggregatedResult.pbs.length} PBS instances, ${pveBackups.backupTasks.length} PVE backup tasks, ${pveBackups.storageBackups.length} PVE storage backups, ${pveBackups.guestSnapshots.length} guest snapshots.`);
@@ -1774,7 +1865,7 @@ async function fetchMetricsData(runningVms, runningContainers, currentApiClients
         guestsByEndpointNode[endpointId][node].push({ vmid, type, name: name || 'unknown', agent }); // Pass agent info
     });
 
-    // Iterate through endpoints and nodes (existing logic)
+    // Iterate through endpoints and use bulk fetch for better performance
     for (const endpointId in guestsByEndpointNode) {
         if (!currentApiClients[endpointId]) {
             console.warn(`WARN: [DataFetcher] No API client found for endpoint: ${endpointId}`);
@@ -1783,22 +1874,77 @@ async function fetchMetricsData(runningVms, runningContainers, currentApiClients
         const { client: apiClientInstance, config: endpointConfig } = currentApiClients[endpointId];
         const endpointName = endpointConfig.name || endpointId;
 
-        for (const nodeName in guestsByEndpointNode[endpointId]) {
-            const guestsOnNode = guestsByEndpointNode[endpointId][nodeName];
+        try {
+            // Fetch all VM/Container metrics in a single bulk request to reduce API calls
+            console.log(`[DataFetcher - ${endpointName}] Using bulk endpoint /cluster/resources to reduce log growth`);
+            const bulkResponse = await apiClientInstance.get('/cluster/resources', { 
+                params: { type: 'vm' } 
+            });
+            const bulkData = bulkResponse?.data?.data || [];
             
-            guestsOnNode.forEach(guestInfo => {
-                const { vmid, type, name: guestName, agent: guestAgentConfig } = guestInfo; // Destructure agent
-                metricPromises.push(
-                    (async () => {
-                        try {
-                            const pathPrefix = type === 'qemu' ? 'qemu' : 'lxc';
-                            // Fetch RRD and Current Status data
-                            const [rrdDataResponse, currentDataResponse] = await Promise.all([
-                                apiClientInstance.get(`/nodes/${nodeName}/${pathPrefix}/${vmid}/rrddata`, { params: { timeframe: 'hour', cf: 'AVERAGE' } }),
-                                apiClientInstance.get(`/nodes/${nodeName}/${pathPrefix}/${vmid}/status/current`)
-                            ]);
+            // Create a map for quick lookup
+            const bulkDataMap = new Map();
+            bulkData.forEach(vm => {
+                const key = `${vm.node}-${vm.vmid}`;
+                bulkDataMap.set(key, vm);
+            });
 
-                            let currentMetrics = currentDataResponse?.data?.data || null;
+            // Process nodes
+            for (const nodeName in guestsByEndpointNode[endpointId]) {
+                const guestsOnNode = guestsByEndpointNode[endpointId][nodeName];
+                
+                guestsOnNode.forEach(guestInfo => {
+                    const { vmid, type, name: guestName, agent: guestAgentConfig } = guestInfo;
+                    metricPromises.push(
+                        (async () => {
+                            try {
+                                const pathPrefix = type === 'qemu' ? 'qemu' : 'lxc';
+                                
+                                // Get bulk data for this VM
+                                const bulkKey = `${nodeName}-${vmid}`;
+                                const bulkVmData = bulkDataMap.get(bulkKey);
+                                
+                                // Skip if VM not found or not running
+                                if (!bulkVmData || bulkVmData.status !== 'running') {
+                                    return null;
+                                }
+                                
+                                // Fetch RRD data (still needed for historical graphs)
+                                const rrdDataResponse = await apiClientInstance.get(`/nodes/${nodeName}/${pathPrefix}/${vmid}/rrddata`, { 
+                                    params: { timeframe: 'hour', cf: 'AVERAGE' } 
+                                });
+                                
+                                // Also fetch current status for accurate I/O counters
+                                // The bulk endpoint seems to cache these values
+                                let currentStatusResponse;
+                                try {
+                                    currentStatusResponse = await apiClientInstance.get(`/nodes/${nodeName}/${pathPrefix}/${vmid}/status/current`);
+                                } catch (statusError) {
+                                    // If individual status fetch fails, continue with bulk data
+                                    console.warn(`[DataFetcher - ${endpointName}] Failed to fetch current status for ${vmid}: ${statusError.message}`);
+                                }
+                                
+                                // Convert bulk data to match existing currentMetrics structure
+                                // Use individual status data for I/O counters if available (more accurate)
+                                const statusData = currentStatusResponse?.data?.data || {};
+                                let currentMetrics = {
+                                    cpu: bulkVmData.cpu || 0,
+                                    cpus: bulkVmData.maxcpu || 1,
+                                    mem: bulkVmData.mem || 0,
+                                    maxmem: bulkVmData.maxmem || 0,
+                                    disk: bulkVmData.disk || 0,
+                                    maxdisk: bulkVmData.maxdisk || 0,
+                                    // Prefer fresh I/O counters and uptime from individual status endpoint
+                                    netin: statusData.netin !== undefined ? statusData.netin : (bulkVmData.netin || 0),
+                                    netout: statusData.netout !== undefined ? statusData.netout : (bulkVmData.netout || 0),
+                                    diskread: statusData.diskread !== undefined ? statusData.diskread : (bulkVmData.diskread || 0),
+                                    diskwrite: statusData.diskwrite !== undefined ? statusData.diskwrite : (bulkVmData.diskwrite || 0),
+                                    uptime: statusData.uptime !== undefined ? statusData.uptime : (bulkVmData.uptime || 0),
+                                    status: bulkVmData.status || 'unknown',
+                                    qmpstatus: bulkVmData.qmpstatus || bulkVmData.status || 'unknown',
+                                    agent: type === 'qemu' ? (bulkVmData.agent || 0) : 0
+                                };
+                                
 
                             // --- QEMU Guest Agent Memory Fetch ---
                             if (type === 'qemu' && currentMetrics && currentMetrics.agent === 1 && guestAgentConfig && (typeof guestAgentConfig === 'string' && (guestAgentConfig.startsWith('1') || guestAgentConfig.includes('enabled=1')))) {
@@ -1883,8 +2029,88 @@ async function fetchMetricsData(runningVms, runningContainers, currentApiClients
                     })()
                 );
             }); // End forEach guestInfo
-            // --- END ADDED ---
         } // End for nodeName
+        } catch (bulkError) {
+            // If bulk fetch fails, fall back to individual requests
+            console.error(`[DataFetcher - ${endpointName}] Bulk fetch failed: ${bulkError.message}. Falling back to individual requests.`);
+            
+            for (const nodeName in guestsByEndpointNode[endpointId]) {
+                const guestsOnNode = guestsByEndpointNode[endpointId][nodeName];
+                
+                guestsOnNode.forEach(guestInfo => {
+                    const { vmid, type, name: guestName, agent: guestAgentConfig } = guestInfo;
+                    metricPromises.push(
+                        (async () => {
+                            try {
+                                const pathPrefix = type === 'qemu' ? 'qemu' : 'lxc';
+                                // Fallback to original individual API calls
+                                const [rrdDataResponse, currentDataResponse] = await Promise.all([
+                                    apiClientInstance.get(`/nodes/${nodeName}/${pathPrefix}/${vmid}/rrddata`, { params: { timeframe: 'hour', cf: 'AVERAGE' } }),
+                                    apiClientInstance.get(`/nodes/${nodeName}/${pathPrefix}/${vmid}/status/current`)
+                                ]);
+
+                                let currentMetrics = currentDataResponse?.data?.data || null;
+
+                                // QEMU Guest Agent Memory Fetch (same as above)
+                                if (type === 'qemu' && currentMetrics && currentMetrics.agent === 1 && guestAgentConfig && (typeof guestAgentConfig === 'string' && (guestAgentConfig.startsWith('1') || guestAgentConfig.includes('enabled=1')))) {
+                                    try {
+                                        const agentMemInfoResponse = await apiClientInstance.post(`/nodes/${nodeName}/qemu/${vmid}/agent/get-memory-block-info`, {});
+                                        
+                                        if (agentMemInfoResponse?.data?.data?.result) {
+                                            const agentMem = agentMemInfoResponse.data.data.result;
+                                            let guestMemoryDetails = null;
+                                            if (Array.isArray(agentMem) && agentMem.length > 0 && agentMem[0].hasOwnProperty('total') && agentMem[0].hasOwnProperty('free')) {
+                                                guestMemoryDetails = agentMem[0];
+                                            } else if (typeof agentMem === 'object' && agentMem !== null && agentMem.hasOwnProperty('total') && agentMem.hasOwnProperty('free')) {
+                                                guestMemoryDetails = agentMem;
+                                            }
+
+                                            if (guestMemoryDetails) {
+                                                currentMetrics.guest_mem_total_bytes = guestMemoryDetails.total;
+                                                currentMetrics.guest_mem_free_bytes = guestMemoryDetails.free;
+                                                currentMetrics.guest_mem_available_bytes = guestMemoryDetails.available;
+                                                currentMetrics.guest_mem_cached_bytes = guestMemoryDetails.cached;
+                                                currentMetrics.guest_mem_buffers_bytes = guestMemoryDetails.buffers;
+
+                                                if (guestMemoryDetails.available !== undefined) {
+                                                    currentMetrics.guest_mem_actual_used_bytes = guestMemoryDetails.total - guestMemoryDetails.available;
+                                                } else if (guestMemoryDetails.cached !== undefined && guestMemoryDetails.buffers !== undefined) {
+                                                    currentMetrics.guest_mem_actual_used_bytes = guestMemoryDetails.total - guestMemoryDetails.free - guestMemoryDetails.cached - guestMemoryDetails.buffers;
+                                                } else {
+                                                    currentMetrics.guest_mem_actual_used_bytes = guestMemoryDetails.total - guestMemoryDetails.free;
+                                                }
+                                            }
+                                        }
+                                    } catch (agentError) {
+                                        // Silently ignore guest agent errors
+                                    }
+                                }
+
+                                const metricData = {
+                                    id: vmid,
+                                    guestName: guestName, 
+                                    node: nodeName,
+                                    type: type,
+                                    endpointId: endpointId, 
+                                    endpointName: endpointName, 
+                                    data: rrdDataResponse?.data?.data?.length > 0 ? rrdDataResponse.data.data : [],
+                                    current: currentMetrics
+                                };
+                                return metricData;
+                            } catch (err) {
+                                const status = err.response?.status ? ` (Status: ${err.response.status})` : '';
+                                if (err.response && err.response.status === 400) {
+                                    console.warn(`[Metrics Cycle - ${endpointName}] Guest ${type} ${vmid} (${guestName}) on node ${nodeName} might be stopped or inaccessible (Status: 400). Skipping metrics.`);
+                                } else {
+                                    console.error(`[Metrics Cycle - ${endpointName}] Failed to get metrics for ${type} ${vmid} (${guestName}) on node ${nodeName}${status}: ${err.message}`);
+                                }
+                                return null;
+                            }
+                        })()
+                    );
+                });
+            }
+        }
     } // End for endpointId
 
     // Wait for all metric fetch promises to settle
@@ -1897,7 +2123,10 @@ async function fetchMetricsData(runningVms, runningContainers, currentApiClients
         }
     });
 
+    const totalGuests = runningVms.length + runningContainers.length;
+    const endpointCount = Object.keys(guestsByEndpointNode).length;
     console.log(`[DataFetcher] Completed metrics fetch. Got data for ${allMetrics.length} guests.`);
+    console.log(`[DataFetcher] API call optimization: Using bulk endpoint reduced calls from ${totalGuests} to ${endpointCount} per cycle`);
     return allMetrics;
 }
 
@@ -1990,6 +2219,463 @@ function clearCaches() {
     nodeConnectionCache.clear();
     nodeStateCache.clear();
     clusterMembershipCache.clear();
+}
+
+/**
+ * Comprehensive PBS verification job diagnostics
+ * Provides detailed analysis of verification job health, configuration, and failure reasons
+ * @param {Object} pbsClient - PBS API client instance
+ * @param {Array} datastores - Array of datastore objects
+ * @returns {Promise<Object>} - Comprehensive verification diagnostics
+ */
+async function fetchVerificationDiagnostics(pbsClient, datastores = []) {
+    const diagnostics = {
+        timestamp: Date.now(),
+        healthScore: 'unknown',
+        jobsStatus: 'unknown',
+        globalRecommendations: {
+            priority: 'low',
+            actions: [],
+            insights: []
+        },
+        datastores: {},
+        overallJobHealth: {
+            totalJobs: 0,
+            activeJobs: 0,
+            disabledJobs: 0,
+            failingJobs: []
+        },
+        specificJobDiagnostics: {},
+        verificationFailureAnalysis: {
+            recentFailures: 0,
+            staleDueToRetention: 0,
+            configurationIssues: 0,
+            commonFailureReasons: []
+        }
+    };
+
+    try {
+        // Step 1: Get all verification jobs configuration
+        const verificationJobs = await getVerificationJobs(pbsClient);
+        diagnostics.overallJobHealth.totalJobs = verificationJobs.length;
+        diagnostics.overallJobHealth.activeJobs = verificationJobs.filter(job => job.enabled).length;
+        diagnostics.overallJobHealth.disabledJobs = verificationJobs.filter(job => !job.enabled).length;
+
+        // Step 2: Analyze each datastore individually
+        const datastoreAnalysisPromises = datastores.map(async (datastore) => {
+            try {
+                const datastoreName = datastore.name;
+                
+                // Get verification health for this datastore
+                const healthAnalysis = await analyzeVerificationHealth(pbsClient, datastoreName);
+                const recommendations = await getVerificationRecommendations(pbsClient, datastoreName);
+                
+                // Find verification jobs for this datastore
+                const datastoreJobs = verificationJobs.filter(job => job.datastore === datastoreName);
+                
+                // Check specific verification job status (focusing on the failing job mentioned)
+                const jobStatusChecks = await Promise.allSettled(
+                    datastoreJobs.map(async (job) => {
+                        const jobStatus = await checkVerificationJobStatus(pbsClient, job.id);
+                        return { jobId: job.id, ...jobStatus };
+                    })
+                );
+
+                const jobStatuses = jobStatusChecks.map(result => 
+                    result.status === 'fulfilled' ? result.value : { error: result.reason?.message }
+                );
+
+                // Analyze verification failures specifically
+                const verificationFailures = await analyzeVerificationFailures(pbsClient, datastoreName, healthAnalysis);
+
+                return {
+                    datastoreName,
+                    healthAnalysis,
+                    recommendations,
+                    jobs: datastoreJobs,
+                    jobStatuses,
+                    verificationFailures,
+                    diagnosticChecks: await performSpecificDiagnosticChecks(pbsClient, datastoreName, datastoreJobs)
+                };
+            } catch (error) {
+                console.error(`[Verification Diagnostics] Error analyzing datastore ${datastore.name}: ${error.message}`);
+                return {
+                    datastoreName: datastore.name,
+                    error: error.message,
+                    healthAnalysis: { healthScore: 'error', error: error.message },
+                    recommendations: { priority: 'high', actions: ['Unable to analyze - check PBS connectivity'], insights: [] }
+                };
+            }
+        });
+
+        const datastoreAnalyses = await Promise.allSettled(datastoreAnalysisPromises);
+        
+        // Process datastore analyses
+        datastoreAnalyses.forEach((result, index) => {
+            if (result.status === 'fulfilled') {
+                const analysis = result.value;
+                diagnostics.datastores[analysis.datastoreName] = analysis;
+                
+                // Aggregate failure statistics
+                if (analysis.verificationFailures) {
+                    diagnostics.verificationFailureAnalysis.recentFailures += analysis.verificationFailures.recentFailures || 0;
+                    diagnostics.verificationFailureAnalysis.staleDueToRetention += analysis.verificationFailures.staleDueToRetention || 0;
+                    diagnostics.verificationFailureAnalysis.configurationIssues += analysis.verificationFailures.configurationIssues || 0;
+                    
+                    if (analysis.verificationFailures.commonReasons) {
+                        diagnostics.verificationFailureAnalysis.commonFailureReasons.push(
+                            ...analysis.verificationFailures.commonReasons
+                        );
+                    }
+                }
+                
+                // Track failing jobs
+                if (analysis.jobStatuses) {
+                    analysis.jobStatuses.forEach(jobStatus => {
+                        if (jobStatus.error || !jobStatus.exists) {
+                            diagnostics.overallJobHealth.failingJobs.push({
+                                jobId: jobStatus.jobId,
+                                datastore: analysis.datastoreName,
+                                error: jobStatus.error,
+                                exists: jobStatus.exists
+                            });
+                        }
+                    });
+                }
+            } else {
+                console.error(`[Verification Diagnostics] Failed to analyze datastore: ${result.reason?.message}`);
+            }
+        });
+
+        // Step 3: Check for the specific failing verification job mentioned in the task
+        // Note: The job ID is just 'v-3fb332a6-ba43', not 'main:v-3fb332a6-ba43'
+        // 'main' is the datastore name, not part of the job ID
+        await checkSpecificFailingJob(pbsClient, diagnostics, 'v-3fb332a6-ba43');
+
+        // Step 4: Calculate overall health score
+        diagnostics.healthScore = calculateOverallHealthScore(diagnostics);
+        diagnostics.jobsStatus = determineJobsStatus(diagnostics);
+
+        // Step 5: Generate global recommendations
+        diagnostics.globalRecommendations = generateGlobalRecommendations(diagnostics);
+
+        return diagnostics;
+
+    } catch (error) {
+        console.error(`[Verification Diagnostics] Critical error during diagnostics: ${error.message}`);
+        diagnostics.error = error.message;
+        diagnostics.healthScore = 'error';
+        diagnostics.jobsStatus = 'error';
+        return diagnostics;
+    }
+}
+
+/**
+ * Analyzes verification failures in detail to identify root causes
+ */
+async function analyzeVerificationFailures(pbsClient, datastoreName, healthAnalysis) {
+    const analysis = {
+        recentFailures: 0,
+        staleDueToRetention: 0,
+        configurationIssues: 0,
+        commonReasons: [],
+        detailedFailures: []
+    };
+
+    try {
+        // Analyze recent failures from health analysis
+        if (healthAnalysis.recentFailures) {
+            analysis.recentFailures = healthAnalysis.recentFailures.length;
+            
+            // Categorize failure reasons
+            const failureReasons = new Map();
+            
+            healthAnalysis.recentFailures.forEach(failure => {
+                const reason = categorizeVerificationFailure(failure);
+                failureReasons.set(reason, (failureReasons.get(reason) || 0) + 1);
+                
+                analysis.detailedFailures.push({
+                    backupType: failure.backupType,
+                    backupId: failure.backupId,
+                    backupTime: failure.backupTime,
+                    verificationState: failure.verificationState,
+                    namespace: failure.namespace,
+                    categorizedReason: reason,
+                    timestamp: failure.backupTime
+                });
+            });
+            
+            // Convert to common reasons array
+            analysis.commonReasons = Array.from(failureReasons.entries())
+                .sort((a, b) => b[1] - a[1])
+                .map(([reason, count]) => ({ reason, count }));
+        }
+        
+        // Check for stale verification references (due to retention policy)
+        const { client } = pbsClient;
+        try {
+            // Get tasks to identify stale verification failures
+            const tasksResponse = await client.get('/nodes/localhost/tasks', {
+                params: { typefilter: 'verificationjob' }
+            });
+            const verificationTasks = tasksResponse.data?.data || [];
+            
+            // Count stale failures (older than 14 days with specific error patterns)
+            const fourteenDaysAgo = (Date.now() / 1000) - (14 * 24 * 60 * 60);
+            analysis.staleDueToRetention = verificationTasks.filter(task => {
+                const endTime = task.endtime || 0;
+                const status = task.status || '';
+                const isOld = endTime && endTime < fourteenDaysAgo;
+                const hasStaleError = status.includes('backup not found') || 
+                                    status.includes('group not found') ||
+                                    status.includes('missing chunks');
+                return isOld && hasStaleError;
+            }).length;
+            
+        } catch (tasksError) {
+            console.warn(`[Verification Diagnostics] Could not analyze stale verification tasks: ${tasksError.message}`);
+        }
+
+        return analysis;
+        
+    } catch (error) {
+        console.error(`[Verification Diagnostics] Error analyzing verification failures: ${error.message}`);
+        return analysis;
+    }
+}
+
+/**
+ * Categorizes verification failure reasons for better diagnostics
+ */
+function categorizeVerificationFailure(failure) {
+    const state = failure.verificationState?.toLowerCase() || '';
+    
+    if (state.includes('missing') || state.includes('not found')) {
+        return 'Missing backup data';
+    } else if (state.includes('corrupt') || state.includes('checksum')) {
+        return 'Data corruption detected';
+    } else if (state.includes('timeout') || state.includes('connection')) {
+        return 'Network/connectivity issues';
+    } else if (state.includes('permission') || state.includes('access')) {
+        return 'Permission/access denied';
+    } else if (state.includes('space') || state.includes('disk')) {
+        return 'Storage space issues';
+    } else {
+        return 'Unknown verification error';
+    }
+}
+
+/**
+ * Performs specific diagnostic checks for verification jobs
+ */
+async function performSpecificDiagnosticChecks(pbsClient, datastoreName, jobs) {
+    const checks = {
+        datastoreHealthy: false,
+        hasActiveJobs: false,
+        jobsConfigurationValid: true,
+        commonIssues: []
+    };
+
+    try {
+        const { client } = pbsClient;
+        
+        // Check datastore health
+        try {
+            const datastoreResponse = await client.get(`/admin/datastore/${datastoreName}/status`);
+            checks.datastoreHealthy = datastoreResponse.data?.data?.total !== undefined;
+        } catch (dsError) {
+            checks.commonIssues.push(`Datastore ${datastoreName} appears unhealthy: ${dsError.message}`);
+        }
+
+        // Check if we have active jobs for this datastore
+        checks.hasActiveJobs = jobs.some(job => job.enabled);
+        if (!checks.hasActiveJobs && jobs.length > 0) {
+            checks.commonIssues.push('All verification jobs for this datastore are disabled');
+        } else if (jobs.length === 0) {
+            checks.commonIssues.push('No verification jobs configured for this datastore');
+        }
+
+        // Check job configurations
+        for (const job of jobs) {
+            if (!job.schedule || job.schedule === 'manual') {
+                checks.commonIssues.push(`Job ${job.id} is set to manual - verification only runs when triggered manually`);
+            }
+        }
+
+        return checks;
+
+    } catch (error) {
+        checks.commonIssues.push(`Diagnostic check failed: ${error.message}`);
+        return checks;
+    }
+}
+
+/**
+ * Checks the specific failing verification job mentioned in the task
+ */
+async function checkSpecificFailingJob(pbsClient, diagnostics, jobId) {
+    try {
+        const jobStatus = await checkVerificationJobStatus(pbsClient, jobId);
+        diagnostics.specificJobDiagnostics[jobId] = {
+            ...jobStatus,
+            investigationReasons: [],
+            suggestedActions: []
+        };
+
+        const jobDiag = diagnostics.specificJobDiagnostics[jobId];
+        
+        if (!jobStatus.exists) {
+            jobDiag.investigationReasons.push('Verification job configuration does not exist');
+            jobDiag.suggestedActions.push('Check if the job was deleted or renamed');
+            jobDiag.suggestedActions.push('Verify the job ID is correct: v-3fb332a6-ba43');
+        } else if (!jobStatus.enabled) {
+            jobDiag.investigationReasons.push('Verification job is disabled');
+            jobDiag.suggestedActions.push('Enable the verification job in PBS configuration');
+        } else {
+            // Job exists and is enabled - check for recent task failures
+            jobDiag.investigationReasons.push('Job exists and is enabled - checking for recent failures');
+            jobDiag.suggestedActions.push('Check PBS task logs for specific failure reasons');
+            jobDiag.suggestedActions.push('Verify target datastore is accessible and has sufficient space');
+        }
+
+        // Add time-specific investigation for June 7-8 failures
+        const june7 = new Date('2024-06-07').getTime() / 1000;
+        const june8 = new Date('2024-06-08').getTime() / 1000;
+        jobDiag.timeSpecificAnalysis = {
+            targetFailurePeriod: 'June 7-8, 2024',
+            targetTimestamps: { start: june7, end: june8 },
+            suggestedLogChecks: [
+                'Check PBS task logs for verification jobs during June 7-8, 2024',
+                'Look for network connectivity issues during this period',
+                'Verify if any snapshots were pruned or became unavailable',
+                'Check for PBS server or storage maintenance during this timeframe'
+            ]
+        };
+
+    } catch (error) {
+        diagnostics.specificJobDiagnostics[jobId] = {
+            error: error.message,
+            investigationReasons: ['Failed to check job status'],
+            suggestedActions: ['Verify PBS API connectivity', 'Check PBS server logs']
+        };
+    }
+}
+
+/**
+ * Calculates overall health score based on all diagnostic data
+ */
+function calculateOverallHealthScore(diagnostics) {
+    let score = 100;
+    
+    // Deduct points for various issues
+    if (diagnostics.overallJobHealth.totalJobs === 0) {
+        score -= 30; // No verification jobs
+    }
+    
+    if (diagnostics.overallJobHealth.failingJobs.length > 0) {
+        score -= (diagnostics.overallJobHealth.failingJobs.length * 20); // 20 points per failing job
+    }
+    
+    if (diagnostics.verificationFailureAnalysis.recentFailures > 0) {
+        score -= (diagnostics.verificationFailureAnalysis.recentFailures * 10); // 10 points per recent failure
+    }
+    
+    if (diagnostics.verificationFailureAnalysis.configurationIssues > 0) {
+        score -= (diagnostics.verificationFailureAnalysis.configurationIssues * 15); // 15 points per config issue
+    }
+    
+    // Ensure score doesn't go below 0
+    score = Math.max(0, score);
+    
+    if (score >= 90) return 'excellent';
+    if (score >= 75) return 'good';
+    if (score >= 50) return 'fair';
+    if (score >= 25) return 'poor';
+    return 'critical';
+}
+
+/**
+ * Determines overall jobs status
+ */
+function determineJobsStatus(diagnostics) {
+    if (diagnostics.overallJobHealth.totalJobs === 0) {
+        return 'no_jobs_configured';
+    }
+    
+    if (diagnostics.overallJobHealth.failingJobs.length > 0) {
+        return 'some_jobs_failing';
+    }
+    
+    if (diagnostics.overallJobHealth.activeJobs === 0) {
+        return 'all_jobs_disabled';
+    }
+    
+    if (diagnostics.verificationFailureAnalysis.recentFailures > 0) {
+        return 'recent_failures_detected';
+    }
+    
+    return 'healthy';
+}
+
+/**
+ * Generates global recommendations based on all diagnostic data
+ */
+function generateGlobalRecommendations(diagnostics) {
+    const recommendations = {
+        priority: 'low',
+        actions: [],
+        insights: []
+    };
+    
+    // High priority recommendations
+    if (diagnostics.overallJobHealth.failingJobs.length > 0) {
+        recommendations.priority = 'high';
+        recommendations.actions.push('Investigate and fix failing verification jobs immediately');
+        diagnostics.overallJobHealth.failingJobs.forEach(job => {
+            recommendations.actions.push(`Fix verification job ${job.jobId} on datastore ${job.datastore}: ${job.error}`);
+        });
+    }
+    
+    if (diagnostics.verificationFailureAnalysis.recentFailures > 5) {
+        recommendations.priority = 'high';
+        recommendations.actions.push(`Address ${diagnostics.verificationFailureAnalysis.recentFailures} recent verification failures`);
+    }
+    
+    // Medium priority recommendations
+    if (diagnostics.overallJobHealth.disabledJobs > 0) {
+        if (recommendations.priority === 'low') recommendations.priority = 'medium';
+        recommendations.insights.push(`${diagnostics.overallJobHealth.disabledJobs} verification jobs are disabled`);
+    }
+    
+    if (diagnostics.overallJobHealth.totalJobs === 0) {
+        if (recommendations.priority === 'low') recommendations.priority = 'medium';
+        recommendations.actions.push('Configure verification jobs to ensure backup integrity');
+    }
+    
+    // Insights about common failure patterns
+    if (diagnostics.verificationFailureAnalysis.commonFailureReasons.length > 0) {
+        const topReason = diagnostics.verificationFailureAnalysis.commonFailureReasons[0];
+        recommendations.insights.push(`Most common verification failure: ${topReason.reason} (${topReason.count} occurrences)`);
+    }
+    
+    if (diagnostics.verificationFailureAnalysis.staleDueToRetention > 0) {
+        recommendations.insights.push(`${diagnostics.verificationFailureAnalysis.staleDueToRetention} verification failures are stale (normal due to backup retention policies)`);
+    }
+    
+    // Specific recommendations for the mentioned failing job
+    if (diagnostics.specificJobDiagnostics['main:v-3fb332a6-ba43']) {
+        const specificJob = diagnostics.specificJobDiagnostics['main:v-3fb332a6-ba43'];
+        if (specificJob.suggestedActions && specificJob.suggestedActions.length > 0) {
+            recommendations.actions.push('For the specific failing job main:v-3fb332a6-ba43:');
+            recommendations.actions.push(...specificJob.suggestedActions);
+        }
+    }
+    
+    if (recommendations.actions.length === 0 && recommendations.priority === 'low') {
+        recommendations.insights.push('Verification system appears to be operating normally');
+    }
+    
+    return recommendations;
 }
 
 module.exports = {

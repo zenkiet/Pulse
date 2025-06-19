@@ -1,5 +1,14 @@
 # Claude Development Notes
 
+## 🚨 CRITICAL: Git Commit Policy
+
+**NEVER COMMIT ANYTHING WITHOUT EXPLICIT USER REQUEST**
+
+- Only commit when the user explicitly asks you to commit
+- Never commit proactively or automatically after completing work
+- Always wait for explicit permission before running `git commit` or `git push`
+- If you complete work, simply report what you did - don't commit it
+
 ## Git Workflow and Automated Releases
 
 ### 🤖 Ultra-Simple Release Philosophy
@@ -42,9 +51,14 @@
 ### 🌿 Branch Strategy - When to Stay vs. Switch
 
 **Default: Always work on `develop`**
+- Always pull before starting work: `git pull origin develop`
 - Make all code changes on develop
 - Push to develop (no automatic releases)
 - Check release status from develop (don't switch just to view)
+
+**Git Config (already set up):**
+- `pull.rebase = true` - Automatically rebases on pull to avoid merge commits
+- This prevents the "divergent branches" error when remote has new commits
 
 **Only switch branches when:**
 1. **Resolving PR merge conflicts**: `gh pr checkout <PR_NUMBER>`
@@ -77,16 +91,39 @@ gh pr create --base main --head develop --title "Release: Your feature"
 # 3. No manual merge needed!
 ```
 
-**CRITICAL: Creating Comprehensive PR Descriptions**
-When creating a PR, you MUST:
-1. **Always run `git log --oneline main..develop`** to see ALL commits that will be included
-2. **Include ALL features and fixes** in the PR title and description, not just the latest change
-3. **Group changes by category**: Major Features, Bug Fixes, Technical Changes, etc.
-4. **Reference relevant issue numbers** (e.g., #125) for each fix or feature
+**RC PR Creation Instructions for Claude Code:**
+When creating RC PRs, Claude Code should:
 
-Example of a good PR title:
-- ✅ "Release: PBS namespace support, port handling fix, and UI improvements"
-- ❌ "Release: Fix port handling" (when there are actually multiple changes)
+1. **Analyze commits since last RC**: Run `git log --oneline <last-rc-tag>..develop`
+2. **Create summarized PR description**: Look at all the commits and create a clean, user-friendly summary grouped by:
+   - ✨ New Features
+   - 🐛 Bug Fixes  
+   - 🔧 Improvements
+   - 📚 Documentation
+3. **Consolidate related commits**: Instead of listing every individual commit, group related changes:
+   - ❌ "Prevent X flash, Prevent Y flash, Prevent Z flash" 
+   - ✅ "Prevent UI flashing issues across multiple components"
+4. **Include attribution**: Reference commits and issues/users when available:
+   - Format: "Feature description (abc1234, addressing #123 by @username)"
+   - For grouped commits: "Fix description (abc1234, def5678, addressing #123)"
+   - If no issue: "Fix description (abc1234)"
+5. **Use this description in PR body**: The summarized description becomes the RC changelog
+
+**Example RC PR Description:**
+```
+## ✨ New Features
+- Add backup source visibility improvements (77f0ad2, addressing #156)
+- Implement PBS namespace filtering (fd612c2, 8590a91)
+
+## 🐛 Bug Fixes  
+- Prevent UI flashing and double refresh issues across components (c665cfa, 353af56, bc53ade, fb8f1c1, 0a08e23)
+- Fix storage type categorization in diagnostics (bc256d1, 308a00f, addressing #145)
+- Resolve version parsing issues with git describe format (1ff7552, 6c3dd41)
+
+## 🔧 Improvements
+- Enhanced PBS UI with relative timestamps (aa40829, f855aad)
+- Optimize backup tab performance (3bbcaa0)
+```
 
 **Creating Stable Release:**
 ```bash
@@ -97,6 +134,38 @@ Example of a good PR title:
 
 # Option 2: Via CLI
 gh workflow run stable-release.yml --ref main
+```
+
+**IMPORTANT: All releases are created as drafts**
+- Releases require manual publishing after review
+- **RC Releases**: Created with `draft: true` and `prerelease: true`
+- **Stable Releases**: Created with `--draft` flag
+- **Publishing**: Manual step required in GitHub UI after review
+
+**Stable Release Changelog Instructions for Claude Code:**
+When creating stable releases, Claude Code should:
+
+1. **Find all RC releases since last stable**: Use `gh release list` to find RC releases since last stable
+2. **Analyze RC changelogs**: Read the description/changelog from each RC release
+3. **Create consolidated stable changelog**: Summarize all RC changes into one cohesive changelog:
+   - Combine similar features across RCs
+   - Deduplicate bug fixes that were refined across RCs  
+   - Group improvements by component/area
+   - Create a comprehensive "What's Changed" summary
+4. **Preserve attribution**: Maintain commit references and issue attribution from RC changelogs
+5. **Focus on user impact**: Emphasize features and fixes users will notice
+
+**Example Process:**
+```bash
+# Find RC releases since last stable
+gh release list --limit 10 | grep "rc"
+
+# View each RC release changelog  
+gh release view v3.30.0-rc1
+gh release view v3.30.0-rc2
+# ... etc
+
+# Create consolidated stable changelog combining all RC improvements
 ```
 
 **That's the entire process!** No complex merge strategies, no lingering PRs, no conflicts.
@@ -213,17 +282,9 @@ The workflow will:
 - Create the stable release with proper changelog
 - Build and push Docker images with :latest tag
 
-### 🚨 CRITICAL: Keep It Simple (Anti-Pattern Warnings)
+### 🚨 Behavior Preferences
 
-**The Golden Rule**: Trust the automation, make minimal changes, stay on `develop`.
-
-**❌ NEVER do these:**
-- Switch branches unnecessarily (stay on `develop` unless resolving PR conflicts)
-- Manually manage version numbers (workflows handle this automatically)
-- Fight with git when workflows are running fine (they have retry logic)
-- Run complex git operations when simple ones work
-- Check out `main` just to view releases (use `gh release view` from any branch)
-- Try to "fix" things that are already working correctly
+**Keep it simple:** Trust automation, stay on `develop`, minimal changes only
 
 **✅ ALWAYS do this simple workflow:**
 ```bash
@@ -235,7 +296,7 @@ npm run test          # or whatever test command exists
 
 # 3. Commit and push (NO releases)
 git add .
-git commit -m "description of change"
+git commit -m "type: descriptive message addressing #123"
 git push origin develop
 
 # 4. When ready to test with users, check commits and create PR
@@ -252,6 +313,33 @@ gh workflow run stable-release.yml --ref main
 ```
 
 **Remember**: If something seems complex, it's probably wrong. The workflows handle complexity - you handle simplicity.
+
+### 📝 Commit & Issue Preferences
+
+**Commit Consolidation:**
+- Group related changes into single commits (avoid commit spam)
+- Theme-based commits: Group changes by the problem they solve
+- Example: Instead of 5 commits for "prevent X flash", "prevent Y flash", etc.
+  Use: `fix: prevent UI flashing and double refresh issues` with detailed body
+
+**Commit Messages:**
+- Always reference GitHub issues: `addressing #123`  
+- Avoid `fixes/closes` - let users test first
+- Use descriptive commit bodies for multi-component changes
+- Run tests before committing when available
+
+**GitHub References:**
+- **Commit references in comments**: Use just the short hash `abc1234` (GitHub auto-links)
+- **Issue references in commits**: Use `addressing #123` (creates reference without auto-closing)
+- **Auto-closing keywords**: `fixes #123`, `closes #123`, `resolves #123` (avoid - let users test first)
+
+**Examples:**
+✅ Good: `fix: prevent UI flashing and double refresh issues addressing #123`
+✅ Good: `feat: add backup source visibility improvements addressing #156`
+✅ Good: In issue comments: "Fixed in commit abc1234"
+❌ Bad: 5 separate commits for each component's flash fix
+❌ Bad: Missing issue reference in commit message
+❌ Bad: In comments: "Fixed in commit abc1234f" (extra characters break linking)
 
 ## Summary of Ultra-Simple Workflow
 
@@ -272,8 +360,73 @@ gh workflow run stable-release.yml --ref main
 - ✅ Auto-merging PRs
 - ✅ Clean release flow
 
-# important-instruction-reminders
-Do what has been asked; nothing more, nothing less.
-NEVER create files unless they're absolutely necessary for achieving your goal.
-ALWAYS prefer editing an existing file to creating a new one.
-NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+# Development Behavior Preferences
+
+- **🚨 NEVER COMMIT WITHOUT EXPLICIT REQUEST** - Only commit when user explicitly asks
+- Do exactly what's asked - no more, no less
+- Edit existing files over creating new ones
+- No proactive documentation creation
+- Use TodoWrite for complex tasks - helps user track progress
+- Be concise in responses unless detail requested
+- When fixing bugs, test the fix but DO NOT commit unless asked
+
+## Service Management
+
+**IMPORTANT**: This development environment runs Pulse as a systemd service.
+
+**Hot reloading enabled:**
+- File changes automatically restart the service
+- No need to manually restart service during development
+- Just save files and changes take effect immediately
+
+**Service commands (if needed):**
+- Check status: `systemctl status pulse`
+- View logs: `journalctl -u pulse -f`
+- Manual restart: `systemctl restart pulse` (rarely needed)
+
+**Never use:**
+- `npm start` or `npm run start` (service handles this)
+- Direct Node.js execution
+- Manual server startup commands
+
+The service automatically handles development mode with hot reloading via the configured npm scripts.
+
+## Commit Consolidation for Claude Code
+
+**IMPORTANT**: When working iteratively and making multiple related fixes, consolidate them before final commit:
+
+1. **During development**: Make incremental commits as needed while debugging/fixing
+2. **Before pushing**: Use `git reset --soft HEAD~N` to uncommit recent related changes
+3. **Consolidate**: Make one meaningful commit with all related changes
+4. **Push**: Single clean commit to develop
+
+**Example workflow**:
+```bash
+# After making 5 commits fixing UI flashing in different components:
+git reset --soft HEAD~5  # Uncommit last 5 commits (keeps changes staged)
+git commit -m "fix: prevent UI flashing and double refresh issues across components"
+git push origin develop
+```
+
+**When to consolidate**:
+- Multiple commits addressing the same root cause
+- Iterative debugging commits (fix A, fix B, fix C for same issue)
+- UI improvements across multiple components
+- Related bug fixes discovered during testing
+
+**Result**: Clean git history with meaningful commit messages instead of commit spam
+
+## Technical Notes
+
+### Proxmox API Bulk Endpoint Limitation
+
+The `/cluster/resources?type=vm` bulk endpoint has a limitation with I/O counter updates:
+
+- **Issue**: Network and disk I/O counters update only every ~10 seconds (not real-time)
+- **Impact**: Using bulk endpoint alone causes I/O rates to show 0 B/s for several polling cycles
+- **Solution**: Hybrid approach implemented in `dataFetcher.js`:
+  - Use bulk endpoint for CPU, memory, disk usage (efficient)
+  - Fetch fresh I/O counters from individual `/nodes/{node}/{type}/{vmid}/status/current` endpoints
+  - This adds one extra API call per VM but ensures accurate 2-second I/O rate updates
+
+This trade-off prioritizes Pulse's real-time monitoring accuracy over minimal API calls.

@@ -250,7 +250,7 @@ jobs:
         if: steps.check.outputs.create_release == 'true'
         id: release_body
         run: |
-          echo "Generating release body with changelog..."
+          echo "Generating release body with detailed changelog..."
           
           # Get the PR body
           PR_BODY=$(gh pr view ${{ github.event.pull_request.number }} --json body -q .body)
@@ -263,26 +263,62 @@ jobs:
           
           HEADER
           
-          # Extract and add the changelog section from PR body
-          echo "$PR_BODY" > pr_body_temp.md
+          # Generate detailed changelog using the same logic as stable releases
+          echo "📝 Generating detailed changelog from commits..."
           
-          # Check if PR has structured sections
-          if grep -q "## Summary" pr_body_temp.md && grep -q "## Test plan" pr_body_temp.md; then
+          # For RC releases, compare against the previous RC or last stable
+          LATEST_RC=$(git tag -l "v*-rc*" | sort -V | tail -1)
+          if [ -n "$LATEST_RC" ]; then
+            PREV_TAG="$LATEST_RC"  # Use last RC for incremental changelog
+            echo "📊 Using previous RC tag: $PREV_TAG"
+          else
+            PREV_TAG=$(git tag -l "v*" | grep -v "rc\|alpha\|beta" | sort -V | tail -1)  # Use last stable
+            echo "📊 No previous RC found, using last stable: $PREV_TAG"
+          fi
+          
+          if [ -z "$PREV_TAG" ]; then
+            PREV_TAG="v0.0.0"
+          fi
+          
+          echo "📊 Analyzing commits from $PREV_TAG to HEAD"
+          
+          # Export variables for the changelog script
+          export PREV_TAG="$PREV_TAG"
+          export NEW_VERSION="${{ steps.check.outputs.base_version }}-rc${{ steps.check.outputs.rc_number }}"
+          export BUMP_TYPE="rc"
+          export REASONING="Release candidate for testing"
+          
+          # Generate detailed changelog using the same script as stable releases
+          if [ -f scripts/generate-changelog.js ]; then
+            echo "🔧 Using changelog script for detailed RC changelog"
+            node scripts/generate-changelog.js
+            
+            # Extract just the "What's Changed" section for the release body
+            if [ -f CHANGELOG.md ]; then
+              echo "---" >> release_body.md
+              echo "" >> release_body.md
+              # Add the changelog content (skip installation instructions for RC)
+              sed -n '/## What'\''s Changed/,/## 🚀 Installation & Update Instructions/{/## 🚀 Installation & Update Instructions/!p;}' CHANGELOG.md >> release_body.md
+              echo "---" >> release_body.md
+            fi
+          else
+            echo "⚠️ Changelog script not found, using basic commit analysis"
+            
+            # Fallback: Basic commit analysis
             echo "---" >> release_body.md
             echo "" >> release_body.md
-            # Extract everything from Summary to Test plan (exclusive)
-            sed -n '/## Summary/,/## Test plan/{/## Test plan/!p;}' pr_body_temp.md >> release_body.md
+            echo "## What's Changed" >> release_body.md
             echo "" >> release_body.md
-            echo "---" >> release_body.md
-          elif grep -q "## Summary" pr_body_temp.md; then
-            echo "---" >> release_body.md
-            echo "" >> release_body.md
-            # Just get the summary section
-            echo "## Summary" >> release_body.md
-            sed -n '/## Summary/,/^##[^#]/{/^##[^#]/!p;}' pr_body_temp.md | tail -n +2 >> release_body.md
+            
+            # Get commits since last stable release
+            git log $PREV_TAG..HEAD --oneline --no-merges | grep -v "chore: bump version\|🤖 Generated with\|merge pull request" | head -20 | while read commit; do
+              echo "- $commit" >> release_body.md
+            done
             echo "" >> release_body.md
             echo "---" >> release_body.md
           fi
+          
+          # Skip PR summary extraction since changelog covers all changes
           
           # Add the standard update instructions
           cat >> release_body.md << 'FOOTER'
@@ -349,9 +385,6 @@ jobs:
           - You can easily switch between Stable and RC channels in the web interface
           FOOTER
           
-          # Clean up
-          rm -f pr_body_temp.md
-          
           echo "Release body generated successfully!"
         env:
           GH_TOKEN: ${{ github.token }}
@@ -362,6 +395,7 @@ jobs:
         with:
           tag_name: v${{ steps.check.outputs.base_version }}-rc${{ steps.check.outputs.rc_number }}
           name: v${{ steps.check.outputs.base_version }}-rc${{ steps.check.outputs.rc_number }}
+          draft: true
           prerelease: true
           generate_release_notes: false
           files: pulse-v${{ steps.check.outputs.base_version }}-rc${{ steps.check.outputs.rc_number }}.tar.gz

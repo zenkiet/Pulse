@@ -13,11 +13,13 @@ class ConfigApi {
         const projectRootEnv = path.join(__dirname, '../.env');
         
         // Check if we're in a Docker environment with persistent config volume
-        // Use config/.env if it exists, otherwise fall back to project root .env
-        if (fsSync.existsSync(configEnvPath)) {
+        // Use config/.env if the config directory exists (Docker persistent volume), otherwise use project root .env
+        if (fsSync.existsSync(configDir)) {
             this.envPath = configEnvPath;
+            this.configDir = configDir;
         } else {
             this.envPath = projectRootEnv;
+            this.configDir = path.dirname(projectRootEnv);
         }
     }
 
@@ -94,7 +96,8 @@ class ConfigApi {
                     key.startsWith('WEBHOOK_') ||
                     key.startsWith('SMTP_') ||
                     key.startsWith('ALERT_') ||
-                    key === 'GLOBAL_EMAIL_ENABLED') {
+                    key === 'GLOBAL_EMAIL_ENABLED' ||
+                    key === 'GLOBAL_WEBHOOK_ENABLED') {
                     response[key] = config[key];
                 }
             });
@@ -700,6 +703,8 @@ class ConfigApi {
         });
         
         try {
+            // Ensure the config directory exists before writing
+            await fs.mkdir(this.configDir, { recursive: true });
             await fs.writeFile(this.envPath, lines.join('\n'), 'utf8');
         } catch (writeError) {
             console.error('[ConfigApi.writeEnvFile] Error writing file:', writeError);
@@ -744,7 +749,7 @@ class ConfigApi {
             
             // Clear all environment variables that might be cached
             Object.keys(process.env).forEach(key => {
-                if (key.startsWith('PROXMOX_') || key.startsWith('PBS_') || key.startsWith('PULSE_') || key.startsWith('ALERT_')) {
+                if (key.startsWith('PROXMOX_') || key.startsWith('PBS_') || key.startsWith('PULSE_') || key.startsWith('ALERT_') || key.startsWith('GLOBAL_')) {
                     delete process.env[key];
                 }
             });
@@ -781,17 +786,23 @@ class ConfigApi {
                 global.lastReloadTime = Date.now();
             }
             
-            // Refresh AlertManager rules based on new environment variables
+            // Refresh AlertManager rules and email configuration based on new environment variables
             try {
                 const alertManager = stateManager.getAlertManager();
-                if (alertManager && typeof alertManager.refreshRules === 'function') {
-                    await alertManager.refreshRules();
-                    console.log('Alert rules refreshed after configuration reload');
+                if (alertManager) {
+                    if (typeof alertManager.refreshRules === 'function') {
+                        await alertManager.refreshRules();
+                        console.log('Alert rules refreshed after configuration reload');
+                    }
+                    if (typeof alertManager.reloadEmailConfiguration === 'function') {
+                        await alertManager.reloadEmailConfiguration();
+                        console.log('Email configuration reloaded after configuration reload');
+                    }
                 } else {
-                    console.warn('AlertManager not available or refreshRules method not found');
+                    console.warn('AlertManager not available');
                 }
             } catch (alertError) {
-                console.error('Error refreshing alert rules:', alertError);
+                console.error('Error refreshing AlertManager configuration:', alertError);
                 // Don't fail the entire reload if alert refresh fails
             }
             

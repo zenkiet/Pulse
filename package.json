@@ -1,6 +1,6 @@
 {
   "name": "pulse",
-  "version": "3.30.0-rc2",
+  "version": "3.31.0-rc1",
   "description": "A lightweight monitoring application for Proxmox VE.",
   "main": "server/index.js",
   "scripts": {
@@ -40,7 +40,7 @@
     "chokidar": "^4.0.3",
     "concurrently": "^9.1.2",
     "playwright": "^1.53.0",
-    "postcss": "^8.5.5",
+    "postcss": "^8.5.6",
     "tailwindcss": "^3.4.4"
   },
   "overrides": {
